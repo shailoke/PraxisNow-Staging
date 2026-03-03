@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
                 const { data: turns, error: turnsError } = await supabase
                     .from('interview_turns')
                     .select('*')
-                    .eq('session_id', originalSessionId)
+                    .eq('session_id', originalSessionId!)
                     .order('turn_index', { ascending: true })
 
                 if (turnsError || !turns || turns.length === 0) {
