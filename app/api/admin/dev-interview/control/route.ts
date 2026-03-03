@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
                 // ATOMIC PERSISTENCE: Mark turn as answered
                 const { error: updateError } = await adminClient
                     .from('interview_turns')
-                    .update({ answered: true } as any)
+                    .update({ answered: true })
                     .eq('id', latestTurn.id)
 
                 if (updateError) {
