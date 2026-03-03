@@ -99,7 +99,7 @@ export async function reRunEvaluation(sessionId: string) {
         package_tier,
         full_transcript,
         prior_session_summaries: '',
-	evaluationDepth: 'standard'
+	evaluationDepth: 'full'
     })
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
