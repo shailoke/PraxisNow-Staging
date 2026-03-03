@@ -61,7 +61,7 @@ export default async function ScenarioEditPage({
             <div className="bg-white p-6 border rounded shadow-sm">
                 <h3 className="font-bold border-b pb-2 mb-4">Evaluation Dimensions</h3>
                 <div className="grid grid-cols-2 gap-3">
-                    {scenario.evaluation_dimensions?.map((dim, i) => (
+                    {scenario.evaluation_dimensions?.map((dim: string, i: number) => (
                         <div key={i} className="bg-gray-50 px-3 py-2 border rounded text-sm font-medium text-gray-700">{dim}</div>
                     ))}
                 </div>
