@@ -273,12 +273,12 @@ export async function POST(req: NextRequest) {
         } else if (custom_scenario_id) {
             const { data: customScenario } = await adminClient
                 .from('custom_scenarios')
-                .select('dimensions')
+                .select('focus_dimensions')
                 .eq('id', custom_scenario_id)
                 .single()
 
-            if (customScenario && customScenario.dimensions) {
-                dimensionNames = customScenario.dimensions as string[]
+            if (customScenario && customScenario.focus_dimensions) {
+                dimensionNames = customScenario.focus_dimensions as string[]
             }
         }
 
