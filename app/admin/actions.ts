@@ -98,7 +98,8 @@ export async function reRunEvaluation(sessionId: string) {
         role_specific_dimensions,
         package_tier,
         full_transcript,
-        prior_session_summaries: ''
+        prior_session_summaries: '',
+	evaluationDepth: 'standard'
     })
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
