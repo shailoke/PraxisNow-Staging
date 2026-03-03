@@ -1,0 +1,2 @@
+ALTER TABLE interview_turns
+ADD COLUMN answered BOOLEAN NOT NULL DEFAULT FALSE;
