@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Interview Replay is available on Pro and Pro+ plans.' }, { status: 403 })
             }
 
-            if (profile.available_sessions < 1) {
+            if (!profile.available_sessions || profile.available_sessions < 1) {
                 return NextResponse.json({ error: 'Insufficient session credits' }, { status: 403 })
             }
 
@@ -299,7 +299,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'AI Fluency Round requires Pro tier' }, { status: 403 })
         }
 
-        if (profile.available_sessions < 1) {
+        if (!profile.available_sessions || profile.available_sessions < 1) {
             return NextResponse.json({ error: 'Insufficient session credits' }, { status: 403 })
         }
 
