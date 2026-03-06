@@ -7,9 +7,9 @@ import OpenAI from 'openai'
 import { Database } from '@/lib/database.types'
 import { generateSessionPDF } from '@/lib/pdfGenerator'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export async function POST(req: NextRequest) {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
     try {
         const { session_id } = await req.json();
 
