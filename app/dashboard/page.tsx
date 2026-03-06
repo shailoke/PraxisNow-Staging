@@ -336,12 +336,12 @@ export default function DashboardPage() {
         // Take last 10 sessions, sorted by created_at
         const recentSessions = [...sessions]
             .filter(s => s.session_type !== 'negotiation_simulation') // Exclude negotiation sessions
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+            .sort((a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime())
             .slice(-10)
 
         return recentSessions.map((s, idx) => ({
             session: idx + 1,
-            date: new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            date: new Date(s.created_at ?? 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             clarity: s.clarity ? s.clarity / 10 : null,
             structure: s.structure ? s.structure / 10 : null,
             signal: s.signal_noise ? s.signal_noise / 10 : null,
