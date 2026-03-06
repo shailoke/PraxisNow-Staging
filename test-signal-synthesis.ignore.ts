@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Test Signal Synthesis Layer
  * 
