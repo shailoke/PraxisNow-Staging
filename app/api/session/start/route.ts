@@ -343,8 +343,8 @@ export async function POST(req: NextRequest) {
                     .single()
 
                 if (s) {
-                    roleForEntry = s.role
-                    levelForEntry = s.level
+                    roleForEntry = s.role ?? roleForEntry
+                    levelForEntry = s.level ?? levelForEntry
                 }
             }
         } else if (custom_scenario_id) {
