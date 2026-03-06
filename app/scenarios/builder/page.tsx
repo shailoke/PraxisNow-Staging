@@ -187,7 +187,7 @@ export default function CustomBuilderPage() {
                                         .map(l => (
                                             <button
                                                 key={l}
-                                                onClick={() => setSelectedLevel(l)}
+                                                onClick={() => l && setSelectedLevel(l)}
                                                 className={`px-4 py-2 rounded-lg text-sm transition-all ${selectedLevel === l
                                                     ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20'
                                                     : 'bg-white/5 hover:bg-white/10 text-gray-300'
