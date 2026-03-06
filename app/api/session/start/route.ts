@@ -363,8 +363,8 @@ export async function POST(req: NextRequest) {
                     .single()
 
                 if (b) {
-                    roleForEntry = b.role
-                    levelForEntry = b.level
+                    roleForEntry = b.role ?? roleForEntry
+                    levelForEntry = b.level ?? levelForEntry
                 }
             }
         }
