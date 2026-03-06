@@ -525,6 +525,7 @@ export function synthesizePreparationSignals(
         // NEW: Per-answer synthesis outputs
         repeated_issues,
         tmay_first_impression_risk,
-        high_impact_answer_observations
+        high_impact_answer_observations,
+        tmay_diagnostic: null
     };
 }
