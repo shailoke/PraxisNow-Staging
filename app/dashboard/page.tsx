@@ -14,7 +14,10 @@ import Link from 'next/link'
 import DashboardFilters, { FilterState } from '@/components/DashboardFilters'
 import ProgressGraph from '@/components/ProgressGraph'
 import { OnboardingTour } from '@/components/OnboardingTour'
-import type { User, Session } from '@/lib/database.types'
+import type { Database } from '@/lib/database.types'
+
+type User = Database['public']['Tables']['users']['Row']
+type Session = Database['public']['Tables']['sessions']['Row']
 
 // Adapter type for UI components
 interface UIScenario {
