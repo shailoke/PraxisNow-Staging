@@ -168,7 +168,9 @@ export function resolveRuntimeScenario(
     const level = base.level
 
     // 2. Derive Persona (Strict Rule: derived from Role + Level)
-    const persona = derivePersona(role, level)
+    const safeRole = role ?? 'pm'
+    const safeLevel = level ?? 'senior'
+    const persona = derivePersona(safeRole, safeLevel)
 
     // 3. Resolve Dimensions
     // "Allowed dimensions must be predefined per role + level."
@@ -193,8 +195,8 @@ export function resolveRuntimeScenario(
 
     // 5. Build Runtime Object
     return {
-        role,
-        level,
+        role: safeRole,
+        level: safeLevel,
         interview_type: 'Technical/Behavioral', // Could be inferred
         scenario_title: custom?.title || base.scenario_title ||
             // Fallback: Generate from dimensions (preserving importance order)
@@ -202,8 +204,8 @@ export function resolveRuntimeScenario(
                 ? `${dimensions[0].name} & ${dimensions[1].name}`
                 : dimensions.length === 1
                     ? dimensions[0].name
-                    : `${role} Interview`),
-        scenario_description: base.prompt, // User explanation
+                    : `${safeRole} Interview`),
+        scenario_description: base.prompt ?? '', // User explanation
         company_context: custom?.company_context || 'Generic Tech Company',
 
         // Update: 'Free' -> 15 mins. 'Starter' (Paid), 'Pro', 'Pro+' -> 45 mins.
