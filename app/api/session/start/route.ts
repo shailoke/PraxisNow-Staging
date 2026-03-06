@@ -327,9 +327,11 @@ export async function POST(req: NextRequest) {
 
         if (scenario_id) {
             // CHECK HARDCODED FIRST
-            if (INTERVIEW_SCENARIOS[scenario_id as string]) {
-                roleForEntry = INTERVIEW_SCENARIOS[scenario_id as string].role
-                levelForEntry = INTERVIEW_SCENARIOS[scenario_id as string].level
+            const hardcodedScenario = INTERVIEW_SCENARIOS[scenario_id as string]
+
+            if (hardcodedScenario) {
+                roleForEntry = hardcodedScenario.role!
+                levelForEntry = hardcodedScenario.level!
                 console.log(`[SESSION_START] Resolved hardcoded role: ${roleForEntry}, level: ${levelForEntry} for ${scenario_id}`)
             }
             // CHECK DATABASE (Only if ID is likely a number/integer)
