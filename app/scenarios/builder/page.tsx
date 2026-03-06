@@ -4,9 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input' // Assuming these exist, else use standard HTML
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+
 import { ArrowLeft, Save, Sparkles, Target } from 'lucide-react'
 import { DbScenario } from '@/lib/runtime-scenario'
 
