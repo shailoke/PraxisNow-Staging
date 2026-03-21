@@ -461,7 +461,7 @@ function BUILD_PROMPT(params: {
 }) {
     const isShallow = params.evaluationDepth === 'shallow';
     const isInsufficient = params.evaluationDepth === 'insufficient';
-    const isStarter = params.package_tier === 'Starter' || params.package_tier === 'Free';
+    const isStarter = params.package_tier === 'Starter';
     const isPro = params.package_tier === 'Pro';
     const isProPlus = params.package_tier === 'Pro+';
 

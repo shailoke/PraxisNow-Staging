@@ -42,7 +42,7 @@ export default function SimulatorPage() {
     const [evalResult, setEvalResult] = useState<EvalResult | null>(null)
     const [isEvaluating, setIsEvaluating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    const [duration, setDuration] = useState(15 * 60) // Default 15m
+    const [duration, setDuration] = useState(45 * 60) // Default exactly 45m
     const [isWarningExpanded, setIsWarningExpanded] = useState(false)
 
     // Time Controller State
@@ -143,18 +143,21 @@ export default function SimulatorPage() {
             if (user) {
                 const { data: profile } = await supabase
                     .from('users')
-                    .select('package_tier')
+                    .select('package_tier, available_sessions')
                     .eq('id', user.id)
                     .single()
 
-                // Check if paid tier
-                if (scenarioIdStr === 'negotiation') {
-                    setDuration(30 * 60)
-                    setTimeLeft(30 * 60)
-                } else if (['Starter', 'Pro'].includes((profile as any)?.package_tier)) {
-                    setDuration(30 * 60)
-                    setTimeLeft(30 * 60)
+                const hasActivePack = profile?.package_tier && profile.package_tier !== 'Free';
+                const remainingSessions = profile?.available_sessions || 0;
+
+                // Client-side protection double-check
+                if (!hasActivePack || remainingSessions <= 0) {
+                    router.replace('/pricing')
+                    return
                 }
+            } else {
+                router.replace('/auth')
+                return
             }
             setLoading(false)
         }
@@ -270,7 +273,7 @@ export default function SimulatorPage() {
 
             // Initialize time controller
             setSessionStartTime(Date.now())
-            setTargetDuration(scenarioIdStr === 'negotiation' ? 20 : 45)
+            setTargetDuration(45)
 
             // 2. Start Voice (Now we have a sessionId, the hook uses it to fetch token)
             // Wait a tick for state update (or pass explicitly if hook allowed, but hook depends on state)

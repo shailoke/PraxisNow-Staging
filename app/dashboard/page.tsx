@@ -7,13 +7,12 @@ import { useRouter } from 'next/navigation'
 import ScenarioCard from '@/components/ScenarioCard'
 import { Button } from '@/components/ui/button'
 import SupportModal from '@/components/SupportModal'
-import { LogOut, Zap, Trophy, AlertTriangle, User as UserIcon, Plus, Download as DownloadIcon, Loader2, X, FileText, ChevronRight, HelpCircle, MicOff, Play, Clock } from 'lucide-react'
+import { LogOut, Zap, Trophy, AlertTriangle, User as UserIcon, Plus, Download as DownloadIcon, Loader2, X, FileText, ChevronRight, HelpCircle, MicOff, Play, Clock, Lock } from 'lucide-react'
 
 
 import Link from 'next/link'
 import DashboardFilters, { FilterState } from '@/components/DashboardFilters'
 import ProgressGraph from '@/components/ProgressGraph'
-import { OnboardingTour } from '@/components/OnboardingTour'
 import type { Database } from '@/lib/database.types'
 
 type User = Database['public']['Tables']['users']['Row']
@@ -47,8 +46,6 @@ export default function DashboardPage() {
         search: ''
     })
 
-    // Tour State
-    const [showTour, setShowTour] = useState(false)
     const [isProfileOpen, setIsProfileOpen] = useState(false)
 
     // New Dashboard State
@@ -117,35 +114,30 @@ export default function DashboardPage() {
             }
             setUser(user)
 
-            // 2. Fetch Profile (Tier, Sessions)
-            const { data: profile } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', user.id)
-                .single()
+            // 2. Fetch Profile, Scenarios, Custom Scenarios in Parallel
+            const [
+                { data: profile },
+                { data: dbScenarios },
+                { data: customData }
+            ] = await Promise.all([
+                supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, display_pic_url, avatar_url, negotiation_credits').eq('id', user.id).single(),
+                supabase.from('scenarios').select('id, role, level, scenario_title, evaluation_dimensions, prompt').order('created_at', { ascending: false }),
+                supabase.from('custom_scenarios').select('id, title, company_context, focus_dimensions, scenarios!inner(role, level, prompt)').eq('user_id', user.id).order('created_at', { ascending: false })
+            ]);
 
             if (profile) {
                 setUserProfile(profile as any)
-                if (profile.onboarding_complete === false) { // Explicitly check false (new default)
-                    setShowTour(true)
+                const hasActivePack = !!(profile.package_tier && profile.package_tier !== 'Free');
+
+                // Immediately redirect new users without a pack to pricing
+                if (!hasActivePack && profile.onboarding_complete === false) {
+                    await supabase.from('users').update({ onboarding_complete: true } as any).eq('id', user.id)
+                    router.replace('/pricing')
+                    return
                 }
             } else {
                 setUserProfile(null)
             }
-
-            // ... (rest of loading logic)
-            // 3. Fetch Scenarios (Global)
-            const { data: dbScenarios } = await supabase
-                .from('scenarios')
-                .select('*')
-                .order('created_at', { ascending: false })
-
-            // 4. Fetch Custom Scenarios
-            const { data: customData } = await supabase
-                .from('custom_scenarios')
-                .select('*, scenarios!inner(role, level, prompt)')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
 
             let allScenarios: UIScenario[] = []
 
@@ -200,25 +192,29 @@ export default function DashboardPage() {
             }
 
             if (customData) {
-                // @ts-ignore
-                const adaptedCustom = customData.map(s => ({
-                    id: s.id, // UUID
-                    role: s.scenarios.role,
-                    level: s.scenarios.level,
-                    title: s.title,
-                    description: `Custom ${s.scenarios.role} scenario` + (s.company_context ? ` with context.` : ''),
-                    dimensions: s.focus_dimensions || [],
-                    isCustom: true
-                }))
+                const adaptedCustom = customData.map(s => {
+                    const baseRole = (s.scenarios as any)?.role || 'Custom';
+                    const baseLevel = (s.scenarios as any)?.level || 'Custom';
+
+                    return {
+                        id: s.id, // UUID
+                        role: baseRole,
+                        level: baseLevel,
+                        title: s.title,
+                        description: `Custom ${baseRole} scenario` + (s.company_context ? ` with context.` : ''),
+                        dimensions: s.focus_dimensions || [],
+                        isCustom: true
+                    }
+                })
                 allScenarios = [...allScenarios, ...adaptedCustom]
             }
 
             setScenarios(allScenarios)
 
-            // 5. Fetch Sessions (History)
+            // 5. Fetch Sessions (History) - Optimized Payload
             const { data: dbSessions } = await supabase
                 .from('sessions')
-                .select('*')
+                .select('id, created_at, session_type, custom_scenario_id, scenario_id, clarity, structure, signal_noise, replay_of_session_id')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
 
@@ -262,15 +258,6 @@ export default function DashboardPage() {
         }
         loadData()
     }, [router, supabase])
-
-    const handleTourComplete = async () => {
-        setShowTour(false)
-        if (user) {
-            await supabase.from('users').update({ onboarding_complete: true } as any).eq('id', user.id)
-            // Update local state to prevent re-triggering if we re-fetch
-            if (userProfile) setUserProfile({ ...userProfile, onboarding_complete: true } as any)
-        }
-    }
 
     const handleSignOut = async () => {
         await supabase.auth.signOut()
@@ -380,14 +367,11 @@ export default function DashboardPage() {
         </div>
     </div>
 
+    const hasActivePack = !!(userProfile?.package_tier && userProfile.package_tier !== 'Free');
+
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-purple-500/30">
-            <OnboardingTour
-                isOpen={showTour}
-                onComplete={handleTourComplete}
-                onSkip={handleTourComplete}
-                userTier={(userProfile as any)?.package_tier}
-            />
+
 
             {/* Header */}
             <header className="border-b border-white/5 bg-black/50 backdrop-blur-md sticky top-0 z-40">
@@ -408,7 +392,7 @@ export default function DashboardPage() {
 
                     {/* Top Stats Bar */}
                     <div className="hidden md:flex items-center gap-6 text-sm">
-                        <div id="tour-start-session" className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
                             <Zap className="w-3 h-3" />
                             <span className="font-semibold">Sessions left: {userProfile?.available_sessions ?? 0}</span>
                         </div>
@@ -461,15 +445,7 @@ export default function DashboardPage() {
                                     >
                                         My Profile
                                     </Link>
-                                    <button
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-purple-500/20 hover:text-white transition-colors"
-                                        onClick={() => {
-                                            setIsProfileOpen(false)
-                                            setShowTour(true)
-                                        }}
-                                    >
-                                        Take me on a tour
-                                    </button>
+
                                     <div className="h-px bg-white/10 my-1"></div>
                                     <button
                                         onClick={handleSignOut}
@@ -493,6 +469,23 @@ export default function DashboardPage() {
             </header>
 
             <main className="max-w-7xl mx-auto px-6 py-8">
+                {/* No Active Pack Banner */}
+                {!hasActivePack && (
+                    <div className="mb-8 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between text-red-200 shadow-lg relative overflow-hidden">
+                        <div className="flex items-center gap-3 relative z-10">
+                            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+                            <span className="font-semibold text-sm">You don't have an active plan. Choose a plan to start practicing.</span>
+                        </div>
+                        <Button
+                            onClick={() => router.push('/pricing')}
+                            className="bg-red-500 hover:bg-red-600 text-white border-0 relative z-10 font-bold tracking-wide"
+                            size="sm"
+                        >
+                            View Plans
+                        </Button>
+                    </div>
+                )}
+
                 {/* Welcome/Action Banner */}
                 <div className="mb-10 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/20 rounded-2xl p-1 flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="px-6 py-4">
@@ -652,13 +645,22 @@ export default function DashboardPage() {
                                                 return (
                                                     <div
                                                         key={scenario.id}
-                                                        onClick={() => {
+                                                        onClick={(e) => {
+                                                            if (!hasActivePack) { e.preventDefault(); e.stopPropagation(); router.push('/pricing'); return; }
                                                             if (hasSessions) router.push(`/simulator/${scenario.id}`)
                                                             else router.push('/pricing')
                                                         }}
-                                                        className="block h-full cursor-pointer min-w-0"
+                                                        className={`block h-full cursor-pointer min-w-0 relative group`}
                                                     >
-                                                        <div className="h-full rounded-2xl border border-cyan-500/30 bg-[#081824] hover:bg-cyan-900/20 hover:border-cyan-500/50 transition-all flex flex-col overflow-hidden group">
+                                                        {!hasActivePack && (
+                                                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[3px] rounded-2xl border border-white/10 transition-colors group-hover:bg-black/50">
+                                                                <div className="bg-purple-600/80 rounded-full p-3 mb-2 shadow-lg backdrop-blur-md border border-purple-400/30">
+                                                                    <Lock className="w-6 h-6 text-white" />
+                                                                </div>
+                                                                <span className="font-semibold text-white tracking-wide">Unlock with a plan</span>
+                                                            </div>
+                                                        )}
+                                                        <div className={`h-full rounded-2xl border border-cyan-500/30 bg-[#081824] hover:bg-cyan-900/20 hover:border-cyan-500/50 transition-all flex flex-col overflow-hidden ${!hasActivePack ? 'opacity-40' : ''}`}>
                                                             <div className="p-6 flex flex-col h-full relative">
                                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-cyan-500/10 transition-colors pointer-events-none"></div>
 
@@ -706,10 +708,15 @@ export default function DashboardPage() {
                                                                     </div>
                                                                     <Button
                                                                         variant="glass"
-                                                                        disabled={!hasSessions}
-                                                                        className={`${!hasSessions ? 'opacity-50' : 'group-hover:bg-cyan-600 group-hover:border-cyan-500'} transition-colors text-xs h-8`}
+                                                                        disabled={(!hasSessions) && hasActivePack}
+                                                                        className={`${(!hasSessions && hasActivePack) ? 'opacity-50' : 'group-hover:bg-cyan-600 group-hover:border-cyan-500'} transition-colors text-xs h-8`}
                                                                     >
-                                                                        {!hasSessions ? (
+                                                                        {!hasActivePack ? (
+                                                                            <>
+                                                                                <Lock className="w-3 h-3 mr-2" />
+                                                                                Locked
+                                                                            </>
+                                                                        ) : !hasSessions ? (
                                                                             <>Out of Sessions</>
                                                                         ) : (
                                                                             <>
@@ -728,19 +735,20 @@ export default function DashboardPage() {
                                             return (
                                                 <div
                                                     key={scenario.id}
-                                                    onClick={() => {
-                                                        if (hasSessions) {
-                                                            router.push(`/simulator/${scenario.id}`)
-                                                        } else {
-                                                            router.push('/pricing')
-                                                        }
-                                                    }}
-                                                    className="block h-full cursor-pointer min-w-0"
+                                                    className="block h-full min-w-0"
                                                 >
                                                     <ScenarioCard
                                                         scenario={scenario}
                                                         disabled={!hasSessions}
                                                         duration={duration}
+                                                        locked={!hasActivePack}
+                                                        onClick={() => {
+                                                            if (hasSessions) {
+                                                                router.push(`/simulator/${scenario.id}`)
+                                                            } else {
+                                                                router.push('/pricing')
+                                                            }
+                                                        }}
                                                     />
                                                     {scenario.isCustom && (
                                                         <div className="mt-2 text-center text-xs text-purple-400 uppercase tracking-widest font-bold">Custom Build</div>

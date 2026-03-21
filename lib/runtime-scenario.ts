@@ -208,8 +208,8 @@ export function resolveRuntimeScenario(
         scenario_description: base.prompt ?? '', // User explanation
         company_context: custom?.company_context || 'Generic Tech Company',
 
-        // Update: 'Free' -> 15 mins. 'Starter' (Paid), 'Pro', 'Pro+' -> 45 mins.
-        session_duration_minutes: userTier === 'Free' ? 15 : 45,
+        // All sessions strictly 45 minutes
+        session_duration_minutes: 45,
 
         evaluation_dimensions: dimensions,
 
@@ -237,7 +237,7 @@ export function resolveRuntimeScenario(
 export async function selectQuestionFamilies(
     dimensions: string[],
     userId: string,
-    userTier: 'Free' | 'Starter' | 'Pro' | 'Pro+'
+    userTier: 'Starter' | 'Pro' | 'Pro+'
 ): Promise<Record<string, string>> {
     const { QUESTION_FAMILIES } = await import('./question-families')
     const selections: Record<string, string> = {}
@@ -245,7 +245,7 @@ export async function selectQuestionFamilies(
     // ========================================
     // STARTER TIER: Deterministic (No Randomization)
     // ========================================
-    if (userTier === 'Starter' || userTier === 'Free') {
+    if (userTier === 'Starter') {
         for (const dimension of dimensions) {
             // Always select first family for this dimension
             const defaultFamily = QUESTION_FAMILIES.find(

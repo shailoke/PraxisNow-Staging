@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
             if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
 
             // Enforce Tier: Pro or Pro+ only
-            if (profile.package_tier === 'Free' || profile.package_tier === 'Starter') {
+            if (profile.package_tier === 'Starter') {
                 return NextResponse.json({ error: 'Interview Replay is available on Pro and Pro+ plans.' }, { status: 403 })
             }
 
@@ -255,6 +255,13 @@ export async function POST(req: NextRequest) {
 
         if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
 
+        const hasActivePack = profile.package_tier && profile.package_tier !== 'Free';
+        const remainingSessions = profile.available_sessions || 0;
+
+        if (!hasActivePack) {
+            return NextResponse.json({ error: 'No active plan. Please purchase a plan to start an interview.' }, { status: 403 })
+        }
+
         // ===================================
         // 6. Fetch Scenario Dimensions (Needed for Tier Enforcement)
         // ===================================
@@ -299,7 +306,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'AI Fluency Round requires Pro tier' }, { status: 403 })
         }
 
-        if (!profile.available_sessions || profile.available_sessions < 1) {
+        if (remainingSessions < 1) {
             return NextResponse.json({ error: 'Insufficient session credits' }, { status: 403 })
         }
 
@@ -308,7 +315,7 @@ export async function POST(req: NextRequest) {
             .from('users')
             // @ts-ignore
             .update({
-                available_sessions: profile.available_sessions - 1,
+                available_sessions: remainingSessions - 1,
                 total_sessions_used: (profile.total_sessions_used || 0) + 1
             })
             .eq('id', user.id)
