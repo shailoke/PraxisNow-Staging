@@ -341,8 +341,10 @@ export type Database = {
           id: string
           improvement_priorities: string[] | null
           key_insight: string | null
+          momentum_card: Json | null
           pattern_analysis: string | null
           pdf_url: string | null
+          progression_comparison: Json | null
           readiness_assessment: string | null
           recovery: number | null
           replay_comparison: Json | null
@@ -372,8 +374,10 @@ export type Database = {
           id?: string
           improvement_priorities?: string[] | null
           key_insight?: string | null
+          momentum_card?: Json | null
           pattern_analysis?: string | null
           pdf_url?: string | null
+          progression_comparison?: Json | null
           readiness_assessment?: string | null
           recovery?: number | null
           replay_comparison?: Json | null
@@ -403,8 +407,10 @@ export type Database = {
           id?: string
           improvement_priorities?: string[] | null
           key_insight?: string | null
+          momentum_card?: Json | null
           pattern_analysis?: string | null
           pdf_url?: string | null
+          progression_comparison?: Json | null
           readiness_assessment?: string | null
           recovery?: number | null
           replay_comparison?: Json | null

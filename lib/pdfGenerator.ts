@@ -258,8 +258,43 @@ export async function generateSessionPDF(
             y = checkPageBreak(y, 200);
             y = addSectionTitle('Areas for Improvement', y);
 
-            evaluation.areas_for_improvement.forEach((imp: any) => {
+            // ── Level-unlock reframe (Change 4) ──────────────────────────────────
+            // Derive nextLevelLabel from hireable_level so improvements read as
+            // forward-looking (what gets you promoted) rather than deficit-focused.
+            const levelProgression: Record<string, string> = {
+                'Junior': 'Mid-level',
+                'Mid-level': 'Senior',
+                'Senior': 'Principal',
+                'Principal': 'Staff',
+                'Staff': 'Director',
+            };
+            let nextLevelLabel = 'To strengthen your bar:';
+            try {
+                const hireableLevel: string = evaluation.hireable_level || '';
+                const tokens = hireableLevel.split(' ');
+                const matchedToken = tokens.find(
+                    (t: string) => Object.prototype.hasOwnProperty.call(levelProgression, t)
+                );
+                if (matchedToken) {
+                    const nextLevel = levelProgression[matchedToken];
+                    nextLevelLabel = `To perform at ${nextLevel} ${metadata.role} bar:`;
+                }
+            } catch (levelErr) {
+                console.warn('[PDF] Level progression parse failed, using fallback:', levelErr);
+                nextLevelLabel = 'To strengthen your bar:';
+            }
+            // ─────────────────────────────────────────────────────────────────────
+
+            evaluation.areas_for_improvement.forEach((imp: any, impIndex: number) => {
                 y = checkPageBreak(y, 100);
+
+                // Render nextLevelLabel once, in gray italic, above the first item only
+                if (impIndex === 0) {
+                    y = checkPageBreak(y, 20);
+                    doc.fontSize(9).font(FONTS.italic).fillColor(COLORS.textMuted)
+                        .text(nextLevelLabel, SPACING.pageMargin, y);
+                    y += 18;
+                }
 
                 // Gap Type Badge (if present)
                 let gapBadge = '';
@@ -299,9 +334,12 @@ export async function generateSessionPDF(
                     }
                 }
 
+                // Prepend "To reach the next level: " to why_it_matters in rendered text only.
+                // Data object is NOT mutated.
+                const whyItMattersText = `To reach the next level: ${imp.why_it_matters || ''}`;
                 doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(imp.why_it_matters, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-                y += doc.heightOfString(imp.why_it_matters, { width: width - (2 * SPACING.pageMargin) }) + 20;
+                    .text(whyItMattersText, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
+                y += doc.heightOfString(whyItMattersText, { width: width - (2 * SPACING.pageMargin) }) + 20;
             });
         }
 
