@@ -42,12 +42,12 @@ export default function SimulatorPage() {
     const [evalResult, setEvalResult] = useState<EvalResult | null>(null)
     const [isEvaluating, setIsEvaluating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    const [duration, setDuration] = useState(45 * 60) // Default exactly 45m
+    const [duration, setDuration] = useState(30 * 60) // Default 30m
     const [isWarningExpanded, setIsWarningExpanded] = useState(false)
 
     // Time Controller State
     const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
-    const [targetDuration, setTargetDuration] = useState(45) // minutes
+    const [targetDuration, setTargetDuration] = useState(30) // minutes
 
     // Data Fetching: Hybrid (Legacy Static + New DB)
     useEffect(() => {
@@ -134,6 +134,9 @@ export default function SimulatorPage() {
                 }
 
                 setScenario(uiScenario)
+                const mins = uiScenario.session_duration_minutes ?? 30
+                setDuration(mins * 60)
+                setTargetDuration(mins)
             } catch (e) {
                 console.error(e)
             }
@@ -273,7 +276,7 @@ export default function SimulatorPage() {
 
             // Initialize time controller
             setSessionStartTime(Date.now())
-            setTargetDuration(45)
+            // targetDuration already set from scenario load — do not override here
 
             // 2. Start Voice (Now we have a sessionId, the hook uses it to fetch token)
             // Wait a tick for state update (or pass explicitly if hook allowed, but hook depends on state)
@@ -481,7 +484,9 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                     setEvalResult(result.summary) // Normalize to fit state (type cast if needed)
                 } else {
                     // Standard interview — redirect to Results Screen
-                    setEvalResult(result)
+                    // Do NOT call setEvalResult here: the simulator results view
+                    // is never rendered for standard interviews; setting evalResult
+                    // before the push causes a .map() crash on undefined fields.
                     router.push(`/results/${sessionId}`)
                 }
             } else {

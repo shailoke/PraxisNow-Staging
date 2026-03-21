@@ -261,6 +261,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           difficulty: string | null
+          duration_minutes: number | null
           evaluation_dimensions: string[] | null
           id: number
           interviewer_persona: Json | null
@@ -281,6 +282,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           difficulty?: string | null
+          duration_minutes?: number | null
           evaluation_dimensions?: string[] | null
           id?: number
           interviewer_persona?: Json | null
@@ -301,6 +303,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           difficulty?: string | null
+          duration_minutes?: number | null
           evaluation_dimensions?: string[] | null
           id?: number
           interviewer_persona?: Json | null
