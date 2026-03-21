@@ -4,6 +4,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface TurnExtraction {
     turn_index: number;
+    dimension: string | null;
     question: string;
     question_type: 'tmay' | 'behavioral' | 'case' | 'hypothetical' | 'technical';
     candidate_answer_verbatim: string;  // EXACT words, no paraphrase
@@ -39,9 +40,19 @@ Return valid JSON only. No markdown, no explanation outside the JSON.
 Return: { "turns": [ { turn_index, question, question_type, candidate_answer_verbatim, core_claim, answer_length_words, has_specific_example, has_metric_or_number, has_explicit_outcome } ] }`;
 
 export async function runStage1(
-    turns: { turn_index: number; content: string; user_answer: string }[]
+    turns: {
+        turn_index: number
+        content: string
+        user_answer: string
+        dimension: string | null
+    }[]
 ): Promise<Stage1Output> {
     const answeredTurns = turns.filter(t => t.user_answer?.trim());
+
+    // Build dimension lookup from DB values — GPT must NOT return dimension
+    const dimensionByTurnIndex = Object.fromEntries(
+        answeredTurns.map(t => [t.turn_index, t.dimension ?? null])
+    )
 
     const turnsFormatted = answeredTurns.map(t => ({
         turn_index: t.turn_index,
@@ -64,7 +75,12 @@ export async function runStage1(
     });
 
     const parsed = JSON.parse(response.choices[0].message.content || '{}');
-    const turnExtractions: TurnExtraction[] = parsed.turns || [];
+    // Merge DB dimension into each extraction — dimension comes from the DB lookup,
+    // never from GPT output (GPT has no knowledge of dimension assignments)
+    const turnExtractions: TurnExtraction[] = (parsed.turns || []).map((t: any) => ({
+        ...t,
+        dimension: dimensionByTurnIndex[t.turn_index] ?? null
+    }))
 
     return {
         turns: turnExtractions,
