@@ -42,12 +42,12 @@ export default function SimulatorPage() {
     const [evalResult, setEvalResult] = useState<EvalResult | null>(null)
     const [isEvaluating, setIsEvaluating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    const [duration, setDuration] = useState(45 * 60) // Default exactly 45m
+    const [duration, setDuration] = useState(30 * 60) // Default 30m
     const [isWarningExpanded, setIsWarningExpanded] = useState(false)
 
     // Time Controller State
     const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
-    const [targetDuration, setTargetDuration] = useState(45) // minutes
+    const [targetDuration, setTargetDuration] = useState(30) // minutes
 
     // Data Fetching: Hybrid (Legacy Static + New DB)
     useEffect(() => {
@@ -134,7 +134,7 @@ export default function SimulatorPage() {
                 }
 
                 setScenario(uiScenario)
-                const mins = uiScenario.session_duration_minutes ?? 45
+                const mins = uiScenario.session_duration_minutes ?? 30
                 setDuration(mins * 60)
                 setTargetDuration(mins)
             } catch (e) {

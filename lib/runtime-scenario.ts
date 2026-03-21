@@ -208,8 +208,8 @@ export function resolveRuntimeScenario(
         scenario_description: base.prompt ?? '', // User explanation
         company_context: custom?.company_context || 'Generic Tech Company',
 
-        // Duration from DB row; defaults to 45 if column absent or null
-        session_duration_minutes: base.duration_minutes ?? 45,
+        // Duration from DB row; defaults to 30 if column absent or null
+        session_duration_minutes: base.duration_minutes ?? 30,
 
         evaluation_dimensions: dimensions,
 
