@@ -348,8 +348,95 @@ export async function generateSessionPDF(
             drawFooter();
         }
 
-        // --- PRO+ ONLY: PERSONAL ANSWER RULES ---
-        if (tier === 'Pro+' && evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules)) {
+        // --- ANNOTATED TRANSCRIPT SECTION ---
+        // Only renders for new sessions (Stage 1 populates transcript_extracts)
+        const transcriptExtracts = (evaluation as any).transcript_extracts;
+        const turnDiagnostics: any[] = (evaluation as any).answer_level_diagnostics || [];
+
+        if (transcriptExtracts && Array.isArray(transcriptExtracts) && transcriptExtracts.length > 0) {
+            doc.addPage();
+            drawHeader();
+            y = 80;
+
+            doc.fontSize(FONT_SIZES.sectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                .text('Your Interview — Turn by Turn', SPACING.pageMargin, y);
+            y += 30;
+
+            doc.fontSize(9).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                .text(
+                    'Your exact answers are shown below alongside what the interviewer observed. This is the section to return to.',
+                    SPACING.pageMargin, y, { width: width - 2 * SPACING.pageMargin }
+                );
+            y += 28;
+
+            for (const extract of transcriptExtracts) {
+                const diagnostic = turnDiagnostics.find((d: any) => d.turn_index === extract.turn_index);
+                const isTMAY = extract.question_type === 'tmay' || extract.turn_index === 0;
+
+                if (y + 120 > doc.page.height - 60) {
+                    doc.addPage();
+                    drawHeader();
+                    y = 80;
+                }
+
+                // Question label
+                const qLabel = isTMAY ? 'Tell me about yourself' : `Question ${extract.turn_index}`;
+                doc.fontSize(8).font(FONTS.bold).fillColor(COLORS.textMuted)
+                    .text(qLabel.toUpperCase(), SPACING.pageMargin, y);
+                y += 14;
+
+                // Question text
+                const qText = extract.question || '';
+                doc.fontSize(10).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                    .text(qText, SPACING.pageMargin + 12, y, { width: width - 2 * SPACING.pageMargin - 12 });
+                y += doc.heightOfString(qText, { width: width - 2 * SPACING.pageMargin - 12 }) + 8;
+
+                // Candidate answer in a shaded box
+                const answerText = extract.candidate_answer_verbatim || '(no answer captured)';
+                const answerBoxWidth = width - 2 * SPACING.pageMargin;
+                const answerInnerWidth = answerBoxWidth - 28;
+                const answerHeight = doc.heightOfString(answerText, { width: answerInnerWidth }) + 20;
+
+                if (y + answerHeight > doc.page.height - 60) {
+                    doc.addPage();
+                    drawHeader();
+                    y = 80;
+                }
+
+                doc.rect(SPACING.pageMargin, y, answerBoxWidth, answerHeight).fill('#F8F7F4');
+                doc.fontSize(9.5).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(answerText, SPACING.pageMargin + 14, y + 10, { width: answerInnerWidth });
+                y += answerHeight + 6;
+
+                // Signal annotation
+                if (diagnostic) {
+                    const signalColor = diagnostic.signal_strength === 'strong' ? '#0A7C42'
+                        : diagnostic.signal_strength === 'mixed' ? '#8B5E00' : '#9B1C1C';
+                    const signalLabel = diagnostic.signal_strength === 'strong' ? 'Strong signal'
+                        : diagnostic.signal_strength === 'mixed' ? 'Mixed signal' : 'Weak signal';
+                    const annotationText = `${signalLabel.toUpperCase()}  —  ${diagnostic.interviewer_consequence || diagnostic.impact_on_interviewer || ''}`;
+                    doc.fontSize(8).font(FONTS.bold).fillColor(signalColor)
+                        .text(annotationText, SPACING.pageMargin + 12, y,
+                            { width: width - 2 * SPACING.pageMargin - 24 });
+                    y += doc.heightOfString(annotationText, { width: width - 2 * SPACING.pageMargin - 24 }) + 14;
+                } else {
+                    y += 12;
+                }
+
+                // Separator line
+                doc.moveTo(SPACING.pageMargin, y)
+                    .lineTo(width - SPACING.pageMargin, y)
+                    .strokeColor('#E0DFDC').lineWidth(0.5).stroke();
+                y += 12;
+            }
+
+            drawFooter();
+        }
+
+        // --- PRO/PRO+ : PERSONAL ANSWER RULES ---
+        // isExtendedEval matches the same pattern used in eval-logic.ts (Pro+ merged into Pro, Feb 2026)
+        const isExtendedEval = tier === 'Pro' || tier === 'Pro+';
+        if (isExtendedEval && evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules)) {
             doc.addPage();
             drawHeader();
             y = 80;

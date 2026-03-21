@@ -6,6 +6,12 @@ import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 import { Database } from '@/lib/database.types'
 import { generateSessionPDF } from '@/lib/pdfGenerator'
+import { runStage1 } from '@/lib/evaluation/stage1-extract'
+import { runStage2 } from '@/lib/evaluation/stage2-evaluate'
+import { runStage3 } from '@/lib/evaluation/stage3-rewrite'
+import { runStage4 } from '@/lib/evaluation/stage4-rules'
+import { validateAnswerUpgrades } from '@/lib/grounding-check'
+import { synthesizePreparationSignals } from '@/lib/signalSynthesis'
 
 export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -121,23 +127,24 @@ export async function POST(req: NextRequest) {
         let reconstructedTranscript = '';
 
         if (turns && turns.length > 0) {
-            // Log keys to identify the correct field if debugging is needed
-            const firstTurn = turns[0] as any;
-            console.log('[TRANSCRIPT_DEBUG] interview_turn keys:', Object.keys(firstTurn));
+            console.log('[TRANSCRIPT_DEBUG] interview_turn keys:', Object.keys(turns[0] as any));
 
             reconstructedTranscript = turns.map((turn: any) => {
-                // Heuristic to find user answer field
-                const userAnswer = turn.user_content || turn.user_audio_transcription || turn.answer_content || turn.user_response || '';
+                // CANONICAL: Read from user_answer only.
+                // This field is written by /api/turns/answer before the turn is marked answered=true.
+                // No fallback to legacy fields — ambiguous field-guessing produced silent empty transcripts.
+                const userAnswer = (turn as any).user_answer || '';
 
-                // Format:
-                // ASSISTANT: <question>
-                // USER: <answer>
+                if (turn.answered && !userAnswer) {
+                    console.error(
+                        `[DATA_LOSS] Turn #${turn.turn_index} marked answered but user_answer is empty.`,
+                        `Session: ${session_id}. Evaluation may be unreliable.`
+                    );
+                }
+
                 let entry = `ASSISTANT: ${turn.content}`;
                 if (turn.answered && userAnswer) {
                     entry += `\n\nUSER: ${userAnswer}`;
-                } else if (turn.answered) {
-                    // Fallback if marked answered but no text found (prevents silent failure of data extraction)
-                    console.warn(`[TRANSCRIPT_WARN] Turn #${turn.turn_index} marked answered but empty content. Keys available: ${Object.keys(turn).join(', ')}`);
                 }
                 return entry;
             }).join('\n\n');
@@ -182,10 +189,25 @@ export async function POST(req: NextRequest) {
         // UPDATE LOCAL VAR
         const full_transcript = effectiveTranscript;
 
-        // CANONICAL DEPTH COMPUTATION
-        const totalTurns = turns?.length || 0;
+        // DATA QUALITY GUARD: Abort if fewer than 50% of answered turns have user_answer content.
+        // This prevents fabricated evaluations on sessions where answers were not captured.
+        const answersWithContent = turns?.filter((t: any) => t.answered && (t as any).user_answer?.trim()).length || 0;
         const answeredTurns = turns?.filter((t: any) => t.answered === true).length || 0;
 
+        if (answeredTurns > 0 && answersWithContent / answeredTurns < 0.5) {
+            console.error(
+                `[EVAL_ABORT] Only ${answersWithContent}/${answeredTurns} answered turns have user_answer content.`,
+                `Fewer than 50% — aborting to prevent fabricated output.`
+            );
+            return NextResponse.json({
+                evaluation_depth: 'insufficient',
+                pdf_url: null,
+                error: 'Insufficient answer content captured for reliable evaluation. Please reattempt the session.'
+            });
+        }
+
+        // CANONICAL DEPTH COMPUTATION
+        const totalTurns = turns?.length || 0;
         const durationMinutes = (session.duration_seconds || 0) / 60;
 
 
@@ -243,58 +265,142 @@ export async function POST(req: NextRequest) {
         }
 
 
-        // 4. Build prompt
-        const prompt = BUILD_PROMPT({
-            role, level, interview_type, scenario_title: full_scenario_description,
-            role_specific_dimensions, package_tier: user.package_tier,
-            full_transcript, prior_session_summaries,
-            evaluationDepth
-        });
+        const dimensionNames: string[] = Array.isArray(dimensions)
+            ? dimensions.map((d: any) => (typeof d === 'string' ? d : d?.name || String(d)))
+            : [];
 
-        // 4. Call OpenAI
-        const result = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'system', content: prompt }],
-            response_format: { type: "json_object" }
-        });
+        // ── Stage 1: Extract ──────────────────────────────────────────────────────────
+        console.log('[EVAL_STAGE1] Starting extraction...');
+        const stage1 = await runStage1(
+            turns.map((t: any) => ({
+                turn_index: t.turn_index,
+                content: t.content,
+                user_answer: (t as any).user_answer || '',
+            }))
+        );
+        console.log(`[EVAL_STAGE1] Extracted ${stage1.turns.length} turns.`);
 
-        // 5. JSON Parsing
-        let evaluation;
+        // ── Stage 2: Evaluate ─────────────────────────────────────────────────────────
+        console.log('[EVAL_STAGE2] Starting evaluation...');
+        const stage2 = await runStage2(
+            stage1,
+            role,
+            level,
+            user.package_tier,
+            dimensionNames
+        );
+        console.log(`[EVAL_STAGE2] Signal: ${stage2.hiring_signal}, Confidence: ${stage2.hiring_confidence}`);
+
+        // ── Stage 3: Rewrite (Pro/Pro+ only, full depth only) ────────────────────────
+        let answerUpgrades: any[] = [];
+        if (evaluationDepth === 'full') {
+            console.log('[EVAL_STAGE3] Generating grounded rewrites...');
+            const rawUpgrades = await runStage3(stage1, stage2, user.package_tier);
+
+            const turnsWithAnswers = turns.filter((t: any) => (t as any).user_answer?.trim());
+            const { valid, flagged } = validateAnswerUpgrades(rawUpgrades, turnsWithAnswers);
+            if (flagged.length > 0) {
+                console.warn(`[EVAL_STAGE3] ${flagged.length} rewrites failed grounding check — excluded.`);
+            }
+            answerUpgrades = valid;
+            console.log(`[EVAL_STAGE3] ${answerUpgrades.length} grounded upgrades produced.`);
+        }
+
+        // ── Stage 4: Personal Rules (Pro/Pro+, full depth only) ───────────────────────
+        let personalRules: any[] = [];
+        const isExtendedEval = user.package_tier === 'Pro' || user.package_tier === 'Pro+';
+        if (isExtendedEval && evaluationDepth === 'full') {
+            console.log('[EVAL_STAGE4] Generating session-specific rules...');
+            personalRules = await runStage4(stage1, stage2);
+            console.log(`[EVAL_STAGE4] ${personalRules.length} validated rules produced.`);
+        }
+
+        // ── Assemble evaluation object ────────────────────────────────────────────────
+        const evaluation: any = {
+            hiring_signal: stage2.hiring_signal,
+            hiring_confidence: stage2.hiring_confidence,
+            hireable_level: stage2.hireable_level,
+            distance_to_strong_hire: stage2.distance_to_strong_hire,
+            confidence_calibration: stage2.hiring_confidence >= 0.85 ? 'above_bar'
+                : stage2.hiring_confidence >= 0.65 ? 'at_bar' : 'below_bar',
+
+            tmay_analysis: stage2.tmay_diagnostic ? {
+                critique: stage2.tmay_diagnostic.key_risk,
+                rewrite: null,  // Stage 3 handles rewrites
+            } : null,
+
+            high_level_assessment: {
+                seniority_observation: `${stage2.hireable_level}. ${stage2.distance_to_strong_hire.primary_blocker}`,
+                strongest_signals: stage2.top_strengths.map((s: any) => s.skill).join(', '),
+                barriers_to_next_level: stage2.distance_to_strong_hire.primary_blocker,
+            },
+
+            strengths: stage2.top_strengths.map((s: any) => ({
+                skill: s.skill,
+                observation: `Turn ${s.evidence_from_turn}: "${s.exact_quote_fragment}"`,
+                why_it_matters: s.why_it_signals_seniority,
+            })),
+            areas_for_improvement: stage2.gaps,
+
+            // Stage 3 — grounded rewrites only (no BUILD_PROMPT answer_upgrades)
+            answer_upgrades: answerUpgrades,
+
+            // Stage 4 — session-specific rules (Pro/Pro+ only)
+            personal_answer_rules: personalRules.map((r: any) => r.rule_text),
+            personal_answer_rules_detailed: personalRules,
+
+            // For signalSynthesis.ts
+            answer_level_diagnostics: stage2.answer_level_diagnostics,
+            tell_me_about_yourself_diagnostic: stage2.tell_me_about_yourself_diagnostic,
+
+            // Verbatim transcript for PDF Turn-by-Turn section
+            transcript_extracts: stage1.turns.map(t => ({
+                turn_index: t.turn_index,
+                question: t.question,
+                candidate_answer_verbatim: t.candidate_answer_verbatim,
+            })),
+        };
+
+        // ── Signal Synthesis (Tasks 5) ─────────────────────────────────────────────
         try {
-            evaluation = JSON.parse(result.choices[0].message.content || '{}');
-        } catch (err) {
-            console.error('JSON Parse Error', err);
-            throw new Error('Invalid evaluation JSON');
+            const synthesized = synthesizePreparationSignals({
+                evaluation: {
+                    primary_failure_mode: stage2.gaps[0] ? {
+                        label: stage2.gaps[0].gap_type || 'Structure',
+                        diagnosis: stage2.gaps[0].limit,
+                        why_it_hurt: stage2.gaps[0].why_it_matters,
+                    } : null,
+                    corrections: stage2.gaps.map(g => ({
+                        issue: g.limit,
+                        evidence_scope: 'session',
+                        severity: g.impact_scope === 'blocks_hire' ? 'HIGH' as const
+                            : g.impact_scope === 'blocks_next_level' ? 'MEDIUM' as const : 'LOW' as const,
+                        interviewer_consequence: g.why_it_matters,
+                        do_instead: g.fix_in_one_sentence,
+                        rule_of_thumb: '',
+                        illustrative_variant: null,
+                    })),
+                    communication_diagnostics: {
+                        structure: stage2.tmay_diagnostic?.structure || null,
+                        evidence_grounding: stage2.turn_diagnostics.some(d => d.signal_strength === 'weak')
+                            ? 'Partial' : 'Strong',
+                        verbal_noise: { detected: null, patterns: null },
+                    },
+                    evaluation_depth: evaluationDepth,
+                    answer_level_diagnostics: stage2.answer_level_diagnostics,
+                    tell_me_about_yourself_diagnostic: stage2.tell_me_about_yourself_diagnostic,
+                },
+                role,
+                level,
+                dimensions: dimensionNames,
+            }, user.package_tier);
+
+            evaluation.synthesis = synthesized;
+            console.log(`[EVAL_SYNTHESIS] repeated_issues: ${synthesized.repeated_issues.length}`);
+        } catch (synthErr) {
+            console.error('[EVAL_SYNTHESIS] Signal synthesis failed (non-critical):', synthErr);
         }
 
-        // Normalize fields
-        if (typeof evaluation.alternative_approaches === 'string') evaluation.alternative_approaches = [evaluation.alternative_approaches];
-
-
-        // Note: Suppression is handled in the prompt itself
-
-        // 6. Extract Answer Upgrades (Interviewer-Calibrated)
-        // CONTRACT: The prompt generates "answer_upgrades" with { question_context, weakness, upgraded_answer }
-        // We map these to the DB schema { issue, why_it_matters, what_to_change_next_time }
-        let answerUpgrades = null;
-
-        // Note: New schema generates this for everyone, but we only strictly persist/use it if present.
-        // The Prompt ensures it's always generated.
-        if (evaluation.answer_upgrades && Array.isArray(evaluation.answer_upgrades)) {
-            console.log(`✅ Extracting ${evaluation.answer_upgrades.length} Answer Upgrades (New Schema)`);
-            answerUpgrades = evaluation.answer_upgrades.map((u: any) => ({
-                issue: `[${u.question_context}] ${u.weakness}`,
-                why_it_matters: "Critical for demonstrating seniority and executive presence.", // Static fallback as per strict schema
-                what_to_change_next_time: u.upgraded_answer
-            }));
-        } else if (evaluation.transformations) {
-            // Fallback for transition period if legacy prompt somehow runs
-            answerUpgrades = evaluation.transformations.map((t: any) => ({
-                issue: `[${t.question_label}] ${t.original_summary}`,
-                why_it_matters: "Optimized for interviewer signal and clarity.",
-                what_to_change_next_time: t.cleaned_up_version
-            }));
-        }
 
         // 7. Replay Comparison (Conditional, PDF-only)
         // CONTRACT: Only generated if current (replay) session is full

@@ -235,6 +235,22 @@ export function useRealtimeVoice(sessionId: number | null, initialInstruction: s
                         messagesRef.current.push(newMsg)
                         setMessages(prev => [...prev, newMsg])
 
+                        // ORDERING INVARIANT: The answer POST must fire HERE — before the turn is
+                        // marked answered=true (which happens inside /api/turns/create on the next
+                        // ASK_NEXT_QUESTION signal). This ensures user_answer is always written
+                        // before evaluation reads the turns table.
+                        // Fire-and-forget: non-blocking, evaluation aborts if >50% are empty.
+                        if (sessionId) {
+                            fetch('/api/turns/answer', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    session_id: sessionId,
+                                    answer_text: msg.transcript.trim(),
+                                })
+                            }).catch(err => console.error('[ANSWER_PERSIST] Failed:', err))
+                        }
+
                         // BUG FIX: Increment turn count but DO NOT release gate
                         // Only ASK_NEXT_QUESTION releases gate
                         if (isWaitingForUser.current) {
