@@ -20,6 +20,7 @@ interface PDFMetadata {
     duration: string;
     session_id: string;
     session_type: string;
+    dimension_order?: string[];
 }
 
 // ========================================================================
@@ -230,6 +231,36 @@ export async function generateSessionPDF(
         doc.addPage();
         drawHeader();
         y = 80;
+
+        // --- DIMENSIONS ASSESSED ---
+        if (metadata.dimension_order && metadata.dimension_order.length > 0) {
+            y = checkPageBreak(y, 60)
+            y = addSectionTitle('Dimensions Assessed in This Session', y)
+            const dims = metadata.dimension_order
+            const midpoint = Math.ceil(dims.length / 2)
+            const leftCol = dims.slice(0, midpoint)
+            const rightCol = dims.slice(midpoint)
+            const colWidth = (width - (2 * SPACING.pageMargin)) / 2
+            const startY = y
+
+            // Left column
+            leftCol.forEach((dim: string) => {
+                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(`• ${dim}`, SPACING.pageMargin, y, { width: colWidth })
+                y += 18
+            })
+
+            // Right column — reset y to startY, offset x by colWidth
+            y = startY
+            rightCol.forEach((dim: string) => {
+                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(`• ${dim}`, SPACING.pageMargin + colWidth, y, { width: colWidth })
+                y += 18
+            })
+
+            // Advance y past whichever column was longer
+            y = startY + (Math.max(leftCol.length, rightCol.length) * 18) + 20
+        }
 
         // 3. STRENGTHS
         if (evaluation.strengths && Array.isArray(evaluation.strengths)) {
