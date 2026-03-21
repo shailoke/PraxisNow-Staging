@@ -714,5 +714,128 @@ Evaluate for:
 
 No coaching. No corrective teaching. Diagnostics only.
 Avoid: Definition-style questions, glossary content, trivia.`
+    },
+
+    // ==========================================
+    // PRODUCT DESIGN FAMILIES (Senior)
+    // ==========================================
+    {
+        id: 'pm_senior_product_design_iteration',
+        dimension: 'Product Design',
+        family_name: 'Product Design — Iteration & Validation (Senior)',
+        prompt_guidance: `Probe how the candidate validates product design decisions without
+    building the full thing, appropriate for a Product Manager at the Senior bar.
+    The domain must be one the candidate has not already discussed in this session.
+    Senior bar: Do they have a concrete validation approach (user research, prototypes,
+    staged rollout, proxy metrics)? Can they articulate what would change their mind?
+
+    Probe:
+    - "What signal did you use and was it sufficient in hindsight?"
+    - "What would have had to be true for you to change direction?"
+    - "How did you know you had enough signal to commit?"
+    Push on whether the validation approach was genuinely rigorous
+    or post-hoc rationalisation of a decision already made.`
+    },
+    {
+        id: 'pm_senior_product_design_tradeoffs',
+        dimension: 'Product Design',
+        family_name: 'Product Design — Tradeoffs & Prioritisation (Senior)',
+        prompt_guidance: `Probe how the candidate handles competing design requirements,
+    appropriate for a Product Manager at the Senior bar.
+    Ask about a specific past design decision involving a genuine tradeoff —
+    simplicity vs power, personalisation vs privacy, speed vs quality.
+    Do not name the tradeoff type in the question — let the candidate surface it.
+    Senior bar: Can they articulate a clear framework for resolving design tradeoffs
+    and defend a specific past decision under challenge?
+
+    Probe:
+    - "What did you cut and why — what made that the right call?"
+    - "Who pushed back and how did you handle it?"
+    - "Did that decision hold up after launch or did you have to revisit it?"
+    A candidate who describes a smooth tradeoff with no real tension
+    has not answered honestly — probe until the real constraint surfaces.`
+    },
+
+    // ==========================================
+    // EXECUTION FAMILIES (Senior)
+    // ==========================================
+    {
+        id: 'pm_senior_execution_experimentation',
+        dimension: 'Execution',
+        family_name: 'Execution — Experimentation Design (Senior)',
+        prompt_guidance: `Probe how the candidate designs experiments to validate product decisions,
+    appropriate for a Product Manager at the Senior bar.
+    Ask them to walk through how they would set up an experiment for a specific
+    type of product change — do not specify the product or feature.
+    Senior bar: Do they understand statistical significance, minimum detectable effect,
+    and the difference between a metric moving and a metric mattering?
+
+    Probe:
+    - "What is your null hypothesis here?"
+    - "How long would you run it and how did you arrive at that number?"
+    - "What would you do if the result is directionally positive but not statistically significant?"
+    - "How do you handle novelty effects in your experiment design?"
+    A candidate who describes A/B testing without addressing statistical rigour
+    or experiment duration has not met the Senior bar.`
+    },
+    {
+        id: 'pm_senior_execution_prioritisation',
+        dimension: 'Execution',
+        family_name: 'Execution — Prioritisation Under Constraint (Senior)',
+        prompt_guidance: `Probe how the candidate prioritises when resources are fixed and
+    everything feels urgent, appropriate for a Product Manager at the Senior bar.
+    Ask about a specific situation where they had to make a hard prioritisation call —
+    not a hypothetical framework walkthrough.
+    Senior bar: Do they have a clear mental model (RICE, opportunity sizing,
+    strategic alignment)? Can they show it in action under real pressure?
+
+    Probe:
+    - "How did you communicate what was being deprioritised and to whom?"
+    - "What happened when two equally important items competed for the same resource?"
+    - "Tell me about a prioritisation call you got wrong — what did you learn?"
+    A candidate who describes a tidy prioritisation process with no conflict
+    or regret has not given an honest answer — probe for the hard part.`
+    },
+
+    // ==========================================
+    // AI PRODUCT FAMILIES (Senior + Principal)
+    // ==========================================
+    {
+        id: 'pm_senior_ai_product_metrics',
+        dimension: 'AI Product',
+        family_name: 'AI Product — Success Metrics & Quality (Senior)',
+        prompt_guidance: `Probe how the candidate defines and measures success for AI-powered features,
+    appropriate for a Product Manager at the Senior bar.
+    The scenario must involve an AI feature where quality is genuinely ambiguous —
+    not a case where success is obvious. Do not specify the product domain.
+    Senior bar: Do they understand that AI features require different success metrics
+    than deterministic features? Do they distinguish model quality from product quality?
+
+    Probe:
+    - "How do you measure the quality of an AI output — who decides what good looks like?"
+    - "How do you separate model quality degradation from product quality degradation?"
+    - "What do you do if users love a feature that is technically producing wrong outputs?"
+    - "How would you detect silent quality degradation in production?"
+    A candidate who applies standard feature metrics to an AI feature without
+    acknowledging the difference has not met the Senior bar.`
+    },
+    {
+        id: 'pm_principal_ai_strategy_moat',
+        dimension: 'AI Product',
+        family_name: 'AI Product — Competitive Moat & Platform Strategy (Principal)',
+        prompt_guidance: `Probe how the candidate thinks about sustainable competitive advantage
+    in AI-powered products, appropriate for a Product Manager at the Principal bar.
+    Ask about a strategic AI investment decision — do not specify the company or product domain.
+    Principal bar: Do they understand why AI features are often easy to copy at the surface
+    but defensible at the data and workflow layer?
+    Do they reason about compounding advantage, not just current differentiation?
+
+    Probe:
+    - "Where does the moat actually come from — model, data, distribution, or workflow lock-in?"
+    - "How do you sequence AI investments to build compounding advantage over 3 years?"
+    - "What is the risk of over-indexing on a specific model provider?"
+    - "What happens to your moat when a competitor ships a better base model?"
+    A candidate who identifies surface-level differentiation without reasoning about
+    defensibility over time has not met the Principal bar.`
     }
 ]

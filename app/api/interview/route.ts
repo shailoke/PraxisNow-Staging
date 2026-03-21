@@ -8,6 +8,46 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 })
 
+// =========================================================
+// DIMENSION STATE: Pure function — no side effects
+// =========================================================
+interface DimensionState {
+    currentDimension: string | null
+    turnsUsedInDimension: number
+    turnsPerDimension: number
+    turnsRemainingInDimension: number
+    nextDimension: string | null
+    isClamped: boolean
+}
+
+function computeDimensionState(
+    turnIndex: number,            // nextIndex — the turn about to be inserted
+    dimensionOrder: string[],     // from session.dimension_order
+    sessionDurationMinutes: number
+): DimensionState {
+    if (!dimensionOrder || dimensionOrder.length === 0) {
+        return { currentDimension: null, turnsUsedInDimension: 0, turnsPerDimension: 2, turnsRemainingInDimension: 0, nextDimension: null, isClamped: false }
+    }
+
+    // Turn 0 is TMAY (pre-seeded); behavioral turns start at index 1
+    const behavioralIndex = Math.max(0, turnIndex - 1)
+
+    const availableTurns = Math.floor(sessionDurationMinutes / 3)
+    const turnsPerDimension = Math.max(2, Math.floor((availableTurns - 1) / dimensionOrder.length))
+
+    const lastDimIdx = dimensionOrder.length - 1
+    const rawDimIdx = Math.floor(behavioralIndex / turnsPerDimension)
+    const isClamped = rawDimIdx > lastDimIdx
+    const dimIdx = Math.min(rawDimIdx, lastDimIdx)
+
+    const currentDimension = dimensionOrder[dimIdx]
+    const turnsUsedInDimension = (behavioralIndex % turnsPerDimension) + 1
+    const turnsRemainingInDimension = isClamped ? 0 : Math.max(0, turnsPerDimension - turnsUsedInDimension)
+    const nextDimension = dimIdx < lastDimIdx ? dimensionOrder[dimIdx + 1] : null
+
+    return { currentDimension, turnsUsedInDimension, turnsPerDimension, turnsRemainingInDimension, nextDimension, isClamped }
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
@@ -414,6 +454,50 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // =========================================================
+        // DIMENSION TRACKING: Resolve next turn index for dimension state
+        // =========================================================
+        // is_first_question → nextTurnIndex is always 1 (no DB call needed)
+        // Otherwise → query the current max turn_index so we know which dimension we're in
+        let nextTurnIndex = 1
+        if (session_id && !is_first_question) {
+            const { data: currentMaxTurn } = await supabase
+                .from('interview_turns')
+                .select('turn_index')
+                .eq('session_id', session_id)
+                .order('turn_index', { ascending: false })
+                .limit(1)
+                .single()
+            nextTurnIndex = currentMaxTurn ? (currentMaxTurn as any).turn_index + 1 : 1
+        }
+
+        const dimState = computeDimensionState(
+            nextTurnIndex,
+            dimensionOrder,
+            scenarioConfig.session_duration_minutes ?? 30
+        )
+
+        let dimensionProgressBlock = ''
+        if (dimState.currentDimension) {
+            const lines = [
+                '[DIMENSION PROGRESS]',
+                `Current dimension: ${dimState.currentDimension} (turn ${dimState.turnsUsedInDimension} of ${dimState.turnsPerDimension})`,
+                `Turns remaining in this dimension: ${dimState.turnsRemainingInDimension}`,
+            ]
+            if (dimState.nextDimension) lines.push(`Next dimension: ${dimState.nextDimension}`)
+            if (dimState.isClamped) lines.push('NOTE: All planned dimensions covered. Continue probing any relevant dimension.')
+            dimensionProgressBlock = lines.join('\n')
+        }
+
+        console.log(`[DIMENSION_STATE] turn ${nextTurnIndex}:`, {
+            currentDimension: dimState.currentDimension,
+            turnsUsedInDimension: dimState.turnsUsedInDimension,
+            turnsPerDimension: dimState.turnsPerDimension,
+            turnsRemainingInDimension: dimState.turnsRemainingInDimension,
+            nextDimension: dimState.nextDimension,
+            isClamped: dimState.isClamped
+        })
+
         // Generate the system prompt with dimension order, family selections, and recent questions
         const systemPrompt = generateInterviewerPrompt({
             ...scenarioConfig,
@@ -429,7 +513,8 @@ export async function POST(request: NextRequest) {
             session_history: sessionHistory,
             selected_families: familySelections, // Inject Entry Guidance
             recent_questions: recentQuestions,   // Anti-convergence blocklist
-            entry_probe_intent: entryProbeIntent ?? null // NEW: probe intent for freshness
+            entry_probe_intent: entryProbeIntent ?? null, // Probe intent for freshness
+            dimensionProgressBlock               // Dimension-aware pacing signal
         })
 
         // Build messages array for OpenAI
@@ -639,7 +724,9 @@ export async function POST(request: NextRequest) {
                             turn_index: nextIndex,
                             turn_type: is_first_question ? 'question' : 'followup',
                             content: assistantMessage.trim(),
-                            answered: false
+                            answered: false,
+                            dimension: dimState.currentDimension ?? null,
+                            turns_in_dimension: dimState.turnsUsedInDimension ?? null
                         } as any)
                         .select('id')
                         .single()
