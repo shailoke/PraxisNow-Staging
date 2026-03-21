@@ -134,6 +134,9 @@ export default function SimulatorPage() {
                 }
 
                 setScenario(uiScenario)
+                const mins = uiScenario.session_duration_minutes ?? 45
+                setDuration(mins * 60)
+                setTargetDuration(mins)
             } catch (e) {
                 console.error(e)
             }
@@ -273,7 +276,7 @@ export default function SimulatorPage() {
 
             // Initialize time controller
             setSessionStartTime(Date.now())
-            setTargetDuration(45)
+            // targetDuration already set from scenario load — do not override here
 
             // 2. Start Voice (Now we have a sessionId, the hook uses it to fetch token)
             // Wait a tick for state update (or pass explicitly if hook allowed, but hook depends on state)
