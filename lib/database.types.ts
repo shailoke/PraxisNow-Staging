@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -120,28 +95,43 @@ export type Database = {
           answered: boolean
           content: string
           created_at: string
+          dimension: string | null
           id: string
           session_id: string
           turn_index: number
           turn_type: string
+          turns_in_dimension: number | null
+          user_answer: string | null
+          user_answer_captured_at: string | null
+          user_answer_word_count: number | null
         }
         Insert: {
           answered?: boolean
           content: string
           created_at?: string
+          dimension?: string | null
           id?: string
           session_id: string
           turn_index: number
           turn_type: string
+          turns_in_dimension?: number | null
+          user_answer?: string | null
+          user_answer_captured_at?: string | null
+          user_answer_word_count?: number | null
         }
         Update: {
           answered?: boolean
           content?: string
           created_at?: string
+          dimension?: string | null
           id?: string
           session_id?: string
           turn_index?: number
           turn_type?: string
+          turns_in_dimension?: number | null
+          user_answer?: string | null
+          user_answer_captured_at?: string | null
+          user_answer_word_count?: number | null
         }
         Relationships: [
           {
@@ -327,6 +317,27 @@ export type Database = {
           },
         ]
       }
+      scenarios_prompt_backup_pre_variety: {
+        Row: {
+          id: number | null
+          level: string | null
+          prompt: string | null
+          role: string | null
+        }
+        Insert: {
+          id?: number | null
+          level?: string | null
+          prompt?: string | null
+          role?: string | null
+        }
+        Update: {
+          id?: number | null
+          level?: string | null
+          prompt?: string | null
+          role?: string | null
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           alternative_approaches: string[] | null
@@ -335,6 +346,7 @@ export type Database = {
           confidence_score: number | null
           created_at: string | null
           custom_scenario_id: string | null
+          dimension_order: Json | null
           duration_seconds: number | null
           evaluation: Json | null
           evaluation_data: Json | null
@@ -368,6 +380,7 @@ export type Database = {
           confidence_score?: number | null
           created_at?: string | null
           custom_scenario_id?: string | null
+          dimension_order?: Json | null
           duration_seconds?: number | null
           evaluation?: Json | null
           evaluation_data?: Json | null
@@ -401,6 +414,7 @@ export type Database = {
           confidence_score?: number | null
           created_at?: string | null
           custom_scenario_id?: string | null
+          dimension_order?: Json | null
           duration_seconds?: number | null
           evaluation?: Json | null
           evaluation_data?: Json | null
@@ -576,6 +590,54 @@ export type Database = {
           },
           {
             foreignKeyName: "user_family_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_question_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          level: string
+          question_text: string
+          role: string
+          session_id: string
+          turn_index: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          level: string
+          question_text: string
+          role: string
+          session_id: string
+          turn_index: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          level?: string
+          question_text?: string
+          role?: string
+          session_id?: string
+          turn_index?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_question_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_question_history_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -812,9 +874,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       notification_channel: ["email", "in_app"],

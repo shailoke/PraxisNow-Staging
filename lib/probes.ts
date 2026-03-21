@@ -369,6 +369,86 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_marketing_leader_ai_fluency',
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can frame org-wide AI marketing strategy, evaluate build vs buy for marketing AI, and model ROI for AI marketing investments with portfolio reasoning.'
+    },
+
+    // ==========================================
+    // PM - SENIOR - PRODUCT DESIGN
+    // ==========================================
+    {
+        id: 'probe_pm_senior_product_design_structure',
+        entry_family: 'entry_pm_senior_product_design',
+        dimension: 'Product Design',
+        intent: 'Evaluate whether the candidate applies a structured design framework unprompted — specifically whether they segment users before defining the problem, and define the problem before proposing solutions.'
+    },
+    {
+        id: 'probe_pm_senior_product_design_tradeoffs',
+        entry_family: 'entry_pm_senior_product_design',
+        dimension: 'Product Design',
+        intent: 'Evaluate whether the candidate proactively surfaces design tradeoffs and can defend a specific design decision against a competing approach — not just describe what they built.'
+    },
+
+    // ==========================================
+    // PM - PRINCIPAL - PRODUCT DESIGN
+    // ==========================================
+    {
+        id: 'probe_pm_principal_product_design_systems',
+        entry_family: 'entry_pm_principal_product_design',
+        dimension: 'Product Design',
+        intent: 'Evaluate whether the candidate thinks in systems and ecosystems — do they consider how their design decision affects adjacent teams, third-party developers, or platform extensibility.'
+    },
+    {
+        id: 'probe_pm_principal_product_design_sequencing',
+        entry_family: 'entry_pm_principal_product_design',
+        dimension: 'Product Design',
+        intent: 'Evaluate whether the candidate can articulate a deliberate build sequencing strategy — what to ship first, what to defer, and why the order matters for learning and risk reduction.'
+    },
+
+    // ==========================================
+    // PM - SENIOR - EXECUTION DIAGNOSIS
+    // ==========================================
+    {
+        id: 'probe_pm_senior_execution_hypothesis_tree',
+        entry_family: 'entry_pm_senior_execution_diagnosis',
+        dimension: 'Execution',
+        intent: 'Evaluate whether the candidate builds a structured hypothesis tree before reaching for data — do they systematically separate internal vs external causes before investigating.'
+    },
+    {
+        id: 'probe_pm_senior_execution_data_literacy',
+        entry_family: 'entry_pm_senior_execution_diagnosis',
+        dimension: 'Execution',
+        intent: 'Evaluate data literacy specifically — can the candidate identify exactly which data cuts they need, articulate why, and reason about what a given data pattern would confirm or rule out.'
+    },
+
+    // ==========================================
+    // PM - SENIOR - AI PRODUCT
+    // ==========================================
+    {
+        id: 'probe_pm_senior_ai_product_failure_modes',
+        entry_family: 'entry_pm_senior_ai_product',
+        dimension: 'AI Product',
+        intent: 'Evaluate whether the candidate reasons about AI failure modes proactively — do they think about what happens when the model is wrong, how users are affected, and how the product recovers.'
+    },
+    {
+        id: 'probe_pm_senior_ai_product_value_vs_hype',
+        entry_family: 'entry_pm_senior_ai_product',
+        dimension: 'AI Product',
+        intent: 'Evaluate whether the candidate can distinguish genuine AI value-add from AI for AI\'s sake — do they apply a clear threshold test for when AI is the right solution vs a simpler deterministic approach.'
+    },
+
+    // ==========================================
+    // PM - PRINCIPAL - AI STRATEGY
+    // ==========================================
+    {
+        id: 'probe_pm_principal_ai_strategy_reversibility',
+        entry_family: 'entry_pm_principal_ai_strategy',
+        dimension: 'AI Product',
+        intent: 'Evaluate whether the candidate reasons about reversibility and lock-in risk when making AI platform decisions — do they distinguish one-way from two-way doors.'
+    },
+    {
+        id: 'probe_pm_principal_ai_strategy_org_implications',
+        entry_family: 'entry_pm_principal_ai_strategy',
+        dimension: 'AI Product',
+        intent: 'Evaluate whether the candidate thinks through org capability gaps and hiring/build implications of an AI strategy decision — not just the product logic but the execution reality.'
     }
 ]
 

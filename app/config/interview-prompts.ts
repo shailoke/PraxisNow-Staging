@@ -30,6 +30,7 @@ export interface InterviewPromptVariables {
    selected_families?: Record<string, string> // Question randomization: dimension -> family_id
    recent_questions?: string[]       // Anti-convergence: recently used questions to avoid
    entry_probe_intent?: string | null // NEW: probe-level intent to vary the Entry Family opening question
+   dimensionProgressBlock?: string    // Dimension-aware pacing signal injected at end of prompt
 }
 
 /**
@@ -49,7 +50,8 @@ export function generateInterviewerPrompt(variables: InterviewPromptVariables): 
       selected_families = {},
       recent_questions = [], // Anti-convergence: questions to avoid
       dimension_order = [],   // Dimension sequencing: enforces order
-      entry_probe_intent = null // NEW: probe intent for entry family freshness
+      entry_probe_intent = null, // probe intent for entry family freshness
+      dimensionProgressBlock = '' // dimension-aware pacing signal
    } = variables
 
    // Format Persona
@@ -427,7 +429,7 @@ SESSION END BEHAVIOR
 CONVERSATION HISTORY
 ––––––––––––––––––––
 ${session_history || '(Session just started. Ask your opening question.)'}
-
+${dimensionProgressBlock ? `\n${dimensionProgressBlock}\n` : ''}
 ASK ONE QUESTION NOW.`
 }
 

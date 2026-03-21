@@ -335,5 +335,116 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
         dimension: 'Entry',
         family_name: 'AI Fluency Entry (Marketing Leader)',
         prompt_guidance: `Probe the candidate's **AI-driven marketing transformation strategy and ROI modeling**. Leader bar: Can they frame org-wide AI marketing strategy, evaluate build vs buy for marketing AI, and model ROI for AI marketing investments? Focus on executive reasoning and portfolio-level trade-offs.`
+    },
+
+    // ==========================================
+    // PRODUCT MANAGER - SENIOR - PRODUCT DESIGN & EXECUTION
+    // ==========================================
+    {
+        id: 'entry_pm_senior_product_design',
+        dimension: 'Entry',
+        family_name: 'Product Design Entry (Senior)',
+        prompt_guidance: `Generate a concrete product design challenge appropriate for a Product Manager
+    interviewing at the Senior bar. Choose a product domain that has not already appeared
+    in this session. Vary across consumer, B2B, marketplace, platform, and enterprise
+    contexts — do not default to the same domain across sessions.
+    Senior bar: Does the candidate structure their answer across user segmentation →
+    problem definition → solution space → tradeoffs → success metrics?
+    Do NOT move on if the candidate skips a step — probe the missing step directly.
+    If they skip user segmentation: "Who specifically are you designing for, and why that segment?"
+    If they skip problem definition: "What problem are you actually solving before you get to solutions?"
+    If they skip tradeoffs: "What would you cut if engineering capacity was halved?"
+    If they skip metrics: "How would you know in 90 days if this was the right call?"
+    A candidate who produces a fluent narrative without structure has not met the Senior bar.`
+    },
+    {
+        id: 'entry_pm_senior_execution_diagnosis',
+        dimension: 'Entry',
+        family_name: 'Execution Diagnosis Entry (Senior)',
+        prompt_guidance: `Generate a metric anomaly scenario with specific numbers, appropriate for
+    a Product Manager interviewing at the Senior bar. The anomaly must be ambiguous enough
+    that multiple hypotheses are plausible — never present a scenario with an obvious single cause.
+    Vary the metric type across sessions: engagement, conversion, retention, revenue, quality —
+    do not default to the same metric type.
+    Senior bar: Does the candidate build a structured hypothesis tree before reaching for data?
+    Do they separate internal causes (release, infra, bug, experiment) from
+    external causes (seasonality, competitor action, market shift)?
+    Do they identify specific data cuts and articulate why each cut tests a specific hypothesis?
+    Probe assumptions aggressively:
+    - "What if this drop is isolated to one platform or region?"
+    - "What if a recent release only partially rolled out?"
+    - "What would you look at to rule out a data pipeline issue?"
+    A candidate who names a single hypothesis without a structured tree,
+    or who reaches for solutions before diagnosing, has not met the Senior bar.`
+    },
+    {
+        id: 'entry_pm_senior_ai_product',
+        dimension: 'Entry',
+        family_name: 'AI Product Thinking Entry (Senior)',
+        prompt_guidance: `Generate an AI product scenario appropriate for a Product Manager
+    interviewing at the Senior bar. The scenario must present a genuine decision point —
+    not a hypothetical where the answer is obviously yes or no.
+    Vary the decision type across sessions: where to apply AI in a workflow,
+    how to evaluate AI output quality, how to handle an AI feature that is underperforming,
+    whether AI is the right solution at all. Do not default to the same scenario type
+    across sessions.
+    Senior bar: Can the candidate distinguish genuine AI value-add from AI for AI's sake?
+    Do they reason about data requirements, model quality thresholds, failure modes,
+    user trust, and how success metrics differ for AI vs deterministic features?
+    Probe:
+    - "How would you know if this AI feature is making things worse, not better?"
+    - "What is the minimum quality bar before you'd ship this?"
+    - "What happens when it produces a wrong output — who is accountable and how does the product recover?"
+    - "What's your non-AI fallback if the model underperforms in production?"
+    Reject candidates who treat AI as a capability layer with no failure modes or
+    who cannot articulate a concrete quality threshold.`
+    },
+
+    // ==========================================
+    // PRODUCT MANAGER - PRINCIPAL - PRODUCT DESIGN & AI STRATEGY
+    // ==========================================
+    {
+        id: 'entry_pm_principal_product_design',
+        dimension: 'Entry',
+        family_name: 'Product Design Entry (Principal)',
+        prompt_guidance: `Generate a product design challenge at platform or ecosystem scale,
+    appropriate for a Product Manager interviewing at the Principal bar.
+    The challenge must involve multiple stakeholders or system interdependencies —
+    not a single-user feature problem. Choose a domain that has not already appeared
+    in this session and vary across infrastructure, developer tooling, marketplace,
+    and enterprise platform contexts.
+    Principal bar: Does the candidate reason about platform vs point-solution tradeoffs,
+    ecosystem incentives, and deliberate build sequencing?
+    Do they consider what NOT to build as rigorously as what to build?
+    Probe on:
+    - Validation: "How would you validate this direction without building it?"
+    - Abandonment: "What signal would make you stop and change direction entirely?"
+    - Sequencing: "If you could only ship one thing in the first 6 months, what is it and why?"
+    - Systems thinking: "How does this decision affect teams or products adjacent to yours?"
+    Reject surface-level user journey answers. If the candidate does not reason about
+    second-order effects unprompted, probe until they do or it becomes clear they cannot.`
+    },
+    {
+        id: 'entry_pm_principal_ai_strategy',
+        dimension: 'Entry',
+        family_name: 'AI Strategy Entry (Principal)',
+        prompt_guidance: `Generate a strategic AI decision scenario at org or platform scale,
+    appropriate for a Product Manager interviewing at the Principal bar.
+    The scenario must involve a genuine strategic tradeoff —
+    not a question where the right answer is self-evident.
+    Vary the decision type across sessions: build vs buy vs fine-tune,
+    AI platform openness vs control, competitive response to an AI-native entrant,
+    data strategy as a moat. Do not default to the same decision type across sessions.
+    Principal bar: Does the candidate reason about build vs buy vs fine-tune
+    with concrete, defensible criteria?
+    Do they think about competitive moat, data network effects, and org capability gaps?
+    Do they reason about second-order effects and what this decision locks them into?
+    Probe:
+    - "How would you make this case to a skeptical CFO with a concrete ROI framing?"
+    - "What makes this decision reversible or irreversible — and does that change your recommendation?"
+    - "What org capabilities do you need that you don't have today, and how does that affect sequencing?"
+    - "What does this decision make harder to do two years from now?"
+    A candidate who produces a strong product logic argument without addressing
+    org execution reality has not met the Principal bar.`
     }
 ]
