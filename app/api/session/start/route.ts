@@ -219,11 +219,12 @@ export async function POST(req: NextRequest) {
                 will_skip_selection: true
             })
 
-            console.log(`🔁 [REPLAY_PROBE_REUSE]`, {
+            console.log(`🔁 [REPLAY_PROBE_CONFIRMED]`, {
                 replay_session_id,
                 original_entry_probe: originalSession.probe_selections?.['Entry'],
                 reusing_probes: originalSession.probe_selections,
-                will_skip_probe_selection: true
+                will_skip_probe_selection: true,
+                note: 'Probe intent injection is SKIPPED for replay sessions in interview/route.ts'
             })
 
             const { data: session, error: insertError } = await adminClient

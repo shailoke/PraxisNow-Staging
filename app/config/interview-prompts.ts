@@ -29,6 +29,7 @@ export interface InterviewPromptVariables {
    session_history?: string          // Conversation history for context
    selected_families?: Record<string, string> // Question randomization: dimension -> family_id
    recent_questions?: string[]       // Anti-convergence: recently used questions to avoid
+   entry_probe_intent?: string | null // NEW: probe-level intent to vary the Entry Family opening question
 }
 
 /**
@@ -47,7 +48,8 @@ export function generateInterviewerPrompt(variables: InterviewPromptVariables): 
       session_history = '',
       selected_families = {},
       recent_questions = [], // Anti-convergence: questions to avoid
-      dimension_order = []   // Dimension sequencing: enforces order
+      dimension_order = [],   // Dimension sequencing: enforces order
+      entry_probe_intent = null // NEW: probe intent for entry family freshness
    } = variables
 
    // Format Persona
@@ -94,7 +96,11 @@ What Annoys Me: ${interviewer_persona.what_annoys_me.join(', ')}`
                entryFamilyGuidance = `
    • IMMEDIATELY after the candidate answers "Tell me about yourself":
      - You MUST probe the following area (Entry Family: ${family.family_name}):
-     - "${family.prompt_guidance}"
+     - "${family.prompt_guidance}"${entry_probe_intent ? `
+     - EVALUATION INTENT FOR THIS SESSION (internal — do not state this to the candidate):
+       ${entry_probe_intent}
+     - Frame your opening question to specifically test this intent. A different session for
+       the same family may test a different intent — yours must reflect THIS intent only.` : ''}
      - Do NOT ask a generic opening question.
      - Move strictly to this topic.`
             }
@@ -209,11 +215,13 @@ STRICT RULES — NO EXCEPTIONS
    The candidate should feel like they are encountering a FRESH question,
    even if they have practiced this dimension extensively.${recent_questions.length > 0 ? `
 
+    ========================================
+   QUESTIONS YOU HAVE ALREADY ASKED THIS USER — DO NOT REPEAT
    ========================================
-   EXPLICITLY FORBIDDEN QUESTION PATTERNS
-   ========================================
-   You have recently asked variations of the following questions.
-   Do NOT ask anything semantically similar to:
+   These are questions asked in previous sessions with this specific candidate.
+   Semantic similarity is sufficient to trigger the block — do not ask any question
+   that tests the same specific scenario, constraint, or situation type, even with
+   different wording or a different product name.
    
 ${recent_questions.map((q, i) => `   ${i + 1}. "${q}"`).join('\n')}
    

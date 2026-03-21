@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
         let familySelections: Record<string, string> = {}
         let probeSelections: Record<string, string | null> = {}  // Probe selections for freshness
         let dimensionOrder: string[] = []
+        let userId: string | null = null  // NEW: required for user-scoped anti-convergence
+        let entryProbeIntent: string | null = null  // NEW: probe intent for entry family freshness
 
         // ===================================
         // REPLAY DETERMINISM: Detect Replay Mode
@@ -60,9 +62,10 @@ export async function POST(request: NextRequest) {
 
         if (session_id) {
             // Fetch session metadata to check if this is a replay
+            // NOTE: user_id added here (first fetch only). Do NOT add to the hydration-fix fetch below.
             const { data: sessionData, error: sessionFetchError } = await supabase
                 .from('sessions')
-                .select('replay_of_session_id, family_selections, dimension_order')
+                .select('replay_of_session_id, family_selections, dimension_order, user_id')
                 .eq('id', session_id)
                 .single()
 
@@ -102,6 +105,10 @@ export async function POST(request: NextRequest) {
                 console.log(`✅ [REPLAY_LOADED] Loaded ${originalTurns.length} turns from original session`)
             }
 
+            // Extract userId for anti-convergence scoping
+            userId = (sessionData as any)?.user_id ?? null
+            console.log(`[USER_ID_LOADED] userId: ${userId ?? 'null'}, isReplay: ${isReplaySession}`)
+
             // CRITICAL FIX: Hydrate familySelections from DB with strict validation
             const dbFamilySelections = (sessionData as any)?.family_selections
             const dbProbeSelections = (sessionData as any)?.probe_selections
@@ -121,6 +128,16 @@ export async function POST(request: NextRequest) {
                 console.log(`✅ [PROBE_SELECTIONS_LOADED] Keys: ${Object.keys(probeSelections)}, Entry: ${probeSelections['Entry'] || 'MISSING'}`)
             } else {
                 console.warn(`⚠️ [PROBE_SELECTIONS_NULL] No probe_selections in session ${session_id} (OK for old sessions)`)
+            }
+
+            // NEW: Load entry probe intent for prompt injection (skip for replay sessions)
+            // Replay sessions must reproduce the original probe intent verbatim via stored probe_selections.
+            const entryProbeId = probeSelections['Entry']
+            if (entryProbeId && !isReplaySession) {
+                const { PROBES } = await import('@/lib/probes')
+                const entryProbe = PROBES.find((p: any) => p.id === entryProbeId)
+                entryProbeIntent = entryProbe?.intent || null
+                console.log(`[PROBE_INTENT_LOADED] probe: ${entryProbeId}, intent: ${entryProbeIntent?.substring(0, 60)}...`)
             }
 
             if ((sessionData as any)?.dimension_order && Array.isArray((sessionData as any).dimension_order)) {
@@ -359,40 +376,50 @@ export async function POST(request: NextRequest) {
         }
 
         // ===================================
-        // ANTI-CONVERGENCE: Fetch Recent Questions
+        // ANTI-CONVERGENCE: Fetch Recent Questions (User-Scoped)
         // ===================================
         let recentQuestions: string[] = []
 
-        if (session_id && scenarioConfig.role && scenarioConfig.level) {
+        console.log(`[ANTI_CONVERGENCE_TIER] role=${scenarioConfig.role}, isReplay=${isReplaySession}, blocklistActive=${!isReplaySession}`)
+
+        if (isReplaySession) {
+            // Replay sessions must reproduce original questions exactly — no blocklist.
+            recentQuestions = []
+            console.log('[ANTI_CONVERGENCE] Replay session — blocklist cleared')
+        } else if (session_id && userId && scenarioConfig.role && scenarioConfig.level) {
             try {
-                // Fetch last 5 interviewer questions for same role across all recent sessions
+                const ninetyDaysAgo = new Date(
+                    Date.now() - 90 * 24 * 60 * 60 * 1000
+                ).toISOString()
+
+                const { data: historyRows } = await (supabase as any)
+                    .from('user_question_history')
+                    .select('question_text')
+                    .eq('user_id', userId)
+                    .eq('role', scenarioConfig.role)
+                    .eq('level', scenarioConfig.level)
+                    .neq('session_id', session_id)   // exclude current session
+                    .gte('created_at', ninetyDaysAgo)
+                    .order('created_at', { ascending: false })
+                    .limit(30)
+
+                if (historyRows && historyRows.length > 0) {
+                    recentQuestions = historyRows.map((r: any) => r.question_text)
+                    console.log(`[ANTI_CONVERGENCE] Loaded ${recentQuestions.length} past questions for user ${userId} (${scenarioConfig.role} ${scenarioConfig.level})`)
+                }
+
+                /* OLD QUERY — removed (global, 10 turns, no user scope):
                 const { data: recentTurns } = await supabase
                     .from('interview_turns')
                     .select('content, sessions!inner(scenario_id, scenarios!inner(role, level))')
                     .eq('turn_type', 'question')
-                    .neq('turn_index', 0) // Exclude TMAY
+                    .neq('turn_index', 0)
                     .order('created_at', { ascending: false })
-                    .limit(10) // Fetch more, filter client-side
-
-                if (recentTurns && recentTurns.length > 0) {
-                    // Filter for matching role+level and extract question text
-                    recentQuestions = recentTurns
-                        .filter((turn: any) => {
-                            const session = turn.sessions
-                            const scenario = session?.scenarios
-                            return scenario?.role === scenarioConfig.role &&
-                                scenario?.level === scenarioConfig.level
-                        })
-                        .map((turn: any) => turn.content)
-                        .slice(0, 5) // Take top 5
-
-                    if (recentQuestions.length > 0) {
-                        console.log(`✅ [ANTI_CONVERGENCE] Found ${recentQuestions.length} recent questions for ${scenarioConfig.role} ${scenarioConfig.level}`)
-                    }
-                }
+                    .limit(10)
+                */
             } catch (error) {
-                console.error('⚠️ [ANTI_CONVERGENCE] Failed to fetch recent questions:', error)
-                // Continue without anti-convergence data - not critical
+                console.error('[ANTI_CONVERGENCE] History query failed:', error)
+                // Non-critical — continue without blocklist
             }
         }
 
@@ -406,11 +433,12 @@ export async function POST(request: NextRequest) {
             scenario_title: scenarioConfig.scenario_title!,
             base_system_prompt: scenarioConfig.base_system_prompt!,
             evaluation_dimensions: scenarioConfig.evaluation_dimensions!,
-            dimension_order: dimensionOrder, // DIMENSION SEQUENCING
-            seeded_questions: [], // FORCE EMPTY to disable legacy opening
+            dimension_order: dimensionOrder,     // DIMENSION SEQUENCING
+            seeded_questions: [],                // FORCE EMPTY to disable legacy opening
             session_history: sessionHistory,
             selected_families: familySelections, // Inject Entry Guidance
-            recent_questions: recentQuestions // Anti-convergence blocklist
+            recent_questions: recentQuestions,   // Anti-convergence blocklist
+            entry_probe_intent: entryProbeIntent ?? null // NEW: probe intent for freshness
         })
 
         // Build messages array for OpenAI
@@ -633,6 +661,27 @@ export async function POST(request: NextRequest) {
                     newTurnId = (insertedTurn as any)?.id
                     console.log(`✅ [TURN_CREATED] Populated turn #${nextIndex} created (id: ${newTurnId})`)
                     turnStatus = 'completed'
+
+                    // NEW: Fire-and-forget insert into user_question_history
+                    // REPLAY GUARD: never write history for replay sessions
+                    // INVARIANT: This must NEVER be awaited. Never block the response on this.
+                    if (!isReplaySession && userId && scenarioConfig.role && scenarioConfig.level) {
+                        ; (supabaseClient as any)
+                            .from('user_question_history')
+                            .insert({
+                                user_id: userId,
+                                role: scenarioConfig.role,
+                                level: scenarioConfig.level,
+                                session_id,
+                                turn_index: nextIndex,
+                                question_text: assistantMessage.trim()
+                            } as any)
+                            .then(({ error: historyError }: { error: any }) => {
+                                if (historyError) {
+                                    console.warn('[QUESTION_HISTORY] Non-blocking insert failed:', historyError)
+                                }
+                            })
+                    }
 
                 } catch (dbError) {
                     console.error('Database transaction error:', dbError)

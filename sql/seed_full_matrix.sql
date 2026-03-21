@@ -4,143 +4,133 @@ delete from public.scenarios where true;
 -- 1. SOFTWARE DEVELOPMENT ENGINEERING (SDE)
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Software Engineer', 'Junior', 
- 'Conduct a standard coding interview covering data structures and algorithms. Ask the candidate to solve a problem like "Valid Anagram" or "Detect Cycle in Linked List". Focus on clean code and basic edge cases.',
+ 'The candidate is being evaluated on Code Correctness, DS&A Knowledge, Communication, and Edge Case Handling. Present a novel problem that tests these dimensions. Do not reuse any problem from the blocked question list. Generate a fresh problem each session — novelty is intentional and required. The problem must meet ALL of the following criteria: it must involve designing, implementing, or reasoning about a data structure or algorithm; it must be solvable in an interview timebox; it must have at least one non-obvious edge case worth probing. Good problem forms: "given a stream of X, find Y efficiently", "design a data structure that supports operations A, B, C", "given a graph/array/string of type X, solve constraint problem Y." Invalid forms: questions about product roadmaps, user research, stakeholder management, or system architecture without a direct coding component. Freshness constraint: novelty must come from an unexpected constraint (offline-first, adversarial input, memory limit), an unusual data type, or an unfamiliar access pattern — not from switching to a different named problem. HARD CONSTRAINT: Every question in this session must be answerable by a Software Engineer candidate. Questions requiring product management, marketing, or business strategy knowledge are forbidden.',
  ARRAY['Code Correctness', 'DS&A Knowledge', 'Communication', 'Edge Case Handling'], 
  'Neutral and efficient'),
 
 ('Software Engineer', 'Senior', 
- 'Design a distributed system component (e.g., Distributed Key-Value Store or Notification Service). Focus on consistency models, sharding, and failure handling.',
+ 'The candidate is being evaluated on System Design, Scalability, Trade-offs, and Database Choice. Present a novel distributed system design problem that tests these dimensions. Do not reuse any problem from the blocked question list. Generate a fresh problem each session — novelty is intentional and required. The problem must meet ALL of the following criteria: it must involve designing a distributed component at internet scale; it must require reasoning about consistency, partitioning, and failure modes; the scale and constraint requirements must emerge through dialogue, not be pre-stated. Good problem forms: "design a distributed component that does X under constraint Y", "design the write or read path for a system with property Z", "how would you architect a service that handles N with requirement Q." Invalid forms: naming specific existing products (e.g., "design Twitter", "build a Kafka clone"), any question requiring product management or business strategy knowledge. Freshness constraint: novelty must come from an unusual consistency requirement, an asymmetric read/write pattern, an adversarial client model, or an unexpected failure mode — not from switching domain names. HARD CONSTRAINT: Every question in this session must be answerable by a Software Engineer candidate. Questions requiring product management or business knowledge without an engineering component are forbidden.',
  ARRAY['System Design', 'Scalability', 'Trade-offs', 'Database Choice'], 
  'Skeptical and architectural'),
 
 ('Software Engineer', 'Principal', 
- 'Discuss high-level architectural evolution and legacy migration. Scenario: "We need to migrate a monolithic payment system to microservices with zero downtime."',
+ 'The candidate is being evaluated on Architecture Evolution, Risk Management, Influence, and Technical Vision. Do not introduce a migration scenario. Open by asking the candidate to describe a large-scale architectural decision or migration they have personally led or significantly contributed to. Use their answer as the basis for all follow-up questions. Probe specifically for: how they identified and sequenced risks in the migration path; how they built organisational alignment around technical direction; what trade-offs they made and what they would change in hindsight. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises — not on any situation you introduce. HARD CONSTRAINT: Every question in this session must be answerable by a Software Engineer candidate. Questions requiring product management, marketing, or HR knowledge are forbidden.',
  ARRAY['Architecture Evolution', 'Risk Management', 'Influence', 'Technical Vision'], 
  'Skeptical and probing'),
 
 ('Software Engineer', 'Leader', 
- 'Engineering Leadership scenario. Scenario: "Your org velocity has dropped by 30% over two quarters. How do you diagnose and fix this?"',
+ 'The candidate is being evaluated on Organisational Health, Metrics, Leadership, and Execution. Do not introduce a velocity or delivery decline scenario. Open by asking the candidate to describe a situation where they identified and addressed a systemic decline in engineering delivery. Use their answer as the basis for all follow-up questions. Probe specifically for: the signals they used to detect the decline; how they diagnosed root cause (people, process, or technical debt); and what concrete interventions they drove and measured. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises — not on any situation you introduce. HARD CONSTRAINT: Every question in this session must be answerable by a Software Engineer candidate. Questions requiring product strategy, financial modelling, or marketing knowledge are forbidden.',
  ARRAY['Organizational Health', 'Metrics', 'Leadership', 'Execution'], 
  'Challenging and executive');
 
 -- 2. PRODUCT MANAGER (PM)
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Product Manager', 'Junior', 
- 'Product Sense case. Scenario: "Pick a favorite product. How would you improve it?" Focus on user needs and basic prioritization.',
+ 'The candidate is being evaluated on Product Sense, User Empathy, Creativity, and Communication. Present a novel product improvement or design problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session — novelty is intentional and required. The problem must meet ALL of the following criteria: it must involve identifying a user need and proposing a product response; it must be scoped to a single digital product surface; it must involve at least one prioritisation decision the candidate must justify. Good problem forms: "pick a product used by audience X and identify its biggest friction point", "design a new feature for a product serving segment Y", "how would you improve the experience of Z for a non-obvious user group." Freshness constraint: novelty must come from an unexpected user segment, a physical-to-digital context, a resource constraint, or an underserved use case — never reuse a named product, company, or market from the blocked question list. Invalid forms: questions about engineering architecture, data model design, or ML internals. HARD CONSTRAINT: Every question in this session must be answerable by a Product Manager candidate. Questions requiring software implementation or data science knowledge are forbidden.',
  ARRAY['Product Sense', 'User Empathy', 'Creativity', 'Communication'], 
  'User-centric and methodical'),
 
 ('Product Manager', 'Senior', 
- 'Product Strategy and Execution. Scenario: "We need to launch a competitor to TikTok. How do we start and what is the MVP?"',
+ 'The candidate is being evaluated on Product Strategy, Market Analysis, Prioritisation, and Execution. Present a novel product launch or competitive entry problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session — novelty is intentional and required. The problem must meet ALL of the following criteria: it must involve entering or competing in a market with existing incumbents; it must require a defensible MVP definition and sequencing rationale; it must surface trade-offs between speed, scope, and differentiation. Good problem forms: "we have decided to enter category X — how do you define what we build first and why", "a new category is forming in space Y — how do you position and launch", "design the market entry strategy for a product competing in a space with one dominant player." Freshness constraint: novelty must come from an unexpected product category, an unusual competitive dynamic, a regulatory or distribution constraint, or a non-obvious target segment — never name a specific company or product from the blocked list. Invalid forms: questions about engineering implementation or data pipeline design. HARD CONSTRAINT: Every question in this session must be answerable by a Product Manager candidate. Questions requiring software architecture or ML knowledge are forbidden.',
  ARRAY['Product Strategy', 'Market Analysis', 'Prioritization', 'Execution'], 
  'Analytical and data-driven'),
 
 ('Product Manager', 'Principal', 
- 'Platform Strategy. Scenario: "Our SaaS platform churn is increasing. Define a strategy to move upmarket while retaining SMBs."',
+ 'The candidate is being evaluated on Strategic Vision, Business Models, Stakeholder Management, and Data Fluency. Do not introduce a churn or market positioning scenario. Open by asking the candidate to describe a significant strategic inflection or market repositioning they have personally led or driven. Use their answer as the basis for all follow-up questions. Probe specifically for: how they built the business case and got executive alignment; what data they used to frame the strategic decision; and what trade-offs they navigated between short-term revenue and long-term positioning. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises. HARD CONSTRAINT: Every question in this session must be answerable by a Product Manager candidate. Questions requiring engineering architecture or ML model knowledge are forbidden.',
  ARRAY['Strategic Vision', 'Business Models', 'Stakeholder Management', 'Data Fluency'], 
  'Strategic and questioning'),
 
 ('Product Manager', 'Leader', 
- 'Organizational Product Leadership. Scenario: "Two of your product teams are in constant conflict over shared resources. How do you resolve this structure?"',
+ 'The candidate is being evaluated on Leadership, Org Design, Conflict Resolution, and Vision Alignment. Do not introduce a team conflict scenario. Open by asking the candidate to describe a situation where they had to restructure, realign, or resolve systemic misalignment across product teams. Use their answer as the basis for all follow-up questions. Probe specifically for: the diagnostic process they used to identify the structural root cause; how they built alignment across senior stakeholders; and what they changed and how they measured whether it worked. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises. HARD CONSTRAINT: Every question in this session must be answerable by a Product Manager or Product Leader candidate. Questions requiring engineering implementation knowledge are forbidden.',
  ARRAY['Leadership', 'Org Design', 'Conflict Resolution', 'Vision Alignment'], 
  'Executive and diplomatic');
 
 -- 3. PRODUCT MARKETING MANAGER (PMM)
+-- NOTE: These rows are inserted as 'Product Marketing Manager' and converted to 'Marketer'
+-- by role_model_cleanup.sql. The prompts already use the Marketer-appropriate sanitized text.
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Product Marketing Manager', 'Junior', 
- 'Go-to-Market basics. Scenario: "Draft the messaging and positioning for a new budget smartphone targeting college students."',
+ 'The candidate is being evaluated on Messaging, Audience Segmentation, GTM Strategy, and Market Positioning. Present a novel go-to-market positioning or launch problem. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve developing positioning for a product with a specific user segment; it must require articulating a value proposition and at least one channel choice. Good problem forms: "develop messaging for a new product for segment X with constraint Y", "position a product entering a crowded category for audience Z." Freshness constraint: novelty must come from an unexpected product category, a budget constraint, a channel limitation, or a non-obvious competitive positioning angle — never reuse a named product, brand, or market. HARD CONSTRAINT: Every question must be answerable by a Marketer candidate. Engineering, data science, or product roadmap ownership questions are forbidden.',
  ARRAY['Messaging', 'Audience Segmentation', 'Copywriting', 'Creativity'], 
  'Enthusiastic and clear'),
 
 ('Product Marketing Manager', 'Senior', 
- 'Strategic GTM Launch. Scenario: "We are launching a complex B2B enterprise security tool. Outline the 6-month GTM plan."',
+ 'The candidate is being evaluated on Demand Generation, Channel Strategy, Campaign Execution, and Metrics. Present a novel demand generation or growth campaign challenge. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve building or optimising demand pipeline with at least one constraint (budget, audience reach, or time-to-pipeline); it must surface a measurement or attribution challenge. Good problem forms: "design a demand generation programme for a B2B product entering a new vertical with constraint Y", "our pipeline is down — walk me through how you diagnose and recover it." Freshness constraint: novelty from an unexpected vertical, unusual channel mix constraint, competitive saturation, or measurement gap — never reuse a named product or market. HARD CONSTRAINT: Every question must be answerable by a Marketer candidate.',
  ARRAY['GTM Strategy', 'Channel Strategy', 'Sales Enablement', 'Metrics'], 
  'Focused and metric-heavy'),
 
 ('Product Marketing Manager', 'Principal', 
- 'Category Creation. Scenario: "We have a new product that doesn''t fit existing categories. How do we define and dominate this new space?"',
+ 'The candidate is being evaluated on Account-Based Marketing, Sales Alignment, Campaign Execution, and Metrics. Present a novel ABM programme design or account strategy challenge. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve designing a targeted account programme for B2B with account selection criteria, tiering, and channel orchestration; it must surface a sales-marketing alignment challenge. Good problem forms: "design a tier-1 ABM programme for SaaS entering a new enterprise vertical", "our ABM generates engagement but not pipeline — walk me through your diagnosis." Freshness constraint: novelty from an unexpected industry vertical, unusual account tier structure, data quality constraint, or unusual sales motion — never reuse a named account or company. HARD CONSTRAINT: Every question must be answerable by a Marketer candidate.',
  ARRAY['Category Design', 'Brand Strategy', 'Thought Leadership', 'Market Positioning'], 
  'Visionary and critical'),
 
 ('Product Marketing Manager', 'Leader', 
- 'Portfolio Strategy. Scenario: "Our brand perception is aging. Lead a rebrand that aligns product reality with new market aspirations."',
+ 'The candidate is being evaluated on Brand Strategy, Thought Leadership, Brand & Narrative, and Market Positioning. Do not introduce a rebrand or brand-aging scenario. Open by asking the candidate to describe a situation where they had to significantly reposition a brand, establish a new brand voice, or drive a narrative shift in a competitive market. Probe specifically for: how they diagnosed the gap between brand perception and product reality; how they built CEO or board alignment; and what success metrics they defined and whether they were achieved. HARD CONSTRAINT: Every question must be answerable by a Marketer candidate. Engineering or data science questions are forbidden.',
  ARRAY['Brand Strategy', 'Leadership', 'Budget Management', 'Executive Comm'], 
  'Executive and brand-focused');
 
 -- 4. DATA SCIENTIST (DS)
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Data Scientist', 'Junior', 
- 'Data Analysis and SQL. Scenario: "Analyze this dataset of user logins to find retention patterns. Write the SQL and explain the findings."',
+ 'The candidate is being evaluated on SQL, Data Intuition, Communication, and Basic Statistics. Present a novel data analysis problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve querying or aggregating behavioural event data; it must require at least one non-trivial SQL pattern (window function, aggregation, or join); it must require the candidate to articulate what they would look for and why. Good problem forms: "given a table of user activity events, write the SQL to find X pattern", "you have tables A and B — how do you answer question Y", "an analyst asks you to find the cohort retention rate — how do you write this query." Freshness constraint: novelty must come from an unexpected data schema, a counter-intuitive aggregation target, or an ambiguous metric definition — not from changing domain names. HARD CONSTRAINT: Every question in this session must be answerable by a Data Scientist candidate. Product management or engineering architecture questions without a data component are forbidden.',
  ARRAY['SQL', 'Data Intuition', 'Communication', 'Basic Statistics'], 
  'Technical and precise'),
 
 ('Data Scientist', 'Senior', 
- 'Machine Learning System Design. Scenario: "Design a recommendation system for a video streaming service. Handle cold starts and scalability."',
+ 'The candidate is being evaluated on ML System Design, Feature Engineering, Productionisation, and Metrics. Present a novel ML system design problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve designing an ML system end-to-end for a real product use case; it must require reasoning about feature design, model selection, and production deployment; it must surface a non-trivial challenge such as cold start, distribution shift, or feedback loops. Good problem forms: "design a ranking or personalisation system for product X with constraint Y", "build a model that predicts Z at scale with challenge Q", "how would you architect an ML pipeline for a system that must handle property X." Freshness constraint: novelty must come from an unexpected prediction target, an unusual data sparsity pattern, a privacy constraint, or an asymmetric feedback signal — not from switching the product name. HARD CONSTRAINT: Every question in this session must be answerable by a Data Scientist candidate. Product roadmap or engineering-only architecture questions are forbidden.',
  ARRAY['ML System Design', 'Feature Engineering', 'Productionization', 'Metrics'], 
  'Analytical and thorough'),
 
 ('Data Scientist', 'Principal', 
- 'Data Strategy & AI Ethics. Scenario: "We want to use user data to predict health outcomes. What are the ethical risks and architectural safeguards?"',
+ 'The candidate is being evaluated on Data Strategy, Ethics/Privacy, Architecture, and Influence. Present a novel high-stakes data or AI strategy problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve using sensitive or behavioural data at scale for a consequential prediction; it must require the candidate to articulate ethical risks and not just technical safeguards; it must surface trade-offs between data value and privacy or fairness constraints. Good problem forms: "we want to use data of type X to make decision Y — what are the risks and guardrails", "design a data strategy for a use case with legal and ethical exposure in domain Z", "how would you architect a system that maximises data utility while enforcing constraint Q." Freshness constraint: novelty must come from an unexpected data type, a new regulatory context, an unfamiliar prediction target, or an unusual harm category. HARD CONSTRAINT: Every question in this session must be answerable by a Data Scientist candidate.',
  ARRAY['Data Strategy', 'Ethics/Privacy', 'Architecture', 'Influence'], 
  'Ethical and strategic'),
 
 ('Data Scientist', 'Leader', 
- 'Data Organization Leadership. Scenario: "The engineering team ignores data insights. How do you build a data-driven culture?"',
+ 'The candidate is being evaluated on Data Culture, Leadership, Cross-functional Influence, and ROI Focus. Do not introduce a culture or adoption scenario. Open by asking the candidate to describe a situation where they drove meaningful adoption of data-informed decision-making across a team or organisation that was resistant or immature. Use their answer as the basis for all follow-up questions. Probe specifically for: the specific behaviours or decisions they were trying to change; how they built credibility and coalition with non-data stakeholders; and what metrics they used to know the culture had actually shifted. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises. HARD CONSTRAINT: Every question in this session must be answerable by a Data Science Leader candidate. Questions requiring software engineering implementation or product roadmap ownership knowledge are forbidden.',
  ARRAY['Data Culture', 'Leadership', 'Cross-functional Influence', 'ROI Focus'], 
  'Challenging and outcome-oriented');
 
 -- 5. PROJECT MANAGER (PgM)
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Project Manager', 'Junior', 
- 'Project Planning. Scenario: "Create a timeline for a 3-month web migration project with 3 dependencies."',
+ 'The candidate is being evaluated on Planning, Scheduling, Communication, and Risk Identification. Present a novel project planning problem that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve planning a time-boxed technical or operational initiative with at least two external dependencies; it must require the candidate to surface and sequence risks; it must require a communication or stakeholder plan. Good problem forms: "plan a delivery of X with constraints Y and dependency Z", "how do you build a project timeline for an initiative where team capacity is uncertain", "a project has a fixed launch date and three external dependencies — walk me through your plan." Freshness constraint: novelty must come from an unexpected dependency type, a compressed timeline, unclear ownership, or an unusual cross-team structure. HARD CONSTRAINT: Every question in this session must be answerable by a Project Manager candidate. Engineering implementation or product strategy questions are forbidden.',
  ARRAY['Planning', 'Scheduling', 'Communication', 'Risk ID'], 
  'Organized and detail-oriented'),
 
 ('Project Manager', 'Senior', 
- 'Risk Management & Recovery. Scenario: "A critical vendor is 3 weeks late, threatening the launch date. How do you recover?"',
+ 'The candidate is being evaluated on Risk Management, Negotiation, Stakeholder Communication, and Problem Solving. Do not introduce a vendor delay or delivery failure scenario. Open by asking the candidate to describe a situation where a significant delivery risk materialised on a project they owned. Use their answer as the basis for all follow-up questions. Probe specifically for: how they detected the risk early (or why they did not); what recovery options they evaluated and how they chose between them; how they communicated to stakeholders under pressure. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises. HARD CONSTRAINT: Every question in this session must be answerable by a Project Manager candidate. Product strategy or engineering architecture questions are forbidden.',
  ARRAY['Risk Management', 'Negotiation', 'Stakeholder Comm', 'Problem Solving'], 
  'Pragmatic and firm'),
 
 ('Project Manager', 'Principal', 
- 'Program Management. Scenario: "Manage a multi-year digital transformation program across 5 business units. How do you track 20+ workstreams?"',
+ 'The candidate is being evaluated on Program Management, Governance, Reporting, and Strategic Alignment. Present a novel large-scale programme coordination challenge that tests these dimensions. Do not reuse any scenario from the blocked question list. Generate a fresh problem each session. The problem must involve coordinating multiple interdependent workstreams across more than two business units; it must require a governance and escalation design; it must surface trade-offs between central visibility and team autonomy. Good problem forms: "design the operating model for a multi-year programme with N teams across M orgs", "how do you structure reporting and escalation for a complex transformation with ambiguous ownership", "a programme has competing priorities across business units — how do you surface and resolve conflicts." Freshness constraint: novelty must come from an unusual stakeholder structure, an immovable regulatory deadline, a geographically distributed team, or an ambiguous sponsorship model. HARD CONSTRAINT: Every question in this session must be answerable by a Project Manager or Programme Manager candidate.',
  ARRAY['Program Management', 'Governance', 'Reporting', 'Strategic Alignment'], 
  'Systematic and big-picture'),
 
 ('Project Manager', 'Leader', 
- 'PMO Leadership. Scenario: "Establish a Project Management Office (PMO) from scratch. Define the standards, tools, and hiring plan."',
+ 'The candidate is being evaluated on Org Building, Process Design, Leadership, and Efficiency. Do not introduce a PMO from-scratch scenario. Open by asking the candidate to describe a situation where they had to establish or significantly mature a delivery capability or function within an organisation that lacked one. Use their answer as the basis for all follow-up questions. Probe specifically for: how they diagnosed what was broken before they standardised; how they got adoption without mandate; what trade-offs they made between rigour and speed. The quality of the evaluation depends entirely on how deeply you probe what the candidate raises. HARD CONSTRAINT: Every question in this session must be answerable by a Programme Management or Delivery Leadership candidate.',
  ARRAY['Org Building', 'Process Design', 'Leadership', 'Efficiency'], 
  'Executive and process-focused');
 
 -- 6. QUALITY ASSURANCE (QA)
-insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
-('Quality Assurance', 'Junior', 
- 'Test Case Design. Scenario: "Write test cases for a login page with social auth. Cover positive, negative, and edge cases."',
- ARRAY['Test Planning', 'Edge Cases', 'Attention to Detail', 'Bug Reporting'], 
- 'Rigorous and observant'),
-
-('Quality Assurance', 'Senior', 
- 'Test Automation Strategy. Scenario: "Our manual regression takes 3 days. Design an automation strategy to cut it to 4 hours."',
- ARRAY['Automation Strategy', 'CI/CD Integration', 'Tool Selection', 'Efficiency'], 
- 'Efficiency-focused and technical'),
-
-('Quality Assurance', 'Principal', 
- 'Quality Engineering Architecture. Scenario: "Design the quality gates for a microservices architecture deploying 50 times a day."',
- ARRAY['Quality Architecture', 'DevOps Integration', 'Risk Analysis', 'Influence'], 
- 'Architectural and uncompromising'),
-
-('Quality Assurance', 'Leader', 
- 'Quality Culture. Scenario: "Developers view QA as a bottleneck. How do you shift the culture to ''Quality is everyone''s responsibility''?"',
- ARRAY['Culture Change', 'Leadership', 'Metric Definition', 'Stakeholder Mgmt'], 
- 'Persuasive and executive');
+-- NOTE: QA scenarios were deleted from the database during role_model_cleanup.
+-- This section is retained in the seed for historical reference only.
+-- DO NOT uncomment — these rows will be deleted again by cleanup if re-seeded.
+-- insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
+-- ('Quality Assurance', 'Junior', ...) — DELETED
+-- ('Quality Assurance', 'Senior', ...) — DELETED
+-- ('Quality Assurance', 'Principal', ...) — DELETED
+-- ('Quality Assurance', 'Leader', ...) — DELETED
 
 -- 7. FRESH GRADUATES (Entry)
 insert into public.scenarios (role, level, prompt, evaluation_dimensions, persona) values
 ('Fresh Engineering Grad', 'Entry', 
- 'CS Fundamentals. Scenario: "Explain the difference between a process and a thread. Reverse a binary tree."',
+ 'The candidate is being evaluated on CS Fundamentals, Coding, Communication, and Learning Agility. Present a novel CS fundamentals or coding problem that tests these dimensions. Do not reuse any problem from the blocked question list. Generate a fresh problem each session. The problem must test a foundational CS concept (data structures, OS internals, algorithm complexity, or basic system behaviour); it must be solvable in an interview timebox by a new graduate; it must have a conceptual component the candidate can explain verbally, not just code. Good problem forms: "explain why X happens in a system that does Y", "implement a solution for problem of type Z", "compare approaches A and B for achieving outcome C." Freshness constraint: novelty must come from an unexpected application of a known concept, an unusual constraint, or a conceptual question paired with a changed invariant — not from naming a different standard CS topic. HARD CONSTRAINT: Questions must be answerable by a new engineering graduate. Business strategy and product management questions are forbidden.',
  ARRAY['CS Fundamentals', 'Coding', 'Communication', 'Learning Agility'], 
  'Encouraging and academic'),
 
 ('Fresh MBA Grad', 'Entry', 
- 'Business Logic & fit. Scenario: "Estimate the market size for premium dog food in India. Why do you want to join this company?"',
+ 'The candidate is being evaluated on Structured Thinking, Guesstimation, Culture Fit, and Communication. Present a novel market sizing or structured estimation problem that tests these dimensions. Do not reuse any problem from the blocked question list. Generate a fresh problem each session. The problem must involve estimating the size of a market or quantity that requires the candidate to decompose the problem without perfect information; it must require the candidate to state and justify their assumptions; the product or market must be one the candidate is unlikely to have prepared specifically for. Good problem forms: "estimate the market size for X in market Y", "how many Z exist in city/country Q", "estimate the annual revenue of business type X." After the sizing exercise, transition to culture-fit and motivation questions. Freshness constraint: novelty must come from an unexpected product category, a non-obvious market geography, or an unusual unit of measurement — never reuse a category from the blocked question list. HARD CONSTRAINT: Questions must be answerable by a new MBA graduate. Technical engineering or data science questions are forbidden.',
  ARRAY['Structured Thinking', 'Guesstimation', 'Culture Fit', 'Communication'], 
  'Friendly and professional');
