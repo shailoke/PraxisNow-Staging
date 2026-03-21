@@ -107,7 +107,8 @@ export async function POST(request: NextRequest) {
 
             // Extract userId for anti-convergence scoping
             userId = (sessionData as any)?.user_id ?? null
-            console.log(`[USER_ID_LOADED] userId: ${userId ?? 'null'}, isReplay: ${isReplaySession}`)
+            // Critical diagnostic: if null, history inserts will be skipped and blocklist disabled
+            console.log(`[USER_ID_RESOLVED] userId: ${userId ?? 'NULL — history insert will be skipped'}, isReplay: ${isReplaySession}`)
 
             // CRITICAL FIX: Hydrate familySelections from DB with strict validation
             const dbFamilySelections = (sessionData as any)?.family_selections
@@ -398,10 +399,13 @@ export async function POST(request: NextRequest) {
                     .eq('user_id', userId)
                     .eq('role', scenarioConfig.role)
                     .eq('level', scenarioConfig.level)
-                    .neq('session_id', session_id)   // exclude current session
+                    // NOTE: intentionally NO .neq('session_id') filter.
+                    // Including current-session rows gives GPT-4o two dedup layers:
+                    //   1. Conversation history (flow control)
+                    //   2. Explicit blocklist (semantic dedup, cross AND within session)
                     .gte('created_at', ninetyDaysAgo)
                     .order('created_at', { ascending: false })
-                    .limit(30)
+                    .limit(50)  // raised from 30 to cover within-session rows too
 
                 if (historyRows && historyRows.length > 0) {
                     recentQuestions = historyRows.map((r: any) => r.question_text)
@@ -664,23 +668,32 @@ export async function POST(request: NextRequest) {
 
                     // NEW: Fire-and-forget insert into user_question_history
                     // REPLAY GUARD: never write history for replay sessions
-                    // INVARIANT: This must NEVER be awaited. Never block the response on this.
+                    // INVARIANT: This must NEVER be awaited and must NEVER throw into the outer catch.
                     if (!isReplaySession && userId && scenarioConfig.role && scenarioConfig.level) {
-                        ; (supabaseClient as any)
-                            .from('user_question_history')
-                            .insert({
-                                user_id: userId,
-                                role: scenarioConfig.role,
-                                level: scenarioConfig.level,
-                                session_id,
-                                turn_index: nextIndex,
-                                question_text: assistantMessage.trim()
-                            } as any)
-                            .then(({ error: historyError }: { error: any }) => {
-                                if (historyError) {
-                                    console.warn('[QUESTION_HISTORY] Non-blocking insert failed:', historyError)
-                                }
-                            })
+                        // Wrap in try-catch so a synchronous client error cannot propagate
+                        try {
+                            ; (supabaseClient as any)
+                                .from('user_question_history')
+                                .insert({
+                                    user_id: userId,
+                                    role: scenarioConfig.role,
+                                    level: scenarioConfig.level,
+                                    session_id,
+                                    turn_index: nextIndex,
+                                    question_text: assistantMessage.trim()
+                                } as any)
+                                .then(({ error: historyError }: { error: any }) => {
+                                    if (historyError) {
+                                        console.warn('[QUESTION_HISTORY] Non-blocking insert failed:', historyError)
+                                    }
+                                })
+                        } catch (historyInitErr) {
+                            // Synchronous client-level error (e.g. invalid argument) — log and swallow
+                            console.warn('[QUESTION_HISTORY] Insert threw synchronously:', historyInitErr)
+                            // NEVER rethrow — this must not affect the turn response
+                        }
+                    } else if (!isReplaySession) {
+                        console.warn(`[QUESTION_HISTORY] Skipped insert — userId: ${userId}, role: ${scenarioConfig.role}, level: ${scenarioConfig.level}`)
                     }
 
                 } catch (dbError) {
