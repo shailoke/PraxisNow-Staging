@@ -60,6 +60,7 @@ interface InterviewTurn {
   turn_type: string
   content: string
   answered: boolean | null
+  dimension: string | null
 }
 
 // ── Signal utilities ──────────────────────────────────────────────────────────
@@ -104,6 +105,21 @@ function deriveNextLevelLabel(hireableLevel: string | undefined, role: string | 
     console.warn('[ResultsPage] Could not parse hireable_level for next-level label:', hireableLevel)
   }
   return 'To strengthen your bar:'
+}
+
+const DIMENSION_DESCRIPTOR: Record<string, string> = {
+  'Product Design':  'structured product thinking',
+  'Execution':       'analytical rigour',
+  'AI Product':      'systems thinking',
+  'Strategy':        'strategic clarity',
+  'Behavioral':      'self-awareness and ownership',
+  'Leadership':      'leadership clarity',
+  'Communication':   'communication precision',
+  'Technical':       'technical depth',
+}
+const getDimensionDescriptor = (dimension: string | null): string | null => {
+  if (!dimension) return null
+  return DIMENSION_DESCRIPTOR[dimension] ?? 'strong thinking'
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -152,7 +168,7 @@ export default function ResultsPage() {
         fetchSessionRow(supabase, userId),
         supabase
           .from('interview_turns')
-          .select('id, session_id, turn_index, turn_type, content, answered')
+          .select('id, session_id, turn_index, turn_type, content, answered, dimension')
           .eq('session_id', sessionId)
           .order('turn_index', { ascending: true }),
       ])
@@ -231,6 +247,20 @@ export default function ResultsPage() {
   const bestTurn = bestDiagnostic
     ? turns.find(t => t.turn_index === bestDiagnostic.turn_index && t.turn_type === 'question') ?? null
     : null
+  const bestDimension = bestTurn?.dimension ?? null
+  const bestDimensionDescriptor = getDimensionDescriptor(bestDimension)
+
+  // Section 3 — blocker dimension (weakest turn's dimension)
+  const weakestDiagnostic = (
+    diagnostics.find((d: any) => d.signal_strength === 'weak') ??
+    diagnostics.find((d: any) => d.signal_strength === 'mixed') ??
+    null
+  )
+  const blockerTurn = weakestDiagnostic
+    ? turns.find((t: any) => t.turn_index === weakestDiagnostic.turn_index) ?? null
+    : null
+  const blockerDimension = blockerTurn?.dimension ?? null
+
   const bestConsequence = bestDiagnostic?.interviewer_consequence ?? bestDiagnostic?.impact_on_interviewer ?? null
   // Only show Section 2 if there is something meaningful to display
   const showStrongestMoment = !!bestDiagnostic && (!!bestTurn || !!bestConsequence)
@@ -339,6 +369,11 @@ export default function ResultsPage() {
         {showStrongestMoment && (
           <div className="bg-black/30 border border-white/10 rounded-2xl p-6 space-y-4">
             <p className="text-xs uppercase tracking-widest text-gray-400">Your Strongest Moment</p>
+            {bestDimension && bestDimensionDescriptor && (
+              <p className="text-sm text-purple-400 font-medium mb-3">
+                You showed {bestDimensionDescriptor} in the {bestDimension} round
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {bestTurn && (
                 <div>
@@ -363,6 +398,11 @@ export default function ResultsPage() {
           {primaryBlocker && (
             <div className="space-y-2">
               <p className="text-xl font-semibold text-white">{primaryBlocker}</p>
+              {blockerDimension && (
+                <p className="text-sm text-amber-400 font-medium mt-2">
+                  Focus area: {blockerDimension} round
+                </p>
+              )}
               <p className="text-gray-400 text-sm">
                 Fixing this one thing is the highest-leverage change you can make to your hiring signal.
               </p>
