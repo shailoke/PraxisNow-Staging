@@ -543,6 +543,28 @@ export async function POST(req: NextRequest) {
             throw new Error(`Failed to create session: ${insertError.message}`)
         }
 
+        if (!session) {
+            // COMPENSATION: Refund credit
+            // This guards the data: null, error: null silent failure case —
+            // distinct from insertError (which is a PostgREST-level error).
+            // Possible causes: RLS blocking the RETURNING clause, a DB trigger
+            // suppressing the row, or a transient PostgREST issue.
+            console.error('[SESSION_START] Insert returned null data with no error — possible RLS or trigger issue', {
+                user_id: user.id,
+                session_payload_keys: Object.keys(sessionPayload)
+            })
+            await adminClient
+                .from('users')
+                // @ts-ignore
+                .update({
+                    available_sessions: profile.available_sessions,
+                    total_sessions_used: profile.total_sessions_used
+                })
+                .eq('id', user.id)
+
+            throw new Error('Session creation returned no data. Please try again.')
+        }
+
         // 7d. Track Family Usage (Pro/Pro+ Only)
         if (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') {
             const usageRecords = Object.entries(familySelections).map(([dimension, familyId]) => ({
