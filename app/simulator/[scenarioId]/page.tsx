@@ -481,7 +481,9 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                     setEvalResult(result.summary) // Normalize to fit state (type cast if needed)
                 } else {
                     // Standard interview — redirect to Results Screen
-                    setEvalResult(result)
+                    // Do NOT call setEvalResult here: the simulator results view
+                    // is never rendered for standard interviews; setting evalResult
+                    // before the push causes a .map() crash on undefined fields.
                     router.push(`/results/${sessionId}`)
                 }
             } else {
