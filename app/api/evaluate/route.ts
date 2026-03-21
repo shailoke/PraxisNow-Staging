@@ -603,7 +603,8 @@ export async function POST(req: NextRequest) {
                     date: new Date().toLocaleDateString(),
                     duration: session.duration_seconds ? `${Math.floor(session.duration_seconds / 60)}m` : 'N/A',
                     session_id: session_id,
-                    session_type: customScenario ? 'Custom Scenario' : 'Standard Interview'
+                    session_type: customScenario ? 'Custom Scenario' : 'Standard Interview',
+                    dimension_order: session.dimension_order ?? []
                 },
                 user.package_tier
             );
