@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
         let dimensionOrder: string[] = []
         let userId: string | null = null  // NEW: required for user-scoped anti-convergence
         let entryProbeIntent: string | null = null  // NEW: probe intent for entry family freshness
+        let dbFamilySelectionsCache: Record<string, string> | null = null
 
         // ===================================
         // REPLAY DETERMINISM: Detect Replay Mode
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
 
             // CRITICAL FIX: Hydrate familySelections from DB with strict validation
             const dbFamilySelections = (sessionData as any)?.family_selections
+            dbFamilySelectionsCache = dbFamilySelections ?? null
             const dbProbeSelections = (sessionData as any)?.probe_selections
 
             if (dbFamilySelections && typeof dbFamilySelections === 'object' && Object.keys(dbFamilySelections).length > 0) {
@@ -148,23 +150,14 @@ export async function POST(request: NextRequest) {
         }
 
         // FIX HYDRATION BUG: Merge DB into runtime BEFORE validation
-        if (session_id) {
-            const { data: dbSession } = await supabase
-                .from('sessions')
-                .select('family_selections')
-                .eq('id', session_id)
-                .single()
-
-            const dbFamilySelections = (dbSession as any)?.family_selections || {}
-
-            // Apply DB state to runtime (DB is authoritative)
+        if (session_id && dbFamilySelectionsCache) {
             familySelections = {
-                ...familySelections,       // Runtime can add
-                ...dbFamilySelections      // DB overrides
+                ...familySelections,
+                ...dbFamilySelectionsCache
             }
 
             console.log(`🔍 [FAMILY_HYDRATION_FIX]`, {
-                db: dbFamilySelections,
+                db: dbFamilySelectionsCache,
                 runtime_after_merge: familySelections,
                 has_entry: !!familySelections['Entry']
             })
@@ -173,19 +166,13 @@ export async function POST(request: NextRequest) {
         // REGRESSION GUARD: Detect if DB has Entry but runtime lost it
         // This MUST NEVER happen - it means we have a hydration bug
         if (session_id) {
-            const { data: sessionCheck } = await supabase
-                .from('sessions')
-                .select('family_selections')
-                .eq('id', session_id)
-                .single()
-
-            const dbHasEntry = !!(sessionCheck as any)?.family_selections?.['Entry']
+            const dbHasEntry = !!(dbFamilySelectionsCache?.['Entry'])
             const runtimeHasEntry = !!familySelections['Entry']
 
             if (dbHasEntry && !runtimeHasEntry) {
                 console.error('❌ ENTRY_FAMILY_DROPPED_AT_RUNTIME', {
                     session_id,
-                    db_family_selections: (sessionCheck as any)?.family_selections,
+                    db_family_selections: dbFamilySelectionsCache,
                     runtime_familySelections: familySelections,
                     db_has_entry: dbHasEntry,
                     runtime_has_entry: runtimeHasEntry
