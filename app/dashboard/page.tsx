@@ -13,6 +13,7 @@ import { LogOut, Zap, Trophy, AlertTriangle, User as UserIcon, Plus, Download as
 import Link from 'next/link'
 import DashboardFilters, { FilterState } from '@/components/DashboardFilters'
 import ProgressGraph from '@/components/ProgressGraph'
+import CurrentBarCard, { type CurrentBarCardProps } from '@/components/CurrentBarCard'
 import type { Database } from '@/lib/database.types'
 
 type User = Database['public']['Tables']['users']['Row']
@@ -53,6 +54,7 @@ export default function DashboardPage() {
     const [selectedSession, setSelectedSession] = useState<any | null>(null)
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null)
     const [isSupportOpen, setIsSupportOpen] = useState(false)
+    const [currentBar, setCurrentBar] = useState<CurrentBarCardProps | null>(null)
 
     const handleGeneratePDF = async (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation(); // Prevent row click
@@ -212,13 +214,43 @@ export default function DashboardPage() {
             setScenarios(allScenarios)
 
             // 5. Fetch Sessions (History) - Optimized Payload
+            // evaluation_depth and progression_comparison added for history tab rendering
             const { data: dbSessions } = await supabase
                 .from('sessions')
-                .select('id, created_at, session_type, custom_scenario_id, scenario_id, clarity, structure, signal_noise, replay_of_session_id')
+                .select('id, created_at, session_type, custom_scenario_id, scenario_id, clarity, structure, signal_noise, replay_of_session_id, evaluation_depth, progression_comparison')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
 
             setSessions(dbSessions as any || [])
+
+            // 5b. Targeted fetch: most recent session with evaluation_data for CurrentBarCard
+            // Deliberately separate from the bulk fetch — keeps history payload lean.
+            try {
+                const { data: recentEvalSession } = await supabase
+                    .from('sessions')
+                    .select('id, created_at, evaluation_data, scenarios:scenario_id(role, level)')
+                    .eq('user_id', user.id)
+                    .not('evaluation_data', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (recentEvalSession) {
+                    const evalData = (recentEvalSession as any).evaluation_data;
+                    if (evalData?.hiring_signal) {
+                        const scenario = (recentEvalSession as any).scenarios;
+                        setCurrentBar({
+                            hireable_level: evalData.hireable_level || 'Unknown',
+                            hiring_signal: evalData.hiring_signal,
+                            primary_blocker: evalData.distance_to_strong_hire?.primary_blocker ?? null,
+                            role: scenario?.role || 'Unknown',
+                            session_date: new Date(recentEvalSession.created_at ?? '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        });
+                    }
+                }
+            } catch {
+                // Non-critical — CurrentBarCard simply won't render
+            }
 
             // 6. Pre-select filter based on User Role
             if (profile && (profile as any).primary_role) {
@@ -535,6 +567,9 @@ export default function DashboardPage() {
 
                         {activeTab === 'practice' ? (
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                {/* Current Bar — shown after first evaluated session */}
+                                {currentBar && <CurrentBarCard {...currentBar} />}
+
                                 <DashboardFilters
                                     onFilterChange={setFilters}
                                     roles={roles}
@@ -820,6 +855,11 @@ export default function DashboardPage() {
                                                                 <td className="px-6 py-4 align-middle">
                                                                     <div className="text-white font-medium">{title}</div>
                                                                     <div className="text-xs opacity-50">{subtitle}</div>
+                                                                    {(session as any).progression_comparison?.observed_changes?.[0] && (
+                                                                        <div className="text-xs text-green-400 mt-1">
+                                                                            ↑ {(session as any).progression_comparison.observed_changes[0]}
+                                                                        </div>
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-6 py-4 align-middle">
                                                                     {session.session_type === 'negotiation_simulation' ? (

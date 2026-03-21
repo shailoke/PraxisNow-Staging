@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 import { Database } from '@/lib/database.types'
@@ -12,6 +12,44 @@ import { runStage3 } from '@/lib/evaluation/stage3-rewrite'
 import { runStage4 } from '@/lib/evaluation/stage4-rules'
 import { validateAnswerUpgrades } from '@/lib/grounding-check'
 import { synthesizePreparationSignals } from '@/lib/signalSynthesis'
+import type { ReplayComparison } from '@/lib/replay-comparison'
+
+// ── Progression Architecture — Interfaces ────────────────────────────────────
+
+interface MomentumCard {
+    strongest_signal: string;    // Single strongest thing from session. Max 6 words.
+    one_fix: string;             // Single highest-leverage behavioral change. One sentence.
+    progress_note: string | null; // Improvement note if prior session exists. Null otherwise.
+}
+
+// ── Shared helper: most recent prior completed session in same role/level ─────
+// Used by both momentum_card (progress_note) and progression_comparison.
+// Returns the full session row (with evaluation_data) or null.
+async function getPriorSessionForRoleLevel(
+    adminClient: SupabaseClient,
+    userId: string,
+    role: string,
+    level: string,
+    excludeSessionId: string
+): Promise<any | null> {
+    const { data, error } = await (adminClient
+        .from('sessions')
+        .select('id, created_at, evaluation_data, scenarios:scenario_id(role, level)')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .not('evaluation_data', 'is', null)
+        .neq('id', excludeSessionId)
+        .order('created_at', { ascending: false })
+        .limit(10) as any);
+
+    if (error || !data) return null;
+
+    // Filter in JS — PostgREST join-column filtering is unreliable across client versions
+    const prior = (data as any[]).find((s: any) =>
+        s.scenarios?.role === role && s.scenarios?.level === level
+    );
+    return prior ?? null;
+}
 
 export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -49,6 +87,10 @@ export async function POST(req: NextRequest) {
 
         const session = sessionData as any;
 
+        // Hoist service-role client — reused throughout this entire request
+        const adminServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, adminServiceKey);
+
         // 🛑 IDEMPOTENCY CHECK
         // If session is already completed, do NOT re-run AI.
         // Return existing data + Fresh Signed URL.
@@ -58,18 +100,18 @@ export async function POST(req: NextRequest) {
             // Generate fresh signed URL if PDF exists
             let signedUrl = null;
             if (session.pdf_url) { // pdf_url now stores the PATH
-                const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-                const adminClient = createClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    serviceKey
-                );
                 const { data: signedData } = await adminClient.storage
                     .from('reports')
                     .createSignedUrl(session.pdf_url, 3600); // 1 hour expiry
                 signedUrl = signedData?.signedUrl;
             }
 
-            return NextResponse.json({ ...session.evaluation_data, pdf_url: signedUrl });
+            // X4 fix: also return momentum_card from the persisted session record
+            return NextResponse.json({
+                ...session.evaluation_data,
+                pdf_url: signedUrl,
+                momentum_card: session.momentum_card ?? null,
+            });
         }
 
         // 2. Fetch user tier (SERVER TRUTH)
@@ -447,6 +489,90 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // ── Prior session lookup (shared: momentum_card + progression_comparison) ──
+        // Single DB call reused by both blocks below. Max 10 rows, filtered in JS.
+        let priorSessionData: any | null = null;
+        try {
+            priorSessionData = await getPriorSessionForRoleLevel(
+                adminClient,
+                session.user_id,
+                role,
+                level,
+                session_id
+            );
+        } catch (priorErr) {
+            console.error('[PROGRESSION] Prior session query failed (non-critical):', priorErr);
+        }
+
+        // ── Change 1: Momentum Card derivation ───────────────────────────────────
+        // Derived deterministically from stage2 output + prior session. No new AI calls.
+        const signalRank: Record<string, number> = {
+            STRONG_HIRE: 4, HIRE: 3, BORDERLINE: 2, NO_HIRE: 1
+        };
+
+        // strongest_signal: top strength skill, truncated to 6 words
+        const rawSkill: string | undefined = stage2.top_strengths[0]?.skill;
+        const strongestSignalRaw = rawSkill || dimensionNames[0] || 'Strong communication';
+        const strongest_signal = strongestSignalRaw.split(' ').slice(0, 6).join(' ');
+
+        // one_fix: gaps[0].fix_in_one_sentence → first sentence of primary_blocker → fallback
+        let one_fix = 'Focus on adding measurable outcomes to your answers.';
+        const rawFix: string | null = stage2.gaps[0]?.fix_in_one_sentence ?? null;
+        const rawBlocker: string | null = stage2.distance_to_strong_hire?.primary_blocker ?? null;
+        if (rawFix) {
+            one_fix = rawFix;
+        } else if (rawBlocker) {
+            const firstSentence = rawBlocker.split('.')[0].trim();
+            if (firstSentence) one_fix = firstSentence + '.';
+        }
+
+        // progress_note: compare hiring signals vs. most recent prior session
+        let progress_note: string | null = null;
+        if (priorSessionData?.evaluation_data?.hiring_signal) {
+            const priorSignal: string = priorSessionData.evaluation_data.hiring_signal;
+            const currentSignal: string = stage2.hiring_signal;
+            const priorRank = signalRank[priorSignal] ?? 0;
+            const currentRank = signalRank[currentSignal] ?? 0;
+            if (currentRank > priorRank) {
+                progress_note = `Your hiring signal improved from ${priorSignal} to ${currentSignal} since your last session.`;
+            } else if (currentRank === priorRank) {
+                progress_note = `You're holding your bar consistently. Focus on ${one_fix} to break through.`;
+            } else {
+                progress_note = `This session was tougher than your last. That's normal — use the feedback below.`;
+            }
+        }
+
+        const momentumCard: MomentumCard = { strongest_signal, one_fix, progress_note };
+        console.log('[MOMENTUM_CARD]', momentumCard);
+
+        // ── Change 3: Progression Comparison (non-replay, full sessions only) ────
+        // Reuses priorSessionData from the shared lookup above. No new AI call design —
+        // compareReplayAttempts is existing logic already used by the replay block.
+        // Guard: evaluationDepth === 'full' ensures we never run on shallow sessions.
+        let progressionComparison: ReplayComparison | null = null;
+        if (!session.replay_of_session_id && evaluationDepth === 'full') {
+            try {
+                if (priorSessionData?.evaluation_data) {
+                    console.log(`📈 Running progression comparison against session ${priorSessionData.id}...`);
+                    const { compareReplayAttempts } = await import('@/lib/replay-comparison');
+                    progressionComparison = await compareReplayAttempts({
+                        originalEvaluation: priorSessionData.evaluation_data,
+                        currentEvaluation: evaluation,
+                        role,
+                        level,
+                    });
+                    if (progressionComparison) {
+                        console.log(`✅ Progression comparison: ${progressionComparison.observed_changes.length} changes, ${progressionComparison.unchanged_areas.length} unchanged`);
+                    } else {
+                        console.log('ℹ️ Progression comparison suppressed (insufficient evidence or no changes)');
+                    }
+                }
+            } catch (progressionErr) {
+                console.error('⚠️ Progression comparison failed (non-critical):', progressionErr);
+                progressionComparison = null;
+            }
+        }
+
         // 8. Generate PDF & Upload (SECURE) - After all analysis complete
         let pdfPath = null;
         let signedUrl = null;
@@ -482,10 +608,7 @@ export async function POST(req: NextRequest) {
             );
             console.log('[DEBUG_AFTER_PDF_GENERATION_SUCCESS]');
 
-            // Use Service Role
-            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-            const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey);
-
+            // adminClient is hoisted above — no re-creation needed here
             const sanitizedRole = role.replace(/[^a-zA-Z0-9]/g, '');
             const sanitizedLevel = level.replace(/[^a-zA-Z0-9]/g, '');
             const dateStr = new Date().toISOString().split('T')[0];
@@ -520,7 +643,9 @@ export async function POST(req: NextRequest) {
             status: 'completed',
             evaluation_depth: evaluationDepth,
             answer_upgrades: answerUpgrades,
-            replay_comparison: replayComparison
+            replay_comparison: replayComparison,
+            momentum_card: momentumCard,
+            progression_comparison: progressionComparison,
         };
 
         // DEBUG: Log what we're about to persist to DB
@@ -546,7 +671,7 @@ export async function POST(req: NextRequest) {
             throw new Error(updateError.message);
         }
 
-        return NextResponse.json({ ...evaluation, pdf_url: signedUrl });
+        return NextResponse.json({ ...evaluation, pdf_url: signedUrl, momentum_card: momentumCard });
 
     } catch (error: unknown) {
         console.error('Error in evaluate endpoint:', error);
