@@ -318,6 +318,7 @@ export async function POST(req: NextRequest) {
                 turn_index: t.turn_index,
                 content: t.content,
                 user_answer: (t as any).user_answer || '',
+                dimension: t.dimension ?? null,
             }))
         );
         console.log(`[EVAL_STAGE1] Extracted ${stage1.turns.length} turns.`);
