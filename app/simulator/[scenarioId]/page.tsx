@@ -477,9 +477,12 @@ You will receive time updates every 3 minutes. Follow them strictly.`
             if (res.ok) {
                 // Determine if it's negotiation result (has summary) or standard
                 if (result.summary) {
+                    // Negotiation simulation — stays on simulator results view
                     setEvalResult(result.summary) // Normalize to fit state (type cast if needed)
                 } else {
+                    // Standard interview — redirect to Results Screen
                     setEvalResult(result)
+                    router.push(`/results/${sessionId}`)
                 }
             } else {
                 console.error('Evaluation failed:', result.error)

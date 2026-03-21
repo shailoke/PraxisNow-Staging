@@ -1189,25 +1189,34 @@ export default function DashboardPage() {
                                         Close
                                     </Button>
 
-                                    {selectedSession.pdf_url ? (
+                                    {/* Secondary: PDF icon button — shown for any evaluated non-insufficient session */}
+                                    {(selectedSession as any).evaluation_depth && (selectedSession as any).evaluation_depth !== 'insufficient' && (
                                         <button
                                             onClick={(e) => handleGeneratePDF(e, selectedSession.id.toString())}
                                             disabled={generatingPdfId === selectedSession.id.toString()}
-                                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-bold text-white transition-all shadow-lg shadow-purple-900/20 active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+                                            title={selectedSession.pdf_url ? 'Download Full PDF' : 'Generate PDF Report'}
+                                            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait"
                                         >
-                                            {generatingPdfId === selectedSession.id.toString() ? <Loader2 className="w-4 h-4 animate-spin" /> : <DownloadIcon className="w-4 h-4" />}
-                                            Download Full PDF
+                                            {generatingPdfId === selectedSession.id.toString()
+                                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                                : selectedSession.pdf_url
+                                                    ? <DownloadIcon className="w-4 h-4" />
+                                                    : <FileText className="w-4 h-4" />
+                                            }
                                         </button>
-                                    ) : (selectedSession as any).evaluation_depth && (selectedSession as any).evaluation_depth !== 'insufficient' ? (
-                                        <button
-                                            onClick={(e) => handleGeneratePDF(e, selectedSession.id.toString())}
-                                            disabled={generatingPdfId === selectedSession.id.toString()}
-                                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+                                    )}
+
+                                    {/* Primary: View Report — links to Results Screen for standard (non-negotiation) sessions */}
+                                    {selectedSession.session_type !== 'negotiation_simulation' &&
+                                     (selectedSession as any).evaluation_depth &&
+                                     (selectedSession as any).evaluation_depth !== 'insufficient' && (
+                                        <Link
+                                            href={`/results/${selectedSession.id}`}
+                                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-bold text-white transition-all shadow-lg shadow-purple-900/20 active:scale-95"
                                         >
-                                            {generatingPdfId === selectedSession.id.toString() ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                                            {generatingPdfId === selectedSession.id.toString() ? 'Generating Report...' : 'Generate PDF Report'}
-                                        </button>
-                                    ) : null}
+                                            View Report
+                                        </Link>
+                                    )}
                                 </>
                             )}
                         </div>
