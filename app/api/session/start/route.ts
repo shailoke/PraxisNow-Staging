@@ -440,6 +440,8 @@ export async function POST(req: NextRequest) {
             'Analytics':            'analytics',
             'ML System Design':     'ml_design',
             'Data Strategy':        'data_strategy',
+            'Product Design':       'product_design',
+            'AI Product':           'ai_product',
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'
