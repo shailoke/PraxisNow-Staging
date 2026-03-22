@@ -505,6 +505,118 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_sde_principal_ai_systems',
         dimension: 'AI Systems',
         intent: 'Evaluate whether the candidate addresses data governance, model lineage, and compliance at platform scale — not just as an afterthought but as first-class design constraints.'
+    },
+
+    // ==========================================
+    // MARKETING - STRATEGY PROBES
+    // ==========================================
+    {
+        id: 'probe_marketing_senior_strategy_positioning',
+        entry_family: 'entry_marketing_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate makes deliberate positioning choices — do they explicitly state what they are NOT doing and why, rather than trying to appeal to everyone.'
+    },
+    {
+        id: 'probe_marketing_senior_strategy_tradeoffs',
+        entry_family: 'entry_marketing_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate reasons about strategic tradeoffs — do they acknowledge what their strategy gives up, not just what it gains.'
+    },
+    {
+        id: 'probe_marketing_principal_strategy_portfolio',
+        entry_family: 'entry_marketing_principal_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate reasons at portfolio level — do they think about where to invest, where to harvest, and where to exit across multiple segments or products.'
+    },
+    {
+        id: 'probe_marketing_principal_strategy_category',
+        entry_family: 'entry_marketing_principal_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate thinks about long-term category creation — do they reason about what winning the category looks like in 3 years and what must be true today to get there.'
+    },
+
+    // ==========================================
+    // MARKETING - CAMPAIGN PROBES
+    // ==========================================
+    {
+        id: 'probe_marketing_senior_campaign_measurement',
+        entry_family: 'entry_marketing_senior_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate connects campaign execution to measurable business outcomes — do they design for learning and attribution from the start, not as an afterthought.'
+    },
+    {
+        id: 'probe_marketing_senior_campaign_channels',
+        entry_family: 'entry_marketing_senior_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate thinks in channel systems — do they reason about how channels reinforce each other rather than treating each channel as an isolated tactic.'
+    },
+    {
+        id: 'probe_marketing_principal_campaign_scale',
+        entry_family: 'entry_marketing_principal_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate designs for scale and repeatability — do they think about what breaks when volume increases 10x and how to build institutional campaign knowledge.'
+    },
+    {
+        id: 'probe_marketing_principal_campaign_governance',
+        entry_family: 'entry_marketing_principal_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate reasons about brand governance at scale — do they address how to maintain consistency when multiple teams execute independently.'
+    },
+
+    // ==========================================
+    // MARKETING - GROWTH PROBES
+    // ==========================================
+    {
+        id: 'probe_marketing_senior_growth_hypothesis',
+        entry_family: 'entry_marketing_senior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate builds a clear hypothesis before reaching for a tactic — do they state what they believe is true and what data would prove it wrong.'
+    },
+    {
+        id: 'probe_marketing_senior_growth_data_limits',
+        entry_family: 'entry_marketing_senior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate data literacy — do they acknowledge the limits of their measurement approach and identify specifically what their data would overcount, undercount, or miss entirely.'
+    },
+    {
+        id: 'probe_marketing_principal_growth_infrastructure',
+        entry_family: 'entry_marketing_principal_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate thinks about measurement as a strategic capability — do they reason about data infrastructure, model assumptions, and org adoption as first-class constraints.'
+    },
+    {
+        id: 'probe_marketing_principal_growth_assumptions',
+        entry_family: 'entry_marketing_principal_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate surfaces and challenges the assumptions in their measurement model — do they identify what the model gets wrong and whether that is an acceptable tradeoff.'
+    },
+
+    // ==========================================
+    // MARKETING - AI MARKETING PROBES
+    // ==========================================
+    {
+        id: 'probe_marketing_senior_ai_brand_safety',
+        entry_family: 'entry_marketing_senior_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate reasons about brand safety risk in AI-generated content — do they have concrete quality thresholds and review processes, not just theoretical awareness.'
+    },
+    {
+        id: 'probe_marketing_senior_ai_value_vs_risk',
+        entry_family: 'entry_marketing_senior_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate can distinguish genuine AI value-add in marketing from AI for AI\'s sake — do they apply a clear threshold test for when AI creates more risk than value.'
+    },
+    {
+        id: 'probe_marketing_principal_ai_data_strategy',
+        entry_family: 'entry_marketing_principal_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate thinks about first-party data as a strategic AI asset — do they reason about data moat, privacy constraints, and what happens when data access changes.'
+    },
+    {
+        id: 'probe_marketing_principal_ai_org_capability',
+        entry_family: 'entry_marketing_principal_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate addresses org capability gaps in AI marketing strategy — do they identify what skills and infrastructure they need that they don\'t have today and how that affects sequencing.'
     }
 ]
 

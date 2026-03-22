@@ -119,6 +119,9 @@ const DIMENSION_DESCRIPTOR: Record<string, string> = {
   'ai_fluency':      'AI systems thinking',
   'System Design':   'systems design thinking',
   'AI Systems':      'AI systems engineering',
+  'Campaign':        'campaign execution thinking',
+  'Growth':          'growth and analytical thinking',
+  'AI Marketing':    'AI-augmented marketing thinking',
 }
 const getDimensionDescriptor = (dimension: string | null): string | null => {
   if (!dimension) return null

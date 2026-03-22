@@ -328,6 +328,7 @@ export async function selectQuestionFamilies(
 export function normalizeRole(role: string): string {
     const r = role.toLowerCase().trim()
     if (r.includes('engineer') || r.includes('developer') || r.includes('sde')) return 'sde'
+    if (r.includes('project manager') || r.includes('program manager')) return 'project_manager'
     if (r.includes('product') || r.includes('pm')) return 'pm'
     if (r.includes('design')) return 'designer'
     if (r.includes('data')) return 'data'

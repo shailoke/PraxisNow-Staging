@@ -926,5 +926,116 @@ Avoid: Definition-style questions, glossary content, trivia.`
     - "What circuit breaker patterns apply here and how do you tune them?"
     A candidate who says 'add a fallback' without specifying what the
     fallback is and how it is triggered has not answered concretely enough.`
+    },
+
+    // ==========================================
+    // MARKETING - STRATEGY FAMILIES
+    // ==========================================
+    {
+        id: 'marketing_senior_strategy_competitive',
+        dimension: 'Strategy',
+        family_name: 'Marketing Strategy — Competitive Response (Senior)',
+        prompt_guidance: `Probe how the candidate responds to competitive threats
+    in marketing, appropriate for a Marketer at the Senior bar.
+    Ask about a specific competitive scenario — a new entrant at lower price,
+    a competitor copying your positioning, or a market leader moving
+    into your segment. Do not specify the industry.
+    Senior bar: Do they diagnose before responding — do they understand
+    why the competitive threat matters before deciding how to react?
+    Do they make deliberate choices about where to compete and where
+    to cede ground?
+    Probe:
+    - "What signals would tell you this competitor is a genuine threat
+      vs noise you can ignore?"
+    - "Where specifically would you NOT compete with them and why?"
+    - "How does your response change if they have 10x your budget?"
+    - "What would make you change your positioning vs
+      double down on the current one?"
+    A candidate who responds to every competitive threat with
+    differentiate and invest more has not reasoned carefully enough.`
+    },
+
+    // ==========================================
+    // MARKETING - CAMPAIGN FAMILIES
+    // ==========================================
+    {
+        id: 'marketing_senior_campaign_measurement',
+        dimension: 'Campaign',
+        family_name: 'Campaign — Measurement & Attribution (Senior)',
+        prompt_guidance: `Probe how the candidate designs measurement for
+    marketing campaigns, appropriate for a Marketer at the Senior bar.
+    Ask about a specific measurement challenge — multi-touch attribution,
+    measuring brand vs performance, or isolating campaign impact
+    from other growth drivers. Do not specify the campaign type.
+    Senior bar: Do they understand the assumptions baked into
+    their measurement approach?
+    Do they distinguish between measuring activity, output, and outcome?
+    Probe:
+    - "What does this measurement approach get wrong —
+      what would it overcount or undercount?"
+    - "How do you separate the impact of this campaign from
+      other things happening in the same period?"
+    - "What would a sceptical CFO challenge about this measurement?"
+    - "What would cause you to change the measurement approach
+      mid-campaign?"
+    A candidate who describes a measurement framework without
+    acknowledging its limitations has not answered honestly.`
+    },
+
+    // ==========================================
+    // MARKETING - GROWTH FAMILIES
+    // ==========================================
+    {
+        id: 'marketing_senior_growth_experimentation',
+        dimension: 'Growth',
+        family_name: 'Growth — Experimentation & Iteration (Senior)',
+        prompt_guidance: `Probe how the candidate designs growth experiments,
+    appropriate for a Marketer at the Senior bar.
+    Ask about a specific growth challenge — declining conversion,
+    high CAC relative to LTV, flat retention curve,
+    or underperforming acquisition channel.
+    Do not specify the product type.
+    Senior bar: Do they build a hypothesis before designing the experiment?
+    Do they understand statistical validity and minimum detectable effect?
+    Probe:
+    - "What is your hypothesis here — what do you believe is true
+      and what would prove it wrong?"
+    - "How long would you run this experiment and how did you
+      arrive at that number?"
+    - "What do you do if the result is directionally positive
+      but not statistically significant?"
+    - "What would cause you to stop the experiment early?"
+    A candidate who jumps to a growth tactic without a hypothesis
+    or experiment design has not met the Senior bar.`
+    },
+
+    // ==========================================
+    // MARKETING - AI MARKETING FAMILIES
+    // ==========================================
+    {
+        id: 'marketing_senior_ai_content_quality',
+        dimension: 'AI Marketing',
+        family_name: 'AI Marketing — Content Quality & Brand Safety (Senior)',
+        prompt_guidance: `Probe how the candidate manages quality and brand safety
+    when using AI-generated content in marketing, appropriate for a
+    Marketer at the Senior bar.
+    Ask about a specific content quality or brand safety challenge —
+    do not specify the content type or channel.
+    Senior bar: Do they have a concrete quality threshold and
+    review process, not just theoretical awareness of the risk?
+    Do they think about what happens when AI content fails
+    in a customer-facing context?
+    Probe:
+    - "What is your review process for AI-generated content —
+      who reviews what, at what volume threshold does it change?"
+    - "How do you detect AI content that is technically correct
+      but off-brand?"
+    - "What is your response plan when an AI-generated asset
+      causes a brand incident?"
+    - "How do you balance content velocity from AI with the
+      quality bar your brand requires?"
+    A candidate who says human review without specifying the
+    process, trigger conditions, and scale implications
+    has not answered concretely enough.`
     }
 ]
