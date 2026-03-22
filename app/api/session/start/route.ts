@@ -419,7 +419,7 @@ export async function POST(req: NextRequest) {
             'Communication': 'risks',
             'Technical Depth': 'write_path',
             'Problem Solving': 'read_path',
-            'Collaboration': ' discovery',
+            'Collaboration': 'discovery',
             'Impact': 'metrics',
             'Architecture': 'write_path',
             'Scale': 'write_path',
