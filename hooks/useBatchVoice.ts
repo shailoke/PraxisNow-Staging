@@ -36,7 +36,8 @@ export type InterviewState =
 export function useBatchVoice(
     sessionId: number | null,
     initialInstruction: string = 'Introduce yourself briefly as the interviewer, then ask me to tell you about myself.',
-    isPausedExternal: boolean = false
+    isPausedExternal: boolean = false,
+    targetDuration: number = 30
 ) {
     // ── State ──────────────────────────────────────────────────────────────
     const [isConnected,          setIsConnected]          = useState(false)
@@ -107,87 +108,6 @@ export function useBatchVoice(
         })
     }, [])
 
-    // ── startSession ───────────────────────────────────────────────────────
-    const startSession = useCallback(async () => {
-        if (!sessionId) {
-            console.error('[useBatchVoice] Cannot start: no sessionId')
-            return
-        }
-        setError(null)
-
-        try {
-            // 1. Request microphone
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            mediaStreamRef.current = stream
-
-            // 2. Activate session status in DB (repurposed /api/session route)
-            await fetch('/api/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId }),
-            }).catch((err) => {
-                // Non-fatal — interview route also handles status update
-                console.warn('[useBatchVoice] Session activation fetch failed (non-fatal):', err)
-            })
-
-            setIsConnected(true)
-
-            // 3. Generate the opening interviewer message (Turn 0 prompt)
-            //    We pass the initialInstruction as userMessage so /api/interview
-            //    treats it as the trigger for the first question (is_first_question=true).
-            //    messagesRef is empty at this point — correct for an opening call.
-            turnAuthorityTokens.current += 1
-
-            setIsInterviewerSpeaking(true)
-            setIsSpeaking(true)
-            setInterviewState('ASSISTANT_SPEAKING')
-
-            const interviewRes = await fetch('/api/interview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    messages: [],                          // no history yet
-                    userMessage: initialInstruction,
-                    is_first_question: true,
-                    turn_authority: true,
-                    sessionStartTime: Date.now(),
-                    targetDuration: 30,
-                    pending_system_messages: [],
-                }),
-            })
-
-            if (!interviewRes.ok) {
-                const err = await interviewRes.json().catch(() => ({}))
-                throw new Error(err.error || `Interview API error: ${interviewRes.status}`)
-            }
-
-            const interviewData = await interviewRes.json()
-            const llmText: string = interviewData.message?.trim() ?? ''
-
-            if (!llmText) throw new Error('Interview API returned empty opening message')
-
-            turnAuthorityTokens.current -= 1
-            assistantTurnCount.current += 1
-            isFirstQuestionPending.current = false
-
-            // Push assistant message to ref + state
-            const assistantMsg: Message = { role: 'assistant', content: llmText }
-            messagesRef.current = [...messagesRef.current, assistantMsg]
-            setMessages([...messagesRef.current])
-
-            // 4. Speak the opening message
-            await speakText(llmText)
-
-        } catch (err: any) {
-            console.error('[useBatchVoice] startSession error:', err)
-            setError(err.message || 'Failed to start session')
-            setIsConnected(false)
-            setIsInterviewerSpeaking(false)
-            setIsSpeaking(false)
-        }
-    }, [sessionId, initialInstruction])
-
     // ── speakText ─────────────────────────────────────────────────────────
     /**
      * Synthesise `text` via /api/voice/tts, buffer the full response, and
@@ -196,6 +116,9 @@ export function useBatchVoice(
      * V1: Full buffer before play. MediaSource streaming is a future optimisation
      * (iOS Safari compatibility with MediaSource for audio/mpeg is unverified).
      * TODO: replace with MediaSource streaming once iOS Safari support is confirmed.
+     *
+     * Declared before startSession so startSession can reference it in its
+     * useCallback dependency array without a forward-reference TS error.
      */
     const speakText = useCallback(async (text: string) => {
         revokeCurrentUrl()
@@ -266,6 +189,70 @@ export function useBatchVoice(
         }
     }, [revokeCurrentUrl, startRecording])
 
+    // ── startSession ───────────────────────────────────────────────────────
+    const startSession = useCallback(async () => {
+        if (!sessionId) {
+            console.error('[useBatchVoice] Cannot start: no sessionId')
+            return
+        }
+        setError(null)
+
+        try {
+            // 1. Request microphone
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            mediaStreamRef.current = stream
+
+            // 2. Activate session status in DB (repurposed /api/session route)
+            await fetch('/api/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId }),
+            }).catch((err) => {
+                // Non-fatal — interview route also handles status update on first turn
+                console.warn('[useBatchVoice] Session activation fetch failed (non-fatal):', err)
+            })
+
+            setIsConnected(true)
+
+            // 3. Fetch Turn 0 (TMAY) from DB — pre-seeded by /api/session/start.
+            //    TMAY is NEVER generated here. /api/interview must not be called for Turn 0.
+            //    Invariant: turn_index=0 always exists at this point (session/start pre-seeds it).
+            const { createClient } = await import('@/lib/supabase')
+            const supabase = createClient()
+
+            const { data: tmayTurn, error: tmayError } = await supabase
+                .from('interview_turns')
+                .select('content')
+                .eq('session_id', sessionId)
+                .eq('turn_index', 0)
+                .single()
+
+            if (tmayError || !tmayTurn?.content) {
+                throw new Error(
+                    `[useBatchVoice] Failed to fetch TMAY turn: ${tmayError?.message ?? 'no content'}`
+                )
+            }
+
+            const tmayContent: string = tmayTurn.content
+
+            // Track TMAY as the first assistant message
+            assistantTurnCount.current += 1
+            const tmayMsg: Message = { role: 'assistant', content: tmayContent }
+            messagesRef.current = [tmayMsg]
+            setMessages([tmayMsg])
+
+            // 4. Speak TMAY — after audio ends, startRecording() is called by speakText's onended
+            await speakText(tmayContent)
+
+        } catch (err: any) {
+            console.error('[useBatchVoice] startSession error:', err)
+            setError(err.message || 'Failed to start session')
+            setIsConnected(false)
+            setIsInterviewerSpeaking(false)
+            setIsSpeaking(false)
+        }
+    }, [sessionId, speakText])
+
     // ── askNextQuestion ────────────────────────────────────────────────────
     const askNextQuestion = useCallback(async () => {
         // Guard: paused
@@ -310,9 +297,11 @@ export function useBatchVoice(
                 return
             }
 
-            // 3. ORDERING INVARIANT: POST user_answer BEFORE /api/interview
-            //    This ensures user_answer is persisted before answered=true is set atomically.
-            fetch('/api/turns/answer', {
+            // 3. ORDERING INVARIANT: await /api/turns/answer BEFORE /api/interview.
+            //    The interview route marks the previous turn answered=true atomically.
+            //    user_answer MUST be written first so it is never null on answered=true.
+            //    .catch() keeps this non-throwing on failure; await enforces sequencing.
+            await fetch('/api/turns/answer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -344,7 +333,7 @@ export function useBatchVoice(
                     is_first_question: isFirstQuestionPending.current,
                     turn_authority: true,
                     sessionStartTime: Date.now(),
-                    targetDuration: 30,
+                    targetDuration: targetDuration,
                     pending_system_messages: systemMsgsToSend,
                 }),
             })
@@ -385,7 +374,7 @@ export function useBatchVoice(
             audioChunksRef.current = []
             startRecording()
         }
-    }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText])
+    }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText, targetDuration])
 
     // ── injectSystemMessage ────────────────────────────────────────────────
     /**

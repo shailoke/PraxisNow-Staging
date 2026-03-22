@@ -174,7 +174,7 @@ export default function SimulatorPage() {
     // PAUSE STATE (must be before hook initialization)
     const [isPaused, setIsPaused] = useState(false)
 
-    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError } = useRealtimeVoice(sessionId, initialInstruction, isPaused)
+    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError } = useRealtimeVoice(sessionId, initialInstruction, isPaused, targetDuration)
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
     const [timeLeft, setTimeLeft] = useState(duration)
     const [sessionStarted, setSessionStarted] = useState(false)
