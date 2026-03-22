@@ -446,5 +446,119 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
     - "What does this decision make harder to do two years from now?"
     A candidate who produces a strong product logic argument without addressing
     org execution reality has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // SOFTWARE ENGINEER - SYSTEM DESIGN
+    // ==========================================
+    {
+        id: 'entry_sde_senior_system_design',
+        dimension: 'Entry',
+        family_name: 'System Design Entry (Senior)',
+        prompt_guidance: `Present a system design challenge appropriate for an SDE
+    interviewing at the Senior bar. The system must involve real scale and
+    real constraints — not a toy problem. Choose a domain that has not already
+    appeared in this session. Vary across: distributed data systems, real-time
+    processing, API platforms, notification infrastructure, search systems.
+    Do not default to the same system type across sessions.
+    Senior bar: Does the candidate structure their answer across
+    requirements clarification → high-level design → component deep-dive →
+    tradeoffs → failure modes?
+    Do NOT accept a candidate who jumps straight to components without
+    clarifying requirements and scale.
+    Probe when steps are skipped:
+    - No requirements clarification: "What scale are we designing for —
+      DAU, write volume, read/write ratio?"
+    - No tradeoffs: "What are you trading off with this approach vs
+      an alternative?"
+    - No failure modes: "What happens when this component goes down?"
+    - No data model: "Walk me through the core data model for this system."
+    A candidate who produces a fluent architecture without reasoning about
+    tradeoffs and failure modes has not met the Senior bar.`
+    },
+    {
+        id: 'entry_sde_principal_system_design',
+        dimension: 'Entry',
+        family_name: 'System Design Entry (Principal)',
+        prompt_guidance: `Present a system design challenge at platform or
+    infrastructure scale appropriate for an SDE at the Principal bar.
+    The problem must involve cross-cutting concerns — multi-region consistency,
+    platform extensibility, or infrastructure that other systems depend on.
+    Choose a domain that has not already appeared in this session.
+    Vary across: global data replication, developer platform infrastructure,
+    multi-tenant systems, observability platforms, ML serving infrastructure.
+    Principal bar: Does the candidate reason about the system as a platform
+    designer, not just an implementer?
+    Do they reason about: API contracts and versioning, operational complexity
+    at scale, build vs buy decisions, and how their design affects teams
+    building on top of it?
+    Probe on:
+    - "How would you version this API without breaking existing clients?"
+    - "What does the operational runbook look like for this system at 3am?"
+    - "What would make you change this fundamental design decision two years from now?"
+    - "How does this design constrain or enable teams building on top of it?"
+    Reject candidates who reason at component level without reasoning about
+    platform implications and long-term operational reality.`
+    },
+
+    // ==========================================
+    // SOFTWARE ENGINEER - AI SYSTEMS
+    // ==========================================
+    {
+        id: 'entry_sde_senior_ai_systems',
+        dimension: 'Entry',
+        family_name: 'AI Systems Entry (Senior)',
+        prompt_guidance: `Present a system design challenge where one or more
+    components involve an AI or ML model, appropriate for an SDE at the
+    Senior bar. The challenge must make the AI integration non-trivial —
+    the candidate must reason about what changes when a component is
+    non-deterministic. Choose a domain that has not already appeared
+    in this session. Vary across: LLM-powered features, recommendation
+    systems, content moderation, search ranking, fraud detection.
+    Senior bar: Does the candidate reason differently about AI components
+    vs deterministic components?
+    Key signals:
+    - Do they address model serving latency vs quality tradeoffs?
+    - Do they design for graceful degradation when the model underperforms?
+    - Do they think about evaluation pipelines, not just the serving path?
+    - Do they consider what "correct" means for a probabilistic output?
+    Probe:
+    - "What happens to your system if the model starts returning
+      lower quality outputs — how would you detect and respond?"
+    - "How do you handle the latency tail when the model is slow?"
+    - "What is your fallback when the model service is unavailable?"
+    - "How would you A/B test a model update safely?"
+    A candidate who designs the AI component like a deterministic API
+    with no special handling has not met the Senior bar.`
+    },
+    {
+        id: 'entry_sde_principal_ai_systems',
+        dimension: 'Entry',
+        family_name: 'AI Systems Entry (Principal)',
+        prompt_guidance: `Present an AI infrastructure or platform design challenge
+    appropriate for an SDE at the Principal bar. The challenge must involve
+    platform-level AI concerns — not a single feature with AI added.
+    Choose a domain that has not already appeared in this session.
+    Vary across: ML platform design, multi-model serving infrastructure,
+    AI evaluation platforms, training pipeline architecture,
+    AI gateway and routing systems.
+    Principal bar: Does the candidate reason about AI infrastructure as a
+    platform that other teams depend on?
+    Key signals:
+    - Do they address model versioning, rollback, and shadow deployment?
+    - Do they think about cost management at platform scale?
+    - Do they reason about the organisational implications of their
+      infrastructure decisions?
+    - Do they address data governance, model lineage, and compliance?
+    Probe on:
+    - "How do you manage 50 different model versions across 20 product teams?"
+    - "What does cost attribution look like across teams using this platform?"
+    - "How do you handle a model that is performing well on metrics
+      but causing user trust issues?"
+    - "What makes this platform easy to deprecate components of
+      without breaking dependent teams?"
+    Reject candidates who design a single-team AI system and call it
+    a platform. Push until they reason about multi-team, multi-model,
+    long-term operational reality.`
     }
 ]

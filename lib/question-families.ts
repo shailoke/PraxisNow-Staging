@@ -837,5 +837,94 @@ Avoid: Definition-style questions, glossary content, trivia.`
     - "What happens to your moat when a competitor ships a better base model?"
     A candidate who identifies surface-level differentiation without reasoning about
     defensibility over time has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // SYSTEM DESIGN FAMILIES (SDE Senior)
+    // ==========================================
+    {
+        id: 'sde_senior_system_design_failure_modes',
+        dimension: 'System Design',
+        family_name: 'System Design — Failure Modes & Resilience (Senior)',
+        prompt_guidance: `Probe how the candidate designs for failure in distributed
+    systems, appropriate for an SDE at the Senior bar.
+    Ask about a specific failure scenario in a system relevant to the
+    candidate's experience — do not name the system type in advance.
+    Senior bar: Do they reason systematically about failure modes before
+    being prompted? Do they distinguish between failure detection,
+    containment, and recovery as separate concerns?
+    Probe:
+    - "How do you detect this failure before your users do?"
+    - "What is your blast radius if this component fails completely?"
+    - "Walk me through your recovery procedure — how long does it take
+      to restore full service?"
+    - "What would you instrument differently knowing this failure mode exists?"
+    A candidate who names a failure mode without addressing detection
+    and recovery has answered only one third of the question.`
+    },
+    {
+        id: 'sde_senior_system_design_tradeoffs',
+        dimension: 'System Design',
+        family_name: 'System Design — Architectural Tradeoffs (Senior)',
+        prompt_guidance: `Probe how the candidate reasons about architectural
+    tradeoffs, appropriate for an SDE at the Senior bar.
+    Ask about a specific design decision involving a genuine tradeoff —
+    consistency vs availability, latency vs throughput,
+    operational simplicity vs feature richness.
+    Do not name the tradeoff type — let the candidate surface it.
+    Senior bar: Can they articulate the tradeoff precisely, defend their
+    choice with concrete criteria, and acknowledge what they gave up?
+    Probe:
+    - "What would have to change about your requirements for you to
+      make the opposite choice?"
+    - "How does this tradeoff change at 10x the scale you designed for?"
+    - "Who on your team would push back on this decision and why?"
+    A candidate who presents a design choice as obviously correct
+    without acknowledging the tradeoff has not answered honestly.`
+    },
+
+    // ==========================================
+    // AI SYSTEMS FAMILIES (SDE Senior)
+    // ==========================================
+    {
+        id: 'sde_senior_ai_systems_evaluation',
+        dimension: 'AI Systems',
+        family_name: 'AI Systems — Evaluation & Quality (Senior)',
+        prompt_guidance: `Probe how the candidate designs evaluation systems for
+    AI-powered features, appropriate for an SDE at the Senior bar.
+    Ask about a specific AI feature evaluation challenge —
+    do not specify the feature type.
+    Senior bar: Do they distinguish offline evaluation from online evaluation?
+    Do they understand that AI quality degrades silently and design
+    proactive detection systems?
+    Probe:
+    - "How do you know your offline evaluation translates to production quality?"
+    - "What does silent degradation look like for this system
+      and how do you catch it?"
+    - "How do you evaluate quality when there is no ground truth label?"
+    - "What triggers a rollback vs a patch vs a model retrain?"
+    A candidate who describes only offline metrics without addressing
+    production monitoring has not met the Senior bar.`
+    },
+    {
+        id: 'sde_senior_ai_systems_reliability',
+        dimension: 'AI Systems',
+        family_name: 'AI Systems — Reliability & Fallback (Senior)',
+        prompt_guidance: `Probe how the candidate designs reliable systems when
+    one component is an AI model, appropriate for an SDE at the Senior bar.
+    Ask about a specific reliability challenge in an AI-powered system —
+    do not specify the system type.
+    Senior bar: Do they treat AI components differently from deterministic
+    components in their reliability design?
+    Do they have concrete fallback strategies, not just theoretical awareness?
+    Probe:
+    - "What is your SLA for this feature and how does the AI component
+      affect your ability to meet it?"
+    - "Walk me through your fallback — what does the user experience
+      when the model is unavailable?"
+    - "How do you prevent model latency from cascading into system-wide latency?"
+    - "What circuit breaker patterns apply here and how do you tune them?"
+    A candidate who says 'add a fallback' without specifying what the
+    fallback is and how it is triggered has not answered concretely enough.`
     }
 ]

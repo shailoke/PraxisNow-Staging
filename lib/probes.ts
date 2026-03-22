@@ -449,6 +449,62 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_pm_principal_ai_strategy',
         dimension: 'AI Product',
         intent: 'Evaluate whether the candidate thinks through org capability gaps and hiring/build implications of an AI strategy decision — not just the product logic but the execution reality.'
+    },
+
+    // ==========================================
+    // SDE - SYSTEM DESIGN PROBES
+    // ==========================================
+    {
+        id: 'probe_sde_senior_system_design_requirements',
+        entry_family: 'entry_sde_senior_system_design',
+        dimension: 'System Design',
+        intent: 'Evaluate whether the candidate clarifies requirements and scale before designing — do they ask about DAU, read/write ratio, latency requirements, and consistency needs before drawing components.'
+    },
+    {
+        id: 'probe_sde_senior_system_design_tradeoffs',
+        entry_family: 'entry_sde_senior_system_design',
+        dimension: 'System Design',
+        intent: 'Evaluate whether the candidate proactively reasons about architectural tradeoffs — do they acknowledge what they gave up with each major design decision without being prompted.'
+    },
+    {
+        id: 'probe_sde_principal_system_design_platform',
+        entry_family: 'entry_sde_principal_system_design',
+        dimension: 'System Design',
+        intent: 'Evaluate whether the candidate reasons at platform level — do they think about API contracts, versioning, and how their design affects teams building on top of it.'
+    },
+    {
+        id: 'probe_sde_principal_system_design_operations',
+        entry_family: 'entry_sde_principal_system_design',
+        dimension: 'System Design',
+        intent: 'Evaluate whether the candidate reasons about long-term operational reality — do they address on-call burden, runbooks, and what makes the system easy or hard to operate at scale.'
+    },
+
+    // ==========================================
+    // SDE - AI SYSTEMS PROBES
+    // ==========================================
+    {
+        id: 'probe_sde_senior_ai_systems_nondeterminism',
+        entry_family: 'entry_sde_senior_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate reasons differently about AI components vs deterministic ones — do they proactively address non-determinism, quality degradation, and what correct means for probabilistic output.'
+    },
+    {
+        id: 'probe_sde_senior_ai_systems_fallback',
+        entry_family: 'entry_sde_senior_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate has concrete fallback strategies for AI component failure — not just awareness that fallbacks are needed, but specific mechanisms and trigger conditions.'
+    },
+    {
+        id: 'probe_sde_principal_ai_systems_platform',
+        entry_family: 'entry_sde_principal_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate thinks about AI infrastructure as a multi-team platform — do they address model versioning, cost attribution, and how the platform enables or constrains dependent teams.'
+    },
+    {
+        id: 'probe_sde_principal_ai_systems_governance',
+        entry_family: 'entry_sde_principal_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate addresses data governance, model lineage, and compliance at platform scale — not just as an afterthought but as first-class design constraints.'
     }
 ]
 

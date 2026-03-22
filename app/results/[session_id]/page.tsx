@@ -116,6 +116,9 @@ const DIMENSION_DESCRIPTOR: Record<string, string> = {
   'Leadership':      'leadership clarity',
   'Communication':   'communication precision',
   'Technical':       'technical depth',
+  'ai_fluency':      'AI systems thinking',
+  'System Design':   'systems design thinking',
+  'AI Systems':      'AI systems engineering',
 }
 const getDimensionDescriptor = (dimension: string | null): string | null => {
   if (!dimension) return null
