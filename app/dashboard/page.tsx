@@ -164,8 +164,7 @@ export default function DashboardPage() {
 
                     // DIMENSION-FIRST: Remove level from descriptions
                     // Generate description based on dimensions, not level
-                    const primaryDimensions = s.evaluation_dimensions?.slice(0, 2).join(', ') || 'core skills'
-                    let desc = `Full-length interview focused on ${primaryDimensions}. Difficulty calibrates to your responses in real-time.`
+                    let desc = `${s.scenario_title} — difficulty calibrates to your responses in real-time.`
 
                     // Role-specific copy refinements (NO level mentions)
                     if (s.role === 'Software Engineer' && s.evaluation_dimensions?.includes('Architecture')) {
