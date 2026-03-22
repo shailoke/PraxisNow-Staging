@@ -435,7 +435,11 @@ export async function POST(req: NextRequest) {
             'Stakeholder Management': 'stakeholder_management',
             'Metrics & Accountability': 'metrics_accountability',
             'Risk Management': 'risk_management',
-            'AI Delivery': 'ai_delivery'
+            'AI Delivery':          'ai_delivery',
+            'Brand':                'brand',
+            'Analytics':            'analytics',
+            'ML System Design':     'ml_design',
+            'Data Strategy':        'data_strategy',
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'
