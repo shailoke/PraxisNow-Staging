@@ -786,5 +786,352 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
     A candidate who produces strong marketing logic without addressing
     data strategy, privacy risk, and org execution reality
     has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PROGRAM MANAGEMENT
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_program_management',
+        dimension: 'Entry',
+        family_name: 'Program Management Entry (Senior)',
+        prompt_guidance: `Generate a program management challenge appropriate for
+    a Project Manager interviewing at the Senior bar. The challenge must
+    involve cross-functional coordination complexity — multiple teams,
+    competing priorities, or unclear ownership. Choose a domain that has
+    not already appeared in this session. Vary across: product launches,
+    platform migrations, org restructures, vendor integrations,
+    compliance programs.
+    Senior bar: Does the candidate structure their answer across
+    scope definition → stakeholder mapping → dependency management →
+    risk identification → progress tracking?
+    Do they distinguish between what they control and what they influence?
+    Probe when steps are missing:
+    - No scope definition: "How do you establish what is and isn't
+      in scope when multiple teams have different views?"
+    - No dependency management: "What are the critical path dependencies
+      here and how do you manage them?"
+    - No risk identification: "What are the top three things that could
+      derail this program and what is your mitigation for each?"
+    - No tracking: "How do you give leadership visibility without
+      creating reporting overhead?"
+    A candidate who describes a program plan without addressing
+    cross-team dependencies and risk has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_program_management',
+        dimension: 'Entry',
+        family_name: 'Program Management Entry (Principal)',
+        prompt_guidance: `Generate a program management challenge at portfolio or
+    org transformation scale, appropriate for a Project Manager at the
+    Principal bar. The challenge must involve multiple concurrent programs,
+    resource contention, or strategic alignment complexity.
+    Choose a domain that has not already appeared in this session.
+    Vary across: multi-year transformation programs, platform standardisation
+    across business units, M&A integration, org-wide process change.
+    Principal bar: Does the candidate reason about program portfolio
+    management — how programs interact, compete for resources,
+    and align to strategic outcomes?
+    Do they think about building program management capability,
+    not just running a single program?
+    Probe on:
+    - "How do you resolve resource conflicts between two equally
+      critical programs competing for the same team?"
+    - "How do you maintain strategic alignment when the business
+      direction changes mid-program?"
+    - "What does good program governance look like at this scale —
+      what decisions need escalation vs what should be resolved at program level?"
+    - "How do you build the org's program management capability
+      so it doesn't depend on you personally?"
+    A candidate who reasons at single-program level without addressing
+    portfolio complexity has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - DELIVERY
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_delivery',
+        dimension: 'Entry',
+        family_name: 'Delivery Execution Entry (Senior)',
+        prompt_guidance: `Generate a delivery execution challenge appropriate for
+    a Project Manager interviewing at the Senior bar. The challenge must
+    involve a real delivery pressure situation — scope creep, timeline
+    slippage, team capacity issues, or quality vs speed tradeoffs.
+    Choose a domain that has not already appeared in this session.
+    Do not default to the same pressure type across sessions.
+    Senior bar: Does the candidate make clear-headed tradeoff decisions
+    under pressure rather than trying to solve everything at once?
+    Do they communicate proactively and escalate at the right threshold?
+    Probe when shallow:
+    - "What specifically do you cut and what is your criteria
+      for deciding what stays vs what goes?"
+    - "At what point do you escalate vs absorb the problem yourself?"
+    - "How do you maintain team morale when you're telling people
+      to do more with less?"
+    - "What would you do differently next time to avoid this situation?"
+    A candidate who describes a delivery crisis without making
+    explicit tradeoff decisions has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_delivery',
+        dimension: 'Entry',
+        family_name: 'Delivery Execution Entry (Principal)',
+        prompt_guidance: `Generate a delivery challenge at org or platform scale,
+    appropriate for a Project Manager at the Principal bar.
+    The challenge must involve systemic delivery problems —
+    not a single project failure but a pattern of delivery issues
+    across multiple teams or programs.
+    Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate diagnose root causes of systemic
+    delivery failure rather than treating symptoms?
+    Do they design process changes that scale without creating bureaucracy?
+    Probe on:
+    - "What is the root cause of the pattern you're seeing —
+      is it process, people, tooling, or incentives?"
+    - "How do you change delivery culture without mandating compliance
+      from the top down?"
+    - "What does good delivery look like in 18 months and how do you
+      measure progress toward it?"
+    - "Where does your proposed fix create new problems —
+      what are the second-order effects?"
+    A candidate who proposes process improvements without diagnosing
+    root cause or addressing adoption has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - STAKEHOLDER MANAGEMENT
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_stakeholder_management',
+        dimension: 'Entry',
+        family_name: 'Stakeholder Management Entry (Senior)',
+        prompt_guidance: `Generate a stakeholder management challenge appropriate
+    for a Project Manager interviewing at the Senior bar. The challenge
+    must involve genuine stakeholder conflict or misalignment — not a
+    situation where everyone agrees. Choose a domain that has not already
+    appeared in this session. Vary across: executive sponsor conflict,
+    business unit disagreement, vendor relationship tension,
+    cross-functional priority conflict.
+    Senior bar: Does the candidate understand the underlying interests
+    of each stakeholder before trying to resolve the conflict?
+    Do they find solutions that address root interests rather than
+    just negotiating positions?
+    Probe when shallow:
+    - "What does each stakeholder actually care about underneath
+      their stated position?"
+    - "Who has the most to lose if this isn't resolved and
+      how does that affect your approach?"
+    - "What is your BATNA if you can't get alignment —
+      what do you do if the conflict doesn't resolve?"
+    - "How do you maintain the relationship after a difficult
+      conversation where someone didn't get what they wanted?"
+    A candidate who resolves stakeholder conflict by escalating
+    or splitting the difference without addressing root interests
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_stakeholder_management',
+        dimension: 'Entry',
+        family_name: 'Stakeholder Management Entry (Principal)',
+        prompt_guidance: `Generate a stakeholder management challenge at executive
+    or board level, appropriate for a Project Manager at the Principal bar.
+    The challenge must involve senior leadership alignment —
+    C-suite conflict, board-level visibility, or cross-org political complexity.
+    Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate understand organisational power
+    dynamics and navigate them deliberately?
+    Do they think about long-term relationship capital, not just
+    resolving the immediate conflict?
+    Probe on:
+    - "Who are the informal power holders here — not just the
+      org chart but who actually influences decisions?"
+    - "How do you build credibility with a sceptical executive
+      who didn't choose to work with you?"
+    - "What relationship capital are you spending to resolve this
+      and is it worth it?"
+    - "How does this interaction affect your ability to get things
+      done six months from now?"
+    A candidate who manages executive stakeholders the same way
+    they manage team-level stakeholders has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - METRICS & ACCOUNTABILITY
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_metrics_accountability',
+        dimension: 'Entry',
+        family_name: 'Metrics & Accountability Entry (Senior)',
+        prompt_guidance: `Generate a program metrics and accountability challenge
+    appropriate for a Project Manager interviewing at the Senior bar.
+    The challenge must involve a real measurement problem — not a
+    reporting exercise. Choose a domain that has not already appeared
+    in this session. Vary across: defining program health metrics,
+    tracking team commitments, OKR alignment, velocity measurement,
+    accountability when teams miss commitments.
+    Senior bar: Does the candidate distinguish between lagging indicators
+    (what already happened) and leading indicators (what predicts outcomes)?
+    Do they design metrics that drive behaviour, not just measure it?
+    Probe when shallow:
+    - "What leading indicators would tell you two weeks early that
+      this program is going off track?"
+    - "How do you hold a team accountable for a missed commitment
+      without damaging the relationship?"
+    - "What does your weekly program health report tell leadership
+      that a RAG status doesn't?"
+    - "How do you know if your metrics are causing teams to game
+      the system rather than improve delivery?"
+    A candidate who describes RAG status and milestone tracking
+    without leading indicators or accountability mechanisms
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_metrics_accountability',
+        dimension: 'Entry',
+        family_name: 'Metrics & Accountability Entry (Principal)',
+        prompt_guidance: `Generate a program metrics and accountability challenge
+    at org scale, appropriate for a Project Manager at the Principal bar.
+    The challenge must involve designing a measurement system across
+    multiple programs or teams — not tracking a single program.
+    Choose a domain that has not already appeared in this session.
+    Vary across: portfolio health dashboards, cross-team accountability
+    frameworks, OKR cascading, executive reporting systems.
+    Principal bar: Does the candidate design measurement systems that
+    create genuine accountability without perverse incentives?
+    Do they think about what behaviours their metrics will drive
+    across the org, not just what they will measure?
+    Probe on:
+    - "What perverse incentives does this measurement system create —
+      what will teams optimise for that you don't actually want?"
+    - "How do you get teams to own their metrics rather than
+      treating them as something imposed on them?"
+    - "What does this system make invisible — what important things
+      will you not see in this dashboard?"
+    - "How does the measurement system need to evolve as programs
+      mature from delivery to run-the-business?"
+    A candidate who designs a comprehensive dashboard without
+    addressing behavioural incentives and blind spots
+    has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - RISK MANAGEMENT
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_risk_management',
+        dimension: 'Entry',
+        family_name: 'Risk Management Entry (Senior)',
+        prompt_guidance: `Generate a risk management challenge appropriate for
+    a Project Manager interviewing at the Senior bar. The challenge must
+    involve a real risk decision under uncertainty — not a risk register
+    exercise. Choose a domain that has not already appeared in this session.
+    Vary across: technical risk in new platform adoption, vendor dependency
+    risk, regulatory compliance risk, resource risk, integration risk.
+    Senior bar: Does the candidate distinguish between risks they can
+    mitigate, risks they can transfer, and risks they must accept?
+    Do they make risk-adjusted decisions rather than just identifying risks?
+    Probe when shallow:
+    - "What is the probability and impact of this risk — how did
+      you arrive at those estimates?"
+    - "What is your mitigation and what does it cost — is the
+      mitigation worth the cost given the probability?"
+    - "At what point does this risk become a live issue that
+      requires escalation?"
+    - "What risks are you NOT mitigating and why — what have
+      you consciously decided to accept?"
+    A candidate who produces a risk list without probability/impact
+    assessment or mitigation cost analysis has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_risk_management',
+        dimension: 'Entry',
+        family_name: 'Risk Management Entry (Principal)',
+        prompt_guidance: `Generate a risk management challenge at portfolio or
+    strategic scale, appropriate for a Project Manager at the Principal bar.
+    The challenge must involve systemic or strategic risk — not project-level
+    operational risk. Choose a domain that has not already appeared in this
+    session. Vary across: strategic dependency on a single vendor,
+    regulatory change risk across a program portfolio,
+    org capability risk for a transformation,
+    concentration risk in a technology platform.
+    Principal bar: Does the candidate reason about risk at portfolio level —
+    how risks correlate and compound across programs?
+    Do they think about building risk management capability,
+    not just managing individual risks?
+    Probe on:
+    - "How do these risks correlate — if one materialises,
+      which others become more likely?"
+    - "What is your risk appetite at portfolio level —
+      how much aggregate risk is acceptable?"
+    - "How do you make strategic risk visible to the board
+      without creating panic or paralysis?"
+    - "What early warning system would give you 90 days notice
+      that a strategic risk is materialising?"
+    A candidate who manages portfolio risks as independent items
+    without reasoning about correlation and compounding
+    has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - AI DELIVERY
+    // ==========================================
+    {
+        id: 'entry_project_manager_senior_ai_delivery',
+        dimension: 'Entry',
+        family_name: 'AI Delivery Entry (Senior)',
+        prompt_guidance: `Generate an AI project delivery challenge appropriate
+    for a Project Manager interviewing at the Senior bar. The challenge
+    must involve a delivery situation unique to AI projects — where
+    requirements are fuzzy, model quality is probabilistic, or
+    stakeholder expectations are misaligned with AI reality.
+    Choose a domain that has not already appeared in this session.
+    Vary across: LLM feature delivery, ML model integration,
+    AI vendor evaluation, data pipeline for AI, AI tool rollout.
+    Senior bar: Does the candidate understand what makes AI projects
+    fundamentally different from traditional software delivery?
+    Do they manage expectations around non-deterministic outputs
+    and iterative quality improvement?
+    Probe:
+    - "How do you set stakeholder expectations when you cannot
+      guarantee the model will perform at a specific quality level?"
+    - "What does done mean for an AI feature — how do you know
+      when it is ready to ship?"
+    - "How do you manage a timeline when model training and
+      evaluation cycles are unpredictable?"
+    - "What is your escalation trigger when model quality is
+      not improving despite iteration?"
+    A candidate who manages an AI project like a traditional
+    software delivery with fixed requirements and binary done/not-done
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_project_manager_principal_ai_delivery',
+        dimension: 'Entry',
+        family_name: 'AI Delivery Strategy Entry (Principal)',
+        prompt_guidance: `Generate a strategic AI delivery challenge at org scale,
+    appropriate for a Project Manager at the Principal bar.
+    The challenge must involve building AI delivery capability across
+    multiple teams — not managing a single AI project.
+    Choose a domain that has not already appeared in this session.
+    Vary across: AI delivery governance framework,
+    ML engineering and PM collaboration model,
+    AI vendor strategy, org-wide AI project portfolio management.
+    Principal bar: Does the candidate think about building repeatable
+    AI delivery capability, not just delivering one AI project well?
+    Do they address the unique governance needs of AI —
+    ethics review, bias monitoring, model deprecation?
+    Probe on:
+    - "How do you standardise AI delivery across teams with
+      very different technical maturity levels?"
+    - "What governance framework do you put around AI projects
+      that doesn't slow teams down unnecessarily?"
+    - "How do you build PM capability to work effectively with
+      ML engineers — what does that skill development look like?"
+    - "What does responsible AI delivery mean operationally —
+      not just as a principle but as a process?"
+    A candidate who describes good single-project AI delivery
+    without addressing org-level AI delivery capability
+    has not met the Principal bar.`
     }
 ]

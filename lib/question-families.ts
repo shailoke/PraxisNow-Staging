@@ -1037,5 +1037,93 @@ Avoid: Definition-style questions, glossary content, trivia.`
     A candidate who says human review without specifying the
     process, trigger conditions, and scale implications
     has not answered concretely enough.`
+    },
+
+    // ==========================================
+    // PROJECT MANAGER FAMILIES
+    // ==========================================
+    {
+        id: 'project_manager_senior_program_planning',
+        dimension: 'Program Management',
+        family_name: 'Program Management — Cross-Team Planning & Dependency Resolution (Senior)',
+        prompt_guidance: `Probe how the candidate manages cross-team planning and dependency resolution at the Program Manager Senior bar.
+Ask about a specific situation where they had to coordinate delivery across multiple teams with competing priorities — do not specify the number of teams or the delivery context.
+Senior bar: Do they surface dependencies proactively, not reactively? Do they have a clear process for escalating blocked dependencies versus resolving them locally?
+Probe:
+- "How did you identify and track cross-team dependencies — what was your process, not just the tool?"
+- "What happened when a dependency owner de-prioritised your work? How did you handle it?"
+- "How did you know which risks to escalate versus absorb yourself?"
+- "What information did you give stakeholders about schedule risk before it became a crisis?"
+A candidate who lists tools (Jira, Gantt charts) without describing their decision logic for escalation and dependency management has not answered concretely enough.`
+    },
+    {
+        id: 'project_manager_senior_delivery_recovery',
+        dimension: 'Delivery',
+        family_name: 'Delivery — Schedule Recovery & Trade-off Execution (Senior)',
+        prompt_guidance: `Probe how the candidate recovers delivery when a project falls behind schedule at the Project Manager Senior bar.
+Ask about a specific delivery recovery situation — do not specify the cause of the delay or the size of the gap.
+Senior bar: Do they make concrete scope, resource, or timeline trade-offs rather than abstract statements about re-planning? Do they involve stakeholders in trade-off decisions with clear options, not just updates?
+Probe:
+- "What were the specific trade-offs you put to stakeholders — what did you ask them to accept?"
+- "How did you decide what to cut versus what was non-negotiable for the release?"
+- "What did you change about your own process to prevent the same slip from recurring?"
+- "How did you communicate the revised plan — what did you tell leadership and what did you hold back?"
+A candidate who says they re-planned without describing the specific trade-offs they drove and how they resolved them has not answered concretely enough.`
+    },
+    {
+        id: 'project_manager_senior_stakeholder_conflict',
+        dimension: 'Stakeholder Management',
+        family_name: 'Stakeholder Management — Competing Priorities & Conflict Resolution (Senior)',
+        prompt_guidance: `Probe how the candidate manages situations where key stakeholders have conflicting priorities or requirements at the Project Manager Senior bar.
+Ask about a specific stakeholder conflict — do not specify the stakeholder type, the nature of the conflict, or the project context.
+Senior bar: Do they have a principled approach to surfacing disagreement and brokering alignment — not just escalating or deferring? Do they understand each stakeholder's actual interest beneath their stated position?
+Probe:
+- "What were the underlying interests of each stakeholder — not just their stated positions?"
+- "How did you decide whose priority should win, and how did you communicate that to the losing party?"
+- "What did you do to preserve the relationship with the stakeholder whose priority was de-prioritised?"
+- "At what point would you escalate this conflict versus resolve it yourself?"
+A candidate who describes alignment without explaining the process they used to broker it — including how they handled the losing side — has not answered concretely enough.`
+    },
+    {
+        id: 'project_manager_senior_metrics_leading_indicators',
+        dimension: 'Metrics & Accountability',
+        family_name: 'Metrics & Accountability — Leading Indicators & Delivery Health (Senior)',
+        prompt_guidance: `Probe how the candidate uses metrics to maintain delivery accountability and surface risk early at the Project Manager Senior bar.
+Ask about a specific situation where a metric or signal gave them early warning of a delivery or quality problem — do not specify what the metric was or what the problem turned out to be.
+Senior bar: Do they distinguish leading from lagging indicators? Do they have a clear process for acting on early warning signals rather than waiting for the problem to manifest fully?
+Probe:
+- "What was the leading indicator that told you something was wrong before it became visible to stakeholders?"
+- "How did you distinguish signal from noise — what criteria told you this was a real risk versus normal variance?"
+- "What action did you take based on the early signal, and how did that differ from what you would have done if you had waited?"
+- "How do you hold teams accountable to delivery commitments without creating a metrics-gaming culture?"
+A candidate who describes metrics they tracked without explaining how they acted on early signals before problems escalated has not answered concretely enough.`
+    },
+    {
+        id: 'project_manager_senior_risk_decision',
+        dimension: 'Risk Management',
+        family_name: 'Risk Management — Risk Assessment & Mitigation Decision-Making (Senior)',
+        prompt_guidance: `Probe how the candidate identifies, assesses, and makes decisions about project risk at the Project Manager Senior bar.
+Ask about a specific risk the candidate had to assess and act on — do not specify the type of risk or the outcome.
+Senior bar: Do they have a structured approach to risk assessment — probability, impact, and mitigation cost — or do they act on instinct? Do they make explicit risk acceptance decisions rather than defaulting to mitigation?
+Probe:
+- "How did you assess the probability and impact of this risk — what data did you use, and what did you estimate when data was absent?"
+- "What were your mitigation options, and how did you weigh the cost of mitigation against the cost of the risk materialising?"
+- "Did you accept any residual risk? How did you decide what to accept versus mitigate further?"
+- "How did you communicate this risk to stakeholders — what did you tell them, and what did you not tell them?"
+A candidate who describes risk mitigation without explaining their explicit risk acceptance decision and how they communicated residual risk has not answered concretely enough.`
+    },
+    {
+        id: 'project_manager_senior_ai_expectation_management',
+        dimension: 'AI Delivery',
+        family_name: 'AI Delivery — Expectation Management & Quality Gates for AI-Integrated Projects (Senior)',
+        prompt_guidance: `Probe how the candidate manages delivery of projects that include AI or ML components, particularly around expectation management and quality gates, at the Project Manager Senior bar.
+Ask about a specific AI-integrated project delivery challenge — do not specify the AI component type or the nature of the expectation gap.
+Senior bar: Do they have concrete quality gates for AI deliverables rather than treating AI output like deterministic software output? Do they manage stakeholder expectations about AI capability limitations proactively?
+Probe:
+- "How did you define 'done' for the AI component — what was your quality gate, and who agreed to it?"
+- "How did you set stakeholder expectations about what the AI could and could not do reliably?"
+- "What happened when the AI component performed differently in production than in testing — how did you handle the gap?"
+- "How did you build in contingency for AI output variability — what was your fallback plan?"
+A candidate who manages AI delivery like deterministic software delivery — without addressing probabilistic quality, expectation gaps, and fallback planning — has not answered concretely enough.`
     }
 ]

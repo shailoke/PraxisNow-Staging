@@ -617,6 +617,198 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_marketing_principal_ai_marketing',
         dimension: 'AI Marketing',
         intent: 'Evaluate whether the candidate addresses org capability gaps in AI marketing strategy — do they identify what skills and infrastructure they need that they don\'t have today and how that affects sequencing.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - PROGRAM MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_program_dependencies',
+        entry_family: 'entry_project_manager_senior_program_management',
+        dimension: 'program_management',
+        intent: 'Evaluate whether the candidate can proactively surface and resolve cross-team dependencies before they become blockers — do they have a structured process or do they react when dependencies materialise late.'
+    },
+    {
+        id: 'probe_project_manager_senior_program_risk',
+        entry_family: 'entry_project_manager_senior_program_management',
+        dimension: 'program_management',
+        intent: 'Evaluate whether the candidate can distinguish which program-level risks to escalate versus absorb locally — do they have clear escalation criteria or do they default to escalating everything or nothing.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - PROGRAM MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_program_portfolio',
+        entry_family: 'entry_project_manager_principal_program_management',
+        dimension: 'program_management',
+        intent: 'Evaluate whether the candidate can manage a portfolio of programs with competing resource demands — do they have a principled approach to trade-off decisions across programs at the portfolio level, not just within a single program.'
+    },
+    {
+        id: 'probe_project_manager_principal_program_capability',
+        entry_family: 'entry_project_manager_principal_program_management',
+        dimension: 'program_management',
+        intent: 'Evaluate whether the candidate can identify systemic process or capability gaps that cause recurring program failures — do they address root causes at the org level or apply local fixes program by program.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - DELIVERY
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_delivery_tradeoffs',
+        entry_family: 'entry_project_manager_senior_delivery',
+        dimension: 'delivery',
+        intent: 'Evaluate whether the candidate makes concrete, explicit trade-offs to recover delivery schedule — do they articulate what they asked stakeholders to accept (scope, timeline, quality) and how they drove that decision, or do they describe re-planning without the substance.'
+    },
+    {
+        id: 'probe_project_manager_senior_delivery_communication',
+        entry_family: 'entry_project_manager_senior_delivery',
+        dimension: 'delivery',
+        intent: 'Evaluate whether the candidate communicates delivery risk to stakeholders proactively and with appropriate framing — do they distinguish what leaders need to know versus what teams need to know, and when to surface a risk versus absorb it.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - DELIVERY
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_delivery_rootcause',
+        entry_family: 'entry_project_manager_principal_delivery',
+        dimension: 'delivery',
+        intent: 'Evaluate whether the candidate investigates root causes of systemic delivery failures — do they identify structural or process causes rather than attributing delivery problems to individual team performance.'
+    },
+    {
+        id: 'probe_project_manager_principal_delivery_culture',
+        entry_family: 'entry_project_manager_principal_delivery',
+        dimension: 'delivery',
+        intent: 'Evaluate whether the candidate has shaped delivery norms and culture across teams — do they describe how they changed team behaviour durably, not just how they intervened in a single delivery crisis.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - STAKEHOLDER MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_stakeholder_interests',
+        entry_family: 'entry_project_manager_senior_stakeholder_management',
+        dimension: 'stakeholder_management',
+        intent: 'Evaluate whether the candidate understands the difference between stakeholder positions and underlying interests — do they diagnose what each stakeholder actually needs before attempting to broker alignment.'
+    },
+    {
+        id: 'probe_project_manager_senior_stakeholder_batna',
+        entry_family: 'entry_project_manager_senior_stakeholder_management',
+        dimension: 'stakeholder_management',
+        intent: 'Evaluate whether the candidate has a strategy for managing the losing party in a stakeholder conflict — do they preserve the relationship and maintain credibility after a stakeholder does not get their priority, or do they treat alignment as a one-shot event.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - STAKEHOLDER MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_stakeholder_power',
+        entry_family: 'entry_project_manager_principal_stakeholder_management',
+        dimension: 'stakeholder_management',
+        intent: 'Evaluate whether the candidate can navigate stakeholder power dynamics at the executive level — do they understand how to influence decisions made above their authority level without overstepping, and how they build the credibility to do so.'
+    },
+    {
+        id: 'probe_project_manager_principal_stakeholder_capital',
+        entry_family: 'entry_project_manager_principal_stakeholder_management',
+        dimension: 'stakeholder_management',
+        intent: 'Evaluate whether the candidate understands stakeholder capital — do they recognise when they are spending political capital, when they are building it, and how they manage the balance across a portfolio of relationships over time.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - METRICS & ACCOUNTABILITY
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_metrics_leading',
+        entry_family: 'entry_project_manager_senior_metrics_accountability',
+        dimension: 'metrics_accountability',
+        intent: 'Evaluate whether the candidate can identify and act on leading indicators before a delivery or quality problem becomes visible to stakeholders — do they have a clear process for distinguishing signal from noise and changing course based on early data.'
+    },
+    {
+        id: 'probe_project_manager_senior_metrics_accountability_mechanism',
+        entry_family: 'entry_project_manager_senior_metrics_accountability',
+        dimension: 'metrics_accountability',
+        intent: 'Evaluate whether the candidate has a concrete accountability mechanism that holds teams to delivery commitments — do they describe how they create accountability without creating fear-based reporting cultures.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - METRICS & ACCOUNTABILITY
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_metrics_incentives',
+        entry_family: 'entry_project_manager_principal_metrics_accountability',
+        dimension: 'metrics_accountability',
+        intent: 'Evaluate whether the candidate understands how metrics shape team incentives — do they recognise when a metric is creating perverse behaviour and know how to redesign the accountability system, not just the metric.'
+    },
+    {
+        id: 'probe_project_manager_principal_metrics_blindspots',
+        entry_family: 'entry_project_manager_principal_metrics_accountability',
+        dimension: 'metrics_accountability',
+        intent: 'Evaluate whether the candidate can identify the blindspots in their metrics framework — do they know what their current metrics do not capture and how they manage the risks in that gap.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - RISK MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_risk_mitigation_cost',
+        entry_family: 'entry_project_manager_senior_risk_management',
+        dimension: 'risk_management',
+        intent: 'Evaluate whether the candidate can weigh mitigation cost against risk probability and impact — do they make an explicit decision about how much to spend on mitigation relative to the expected cost of the risk materialising, or do they mitigate every identified risk reflexively.'
+    },
+    {
+        id: 'probe_project_manager_senior_risk_acceptance',
+        entry_family: 'entry_project_manager_senior_risk_management',
+        dimension: 'risk_management',
+        intent: 'Evaluate whether the candidate makes explicit risk acceptance decisions — do they have criteria for deciding what residual risk to accept and how to communicate accepted risk to stakeholders without undermining confidence in the plan.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - RISK MANAGEMENT
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_risk_correlation',
+        entry_family: 'entry_project_manager_principal_risk_management',
+        dimension: 'risk_management',
+        intent: 'Evaluate whether the candidate can identify correlated risks across a portfolio — do they recognise when risks in multiple programs share a common cause, and how they restructure risk management at the portfolio level when that is the case.'
+    },
+    {
+        id: 'probe_project_manager_principal_risk_appetite',
+        entry_family: 'entry_project_manager_principal_risk_management',
+        dimension: 'risk_management',
+        intent: 'Evaluate whether the candidate can define and communicate the organisation\'s risk appetite — do they have a principled view of how much delivery risk is acceptable in different contexts, and do they use that to make consistent decisions rather than calibrating to stakeholder comfort case by case.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - SENIOR - AI DELIVERY
+    // ==========================================
+    {
+        id: 'probe_project_manager_senior_ai_quality_gates',
+        entry_family: 'entry_project_manager_senior_ai_delivery',
+        dimension: 'ai_delivery',
+        intent: 'Evaluate whether the candidate has concrete quality gates for AI deliverables — do they treat AI output as probabilistic and design acceptance criteria accordingly, rather than applying deterministic software testing standards to AI components.'
+    },
+    {
+        id: 'probe_project_manager_senior_ai_expectations',
+        entry_family: 'entry_project_manager_senior_ai_delivery',
+        dimension: 'ai_delivery',
+        intent: 'Evaluate whether the candidate manages stakeholder expectations about AI capability limitations proactively — do they set realistic expectations before deployment and have a plan for managing the gap when AI performance in production differs from testing.'
+    },
+
+    // ==========================================
+    // PROJECT MANAGER - PRINCIPAL - AI DELIVERY
+    // ==========================================
+    {
+        id: 'probe_project_manager_principal_ai_governance',
+        entry_family: 'entry_project_manager_principal_ai_delivery',
+        dimension: 'ai_delivery',
+        intent: 'Evaluate whether the candidate has established governance frameworks for AI delivery at the program or portfolio level — do they have processes for managing AI-specific risks (model drift, data quality, explainability) that go beyond standard delivery governance.'
+    },
+    {
+        id: 'probe_project_manager_principal_ai_capability',
+        entry_family: 'entry_project_manager_principal_ai_delivery',
+        dimension: 'ai_delivery',
+        intent: 'Evaluate whether the candidate can build AI delivery capability across teams — do they identify the skills gaps that prevent teams from delivering AI projects reliably and have a structured approach to closing those gaps, rather than solving AI delivery challenges through heroics or workarounds.'
     }
 ]
 
