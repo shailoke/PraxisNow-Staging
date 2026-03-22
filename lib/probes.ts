@@ -197,13 +197,7 @@ export const PROBES: Probe[] = [
         intent: 'Evaluate whether the candidate can describe an AI feature they have used or built, explaining its user-facing behavior and basic technical mechanism at a conceptual level.'
     },
 
-    // PM SENIOR — 7 probes matching full taxonomy
-    {
-        id: 'probe_pm_senior_ai_architecture_tradeoff',
-        entry_family: 'entry_pm_senior_ai_fluency',
-        dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can justify architectural decisions for AI features, articulate trade-offs between approaches (e.g., RAG vs fine-tuning), and demonstrate constraint awareness including context window limits and latency.'
-    },
+    // PM SENIOR
     {
         id: 'probe_pm_senior_ai_evaluation_framework',
         entry_family: 'entry_pm_senior_ai_fluency',
@@ -216,68 +210,68 @@ export const PROBES: Probe[] = [
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate has a concrete hallucination mitigation strategy including grounding, guardrails, confidence scoring, and fallback flows — not just disclaimers.'
     },
+
+    // PM STAFF
     {
-        id: 'probe_pm_senior_ai_drift_detection',
-        entry_family: 'entry_pm_senior_ai_fluency',
+        id: 'probe_pm_staff_ai_architecture_tradeoff',
+        entry_family: 'entry_pm_staff_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can diagnose model drift vs expectation shift, identify distribution shift signals, and apply structured diagnostic reasoning rather than defaulting to retraining.'
+        intent: 'Justify architectural decisions for AI features, articulate trade-offs between approaches (RAG vs fine-tuning), constraint awareness including context window limits and latency.'
     },
     {
-        id: 'probe_pm_senior_ai_cost_scaling',
-        entry_family: 'entry_pm_senior_ai_fluency',
+        id: 'probe_pm_staff_ai_cost_scaling',
+        entry_family: 'entry_pm_staff_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can reason about AI cost scaling, identify architectural levers (caching, model tiering, token optimization), and make prioritized cost reduction decisions.'
-    },
-    {
-        id: 'probe_pm_senior_ai_orchestration',
-        entry_family: 'entry_pm_senior_ai_fluency',
-        dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate understands orchestration beyond single API calls, can reason about tool-calling architectures, context management, and multi-step AI pipeline design.'
-    },
-    {
-        id: 'probe_pm_senior_ai_risk_governance',
-        entry_family: 'entry_pm_senior_ai_fluency',
-        dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can frame AI risks honestly, articulate which risks were deliberately not mitigated at launch and why, and demonstrate governance maturity including regulatory and bias trade-offs.'
+        intent: 'Reason about AI cost scaling, identify architectural levers (caching, model tiering, token optimization), make prioritized cost reduction decisions.'
     },
 
     // PM PRINCIPAL
     {
-        id: 'probe_pm_principal_ai_system_design',
+        id: 'probe_pm_principal_ai_drift_detection',
         entry_family: 'entry_pm_principal_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can design evaluation frameworks that scale across teams, model drift diagnosis strategies, and articulate multi-layer mitigation with cost optimization at scale.'
+        intent: 'Diagnose model drift vs expectation shift, identify distribution shift signals, apply structured diagnostic reasoning rather than defaulting to retraining.'
     },
     {
-        id: 'probe_pm_principal_ai_orchestration_depth',
+        id: 'probe_pm_principal_ai_orchestration',
         entry_family: 'entry_pm_principal_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can reason about complex AI orchestration systems, multi-model routing strategies, and cross-team AI infrastructure dependencies at principal-level depth.'
+        intent: 'Understand orchestration beyond single API calls, reason about tool-calling architectures, context management, and multi-step AI pipeline design.'
     },
 
     // PM LEADER
     {
-        id: 'probe_pm_leader_ai_governance',
+        id: 'probe_pm_leader_ai_governance_framework',
         entry_family: 'entry_pm_leader_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can design org-level AI governance, frame portfolio-level AI investment trade-offs, and articulate build vs buy decisions for AI capabilities with ROI modeling.'
+        intent: 'Design org-level AI governance, frame portfolio-level AI investment trade-offs, articulate build vs buy decisions for AI capabilities with ROI modeling.'
     },
     {
-        id: 'probe_pm_leader_ai_strategy',
+        id: 'probe_pm_leader_ai_risk_governance',
         entry_family: 'entry_pm_leader_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can articulate org-wide AI strategy, reason about competitive AI positioning, and make portfolio-level resource allocation decisions across AI initiatives.'
+        intent: 'Frame AI risks honestly at org level, articulate which risks were deliberately not mitigated at launch and why, governance maturity including regulatory and bias trade-offs.'
     },
 
     // ==========================================
     // SDE - AI FLUENCY PROBES
     // ==========================================
+
+    // SDE JUNIOR
     {
-        id: 'sde_ai_system_design_tradeoff',
-        entry_family: 'entry_sde_senior_ai_fluency',
+        id: 'sde_junior_ai_integration_basics',
+        entry_family: 'entry_sde_junior_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can design system architectures for new ML features, navigating trade-offs between RAG, fine-tuning, and zero-shot approaches while balancing latency constraints against accuracy needs.'
+        intent: 'Evaluate whether the candidate can integrate a third-party AI API correctly — do they handle response parsing, error cases, rate limiting, and token limits without being told to.'
     },
+    {
+        id: 'sde_junior_ai_prompt_design',
+        entry_family: 'entry_sde_junior_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate understands basic prompt design — do they know how to structure a prompt for reliable outputs and can they explain why prompt wording affects model behaviour.'
+    },
+
+    // SDE SENIOR
     {
         id: 'sde_ai_reliability_strategy',
         entry_family: 'entry_sde_senior_ai_fluency',
@@ -290,34 +284,54 @@ export const PROBES: Probe[] = [
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can build comprehensive offline and online model validation pipelines involving automated metrics, human-in-the-loop logic, and safe deployment strategies to prevent silent degradation.'
     },
+
+    // SDE STAFF
     {
-        id: 'sde_ai_orchestration_layer',
-        entry_family: 'entry_sde_senior_ai_fluency',
+        id: 'sde_staff_ai_system_design_tradeoff',
+        entry_family: 'entry_sde_staff_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can design multi-step LLM workflows and agentic swarms, managing tool-calling logic, state, and parallel execution while handling complex coordination under strict timeouts.'
+        intent: 'Design system architectures for new ML features, navigating trade-offs between RAG, fine-tuning, and zero-shot while balancing latency constraints against accuracy needs.'
     },
     {
-        id: 'sde_ai_cost_optimization',
-        entry_family: 'entry_sde_senior_ai_fluency',
+        id: 'sde_staff_ai_orchestration_layer',
+        entry_family: 'entry_sde_staff_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can scale expensive AI features by applying token economics, semantic caching, and model routing to successfully manage budget limits and sudden bursts in long-context queries.'
+        intent: 'Design multi-step LLM workflows and agentic swarms, managing tool-calling logic, state, and parallel execution under strict timeouts.'
+    },
+
+    // SDE PRINCIPAL
+    {
+        id: 'sde_principal_ai_cost_optimization',
+        entry_family: 'entry_sde_principal_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Scale expensive AI features by applying token economics, semantic caching, and model routing to manage budget limits and sudden bursts in long-context queries.'
     },
     {
-        id: 'sde_ai_drift_diagnosis',
-        entry_family: 'entry_sde_senior_ai_fluency',
+        id: 'sde_principal_ai_drift_diagnosis',
+        entry_family: 'entry_sde_principal_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can investigate sudden drops in model quality through observability, data drift detection, and prompt degradation analysis without blindly rolling back without root cause analysis.'
+        intent: 'Investigate sudden drops in model quality through observability, data drift detection, and prompt degradation analysis without blindly rolling back without root cause analysis.'
+    },
+
+    // SDE LEADER
+    {
+        id: 'sde_leader_ai_security_surface',
+        entry_family: 'entry_sde_leader_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Secure enterprise AI applications by preventing prompt injection, applying PII redaction, and sanitizing outputs to stop data exfiltration instead of relying only on regex filters.'
     },
     {
-        id: 'sde_ai_security_surface',
-        entry_family: 'entry_sde_senior_ai_fluency',
+        id: 'sde_leader_ai_platform_strategy',
+        entry_family: 'entry_sde_leader_ai_fluency',
         dimension: 'ai_fluency',
-        intent: 'Evaluate whether the candidate can secure enterprise AI applications by preventing prompt injection, applying PII redaction, and sanitizing outputs to stop data exfiltration instead of relying only on regex filters.'
+        intent: 'Evaluate whether the candidate reasons about org-level AI platform strategy — do they think about build vs buy for ML infrastructure, how to staff AI platform teams, and how to govern AI usage across engineering at scale.'
     },
 
     // ==========================================
     // DATA SCIENTIST - AI FLUENCY PROBES
     // ==========================================
+
+    // DATA JUNIOR
     {
         id: 'probe_data_junior_ai_pipeline',
         entry_family: 'entry_data_junior_ai_fluency',
@@ -325,11 +339,41 @@ export const PROBES: Probe[] = [
         intent: 'Evaluate whether the candidate can describe data pipelines for AI systems, explain preprocessing applied, and validate data quality for ML model consumption.'
     },
     {
+        id: 'probe_data_junior_ai_feature_engineering',
+        entry_family: 'entry_data_junior_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate understands basic feature engineering for ML — do they identify which data transformations are needed and why, and can they explain the impact of feature quality on model output.'
+    },
+
+    // DATA SENIOR
+    {
         id: 'probe_data_senior_ai_lifecycle',
         entry_family: 'entry_data_senior_ai_fluency',
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can design end-to-end ML pipelines, implement drift detection, build evaluation frameworks, and reason about model degradation with operational rigor.'
     },
+    {
+        id: 'probe_data_senior_ai_experimentation',
+        entry_family: 'entry_data_senior_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate designs rigorous ML experiments — do they address train/validation/test split discipline, prevent data leakage, and reason about whether offline evaluation results will hold in production.'
+    },
+
+    // DATA STAFF
+    {
+        id: 'probe_data_staff_ai_platform',
+        entry_family: 'entry_data_staff_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate can design ML experimentation infrastructure at scale — do they think about feature stores, experiment tracking, and how to enable multiple teams to run parallel experiments without interference.'
+    },
+    {
+        id: 'probe_data_staff_ai_ab_testing',
+        entry_family: 'entry_data_staff_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate designs A/B testing frameworks for ML models — do they address online vs offline evaluation gaps, novelty effects, and how to attribute metric changes to model changes vs other factors.'
+    },
+
+    // DATA PRINCIPAL
     {
         id: 'probe_data_principal_ai_platform',
         entry_family: 'entry_data_principal_ai_fluency',
@@ -337,15 +381,31 @@ export const PROBES: Probe[] = [
         intent: 'Evaluate whether the candidate can architect organization-wide ML platforms, design cross-team feature sharing, and build governance for model lifecycle management with system-level depth.'
     },
     {
+        id: 'probe_data_principal_ai_governance',
+        entry_family: 'entry_data_principal_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate reasons about ML governance at org scale — do they address model lineage, audit trails, bias monitoring, and how to operationalise responsible AI as a process rather than a principle.'
+    },
+
+    // DATA LEADER
+    {
         id: 'probe_data_leader_ai_strategy',
         entry_family: 'entry_data_leader_ai_fluency',
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can frame AI investment decisions, evaluate build vs buy for ML capabilities, and design org-wide data/AI strategy with ROI modeling.'
     },
+    {
+        id: 'probe_data_leader_ai_org_design',
+        entry_family: 'entry_data_leader_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate thinks about AI org design — do they reason about how to structure data science and ML engineering teams, what capabilities to centralise vs embed in product teams, and how to build AI talent pipelines.'
+    },
 
     // ==========================================
     // MARKETING - AI FLUENCY PROBES
     // ==========================================
+
+    // MARKETING JUNIOR
     {
         id: 'probe_marketing_junior_ai_tools',
         entry_family: 'entry_marketing_junior_ai_fluency',
@@ -353,11 +413,41 @@ export const PROBES: Probe[] = [
         intent: 'Evaluate whether the candidate understands how AI tools augment marketing workflows and can distinguish AI-powered capabilities from rule-based automation in campaign management.'
     },
     {
+        id: 'probe_marketing_junior_ai_content_tools',
+        entry_family: 'entry_marketing_junior_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate understands how AI content generation tools work in practice — do they know what inputs drive quality outputs and can they identify when AI-generated content needs human review.'
+    },
+
+    // MARKETING SENIOR
+    {
         id: 'probe_marketing_senior_ai_optimization',
         entry_family: 'entry_marketing_senior_ai_fluency',
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can articulate how AI improves targeting, personalization, and attribution, and can reason about AI-generated content quality and brand safety trade-offs.'
     },
+    {
+        id: 'probe_marketing_senior_ai_attribution',
+        entry_family: 'entry_marketing_senior_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate reasons about AI-driven attribution models — do they understand the assumptions baked into algorithmic attribution, what the model gets wrong, and how to communicate its limitations to stakeholders who want certainty.'
+    },
+
+    // MARKETING STAFF
+    {
+        id: 'probe_marketing_staff_ai_personalisation',
+        entry_family: 'entry_marketing_staff_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate can design AI-driven personalisation systems at scale — do they think about data requirements, model quality thresholds, privacy constraints, and how to measure personalisation quality beyond click rates.'
+    },
+    {
+        id: 'probe_marketing_staff_ai_campaign_intelligence',
+        entry_family: 'entry_marketing_staff_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate can build AI-powered campaign intelligence systems — do they reason about what signals to feed the model, how to validate model recommendations before acting on them, and how to handle model drift in a fast-moving campaign context.'
+    },
+
+    // MARKETING PRINCIPAL
     {
         id: 'probe_marketing_principal_ai_personalization',
         entry_family: 'entry_marketing_principal_ai_fluency',
@@ -365,10 +455,24 @@ export const PROBES: Probe[] = [
         intent: 'Evaluate whether the candidate can architect AI-driven personalization systems, design experimentation frameworks for AI marketing, and reason about privacy-AI trade-offs at scale.'
     },
     {
+        id: 'probe_marketing_principal_ai_privacy',
+        entry_family: 'entry_marketing_principal_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate reasons about privacy-AI tradeoffs in marketing at scale — do they address first-party data strategy, consent frameworks, and how to maintain personalisation quality as third-party data access diminishes.'
+    },
+
+    // MARKETING LEADER
+    {
         id: 'probe_marketing_leader_ai_transformation',
         entry_family: 'entry_marketing_leader_ai_fluency',
         dimension: 'ai_fluency',
         intent: 'Evaluate whether the candidate can frame org-wide AI marketing strategy, evaluate build vs buy for marketing AI, and model ROI for AI marketing investments with portfolio reasoning.'
+    },
+    {
+        id: 'probe_marketing_leader_ai_capability',
+        entry_family: 'entry_marketing_leader_ai_fluency',
+        dimension: 'ai_fluency',
+        intent: 'Evaluate whether the candidate thinks about building AI marketing capability org-wide — do they reason about team upskilling, tool selection governance, and how to create a culture of responsible AI experimentation in marketing.'
     },
 
     // ==========================================
