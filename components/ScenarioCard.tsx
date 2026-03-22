@@ -11,7 +11,7 @@ type Scenario = {
     description: string
 }
 
-export default function ScenarioCard({ scenario, disabled = false, locked = false, duration = '45 mins', levelDisplay, onClick }: { scenario: Scenario & { dimensions?: string[] }, disabled?: boolean, locked?: boolean, duration?: string, levelDisplay?: string, onClick?: () => void }) {
+export default function ScenarioCard({ scenario, disabled = false, locked = false, duration = '45 mins', onClick }: { scenario: Scenario & { dimensions?: string[] }, disabled?: boolean, locked?: boolean, duration?: string, onClick?: () => void }) {
     const router = useRouter()
 
     const handleClick = (e: React.MouseEvent) => {
@@ -77,7 +77,7 @@ export default function ScenarioCard({ scenario, disabled = false, locked = fals
                     </div>
                     {scenario.level && (
                         <div className="text-[10px] opacity-40">
-                            {levelDisplay ?? `${scenario.level} calibration`}
+                            {scenario.level} calibration
                         </div>
                     )}
                 </div>
