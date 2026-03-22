@@ -128,6 +128,10 @@ const DIMENSION_DESCRIPTOR: Record<string, string> = {
   'Metrics & Accountability': 'metrics and accountability thinking',
   'Risk Management':        'risk management thinking',
   'AI Delivery':            'AI-aware delivery thinking',
+  'Product Sense':          'product sense thinking',
+  'Architecture':           'architectural thinking',
+  'Technical Depth':        'technical depth',
+  'Analytical Thinking':    'analytical thinking',
 }
 const getDimensionDescriptor = (dimension: string | null): string | null => {
   if (!dimension) return null
