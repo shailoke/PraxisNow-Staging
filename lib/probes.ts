@@ -1153,6 +1153,278 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_data_leader_data_strategy',
         dimension: 'Data Strategy',
         intent: 'Evaluate whether the candidate reasons about regulatory risk in data strategy — do they identify how their strategy needs to adapt as privacy regulation evolves and what they would do if a key data source was restricted.'
+    },
+
+    // ==========================================
+    // AI PM - SENIOR
+    // ==========================================
+    {
+        id: 'probe_ai_pm_senior_product_sense_ai_constraints',
+        entry_family: 'entry_ai_pm_senior_product_sense',
+        dimension: 'Product Sense',
+        intent: 'Evaluate whether the candidate treats AI constraints as first-class design inputs — do they address hallucination risk, latency, trust, and feedback loops in their product design rather than treating AI as a reliable black box.'
+    },
+    {
+        id: 'probe_ai_pm_senior_product_sense_value_clarity',
+        entry_family: 'entry_ai_pm_senior_product_sense',
+        dimension: 'Product Sense',
+        intent: 'Evaluate whether the candidate can distinguish genuine AI value-add from AI for AI\'s sake — do they articulate specifically what AI enables that a non-AI approach cannot, with concrete user benefit.'
+    },
+    {
+        id: 'probe_ai_pm_senior_ai_execution_quality_gates',
+        entry_family: 'entry_ai_pm_senior_ai_execution',
+        dimension: 'AI Execution',
+        intent: 'Evaluate whether the candidate has concrete quality gates for AI features — do they specify threshold values and go/no-go criteria rather than treating AI quality as a subjective judgment call.'
+    },
+    {
+        id: 'probe_ai_pm_senior_ai_execution_silent_degradation',
+        entry_family: 'entry_ai_pm_senior_ai_execution',
+        dimension: 'AI Execution',
+        intent: 'Evaluate whether the candidate designs for silent AI degradation detection — do they proactively describe monitoring approaches that catch quality drops before users report them.'
+    },
+    {
+        id: 'probe_ai_pm_senior_ai_technical_tradeoffs',
+        entry_family: 'entry_ai_pm_senior_ai_technical',
+        dimension: 'AI Technical',
+        intent: 'Evaluate whether the candidate applies AI technical knowledge to real decisions — do they reason about RAG vs fine-tuning, build vs buy, or latency vs quality with concrete criteria rather than reciting definitions.'
+    },
+    {
+        id: 'probe_ai_pm_senior_ai_technical_when_not_ai',
+        entry_family: 'entry_ai_pm_senior_ai_technical',
+        dimension: 'AI Technical',
+        intent: 'Evaluate whether the candidate knows when NOT to use AI — do they identify situations where a simpler deterministic approach would be better and can articulate why with concrete reasoning.'
+    },
+    {
+        id: 'probe_ai_pm_senior_strategy_moat',
+        entry_family: 'entry_ai_pm_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate reasons about sustainable AI competitive advantage — do they identify where the moat comes from (data, workflow, distribution) rather than assuming the AI model itself is the moat.'
+    },
+    {
+        id: 'probe_ai_pm_senior_strategy_data',
+        entry_family: 'entry_ai_pm_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate connects data strategy to AI product strategy — do they reason about what proprietary data the product needs and how to build data assets that compound over time.'
+    },
+    {
+        id: 'probe_ai_pm_senior_behavioral_ai_specific',
+        entry_family: 'entry_ai_pm_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates AI-specific product judgment — do they articulate what made their experience specifically about AI product development, not generic PM skills applied to an AI context.'
+    },
+    {
+        id: 'probe_ai_pm_senior_behavioral_learning',
+        entry_family: 'entry_ai_pm_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates genuine learning about AI product development — do they identify specific insights about building AI products that changed their practice, not generic PM lessons.'
+    },
+
+    // ==========================================
+    // AI ENGINEER - SENIOR
+    // ==========================================
+    {
+        id: 'probe_ai_engineer_senior_ml_design_full_system',
+        entry_family: 'entry_ai_engineer_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs the full ML system — do they address data pipeline, feature engineering, training, evaluation, serving, and monitoring rather than focusing only on model selection and training.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_ml_design_degradation',
+        entry_family: 'entry_ai_engineer_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs for model degradation — do they specify retraining triggers, monitoring signals, and recovery procedures that detect and respond to silent quality drops.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_llm_architecture',
+        entry_family: 'entry_ai_engineer_senior_llm_deep_dive',
+        dimension: 'LLM Deep Dive',
+        intent: 'Evaluate whether the candidate reasons about LLM architecture decisions with concrete criteria — do they choose between RAG, fine-tuning, and prompt engineering based on specific requirements rather than defaulting to the most complex approach.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_llm_failure_modes',
+        entry_family: 'entry_ai_engineer_senior_llm_deep_dive',
+        dimension: 'LLM Deep Dive',
+        intent: 'Evaluate whether the candidate addresses LLM-specific failure modes as engineering problems — do they have concrete mitigation strategies for hallucination, context overflow, and prompt injection rather than just acknowledging they exist.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_ai_systems_reliability',
+        entry_family: 'entry_ai_engineer_senior_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate designs AI-specific reliability patterns — do they address circuit breakers, fallbacks, and graceful degradation for non-deterministic AI components differently from deterministic services.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_ai_systems_observability',
+        entry_family: 'entry_ai_engineer_senior_ai_systems',
+        dimension: 'AI Systems',
+        intent: 'Evaluate whether the candidate designs AI-specific observability — do they identify metrics that matter for AI systems (output quality distribution, token costs, latency percentiles) that do not exist in traditional monitoring.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_behavioral_ai_specific',
+        entry_family: 'entry_ai_engineer_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates AI-specific engineering judgment — do they articulate what made their experience specifically about building AI systems, not generic software engineering applied to an AI context.'
+    },
+    {
+        id: 'probe_ai_engineer_senior_behavioral_production',
+        entry_family: 'entry_ai_engineer_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates learning about operating AI in production — do they identify specific insights about AI system reliability that changed their engineering practice.'
+    },
+
+    // ==========================================
+    // AI MARKETER - SENIOR
+    // ==========================================
+    {
+        id: 'probe_ai_marketer_senior_ai_marketing_quality',
+        entry_family: 'entry_ai_marketer_senior_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate has concrete quality thresholds for AI marketing — do they specify review processes, brand safety criteria, and escalation triggers rather than treating AI output quality as subjective.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_ai_marketing_risk',
+        entry_family: 'entry_ai_marketer_senior_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate reasons about brand risk in AI marketing — do they identify specific failure modes (off-brand content, offensive outputs, trust erosion) and have concrete response plans for each.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_growth_measurement',
+        entry_family: 'entry_ai_marketer_senior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate applies AI-specific measurement thinking — do they identify measurement challenges unique to AI marketing (attribution complexity, model drift affecting metrics) rather than applying standard marketing analytics.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_growth_roi',
+        entry_family: 'entry_ai_marketer_senior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate can build a credible ROI case for AI marketing investment — do they identify specific efficiency or effectiveness gains attributable to AI with a concrete measurement approach.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_strategy_advantage',
+        entry_family: 'entry_ai_marketer_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate identifies sustainable AI marketing advantage — do they distinguish between advantages that compound (data, capability) vs advantages that are easily copied (tool access, prompts).'
+    },
+    {
+        id: 'probe_ai_marketer_senior_strategy_data',
+        entry_family: 'entry_ai_marketer_senior_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate connects first-party data strategy to AI marketing capability — do they reason about how data assets enable AI marketing advantages that competitors without that data cannot replicate.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_behavioral_ai_specific',
+        entry_family: 'entry_ai_marketer_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates AI-specific marketing judgment — do they articulate what made their experience specifically about AI-augmented marketing, not generic marketing with AI mentioned.'
+    },
+    {
+        id: 'probe_ai_marketer_senior_behavioral_trust',
+        entry_family: 'entry_ai_marketer_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates mature judgment about AI brand and trust risk — do they show they can balance AI efficiency gains against the specific brand risks AI creates in customer-facing contexts.'
+    },
+
+    // ==========================================
+    // AI PROJECT MANAGER - SENIOR
+    // ==========================================
+    {
+        id: 'probe_ai_project_manager_senior_ai_delivery_quality_gates',
+        entry_family: 'entry_ai_project_manager_senior_ai_delivery',
+        dimension: 'AI Delivery',
+        intent: 'Evaluate whether the candidate has concrete AI quality gates — do they specify threshold values and escalation triggers for AI delivery rather than applying binary done/not-done criteria from traditional software delivery.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_ai_delivery_expectations',
+        entry_family: 'entry_ai_project_manager_senior_ai_delivery',
+        dimension: 'AI Delivery',
+        intent: 'Evaluate whether the candidate manages AI-specific stakeholder expectations — do they have a concrete communication approach for explaining probabilistic AI quality to business stakeholders who want certainty.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_program_uncertainty',
+        entry_family: 'entry_ai_project_manager_senior_program_management',
+        dimension: 'Program Management',
+        intent: 'Evaluate whether the candidate builds AI uncertainty into program planning — do they create plans that accommodate model iteration cycles and experiment failures rather than treating AI development like deterministic software development.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_program_handoff',
+        entry_family: 'entry_ai_project_manager_senior_program_management',
+        dimension: 'Program Management',
+        intent: 'Evaluate whether the candidate manages the research-to-production handoff explicitly — do they identify the specific coordination challenges between data science and engineering teams in AI projects.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_stakeholder_expectations',
+        entry_family: 'entry_ai_project_manager_senior_stakeholder_management',
+        dimension: 'Stakeholder Management',
+        intent: 'Evaluate whether the candidate proactively manages AI expectation gaps — do they identify AI-specific expectation mismatches (deterministic vs probabilistic, demo vs production) and address them before they become crises.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_stakeholder_translation',
+        entry_family: 'entry_ai_project_manager_senior_stakeholder_management',
+        dimension: 'Stakeholder Management',
+        intent: 'Evaluate whether the candidate can translate AI technical constraints into business language — do they bridge the gap between what the AI team understands and what business stakeholders need to hear without losing accuracy.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_behavioral_ai_specific',
+        entry_family: 'entry_ai_project_manager_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates AI-specific delivery judgment — do they articulate what made their delivery challenge specifically about AI, not generic project management applied to an AI project.'
+    },
+    {
+        id: 'probe_ai_project_manager_senior_behavioral_hard_calls',
+        entry_family: 'entry_ai_project_manager_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates the ability to make hard go/no-go decisions under AI uncertainty — do they show they can make and defend quality threshold decisions when AI outputs are probabilistic.'
+    },
+
+    // ==========================================
+    // AI SCIENTIST - SENIOR
+    // ==========================================
+    {
+        id: 'probe_ai_scientist_senior_ml_research_production',
+        entry_family: 'entry_ai_scientist_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate reasons about the research-to-production gap — do they identify what typically breaks when moving from experiment to production and design the system to minimise that gap.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_ml_evaluation',
+        entry_family: 'entry_ai_scientist_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs rigorous ML evaluation — do they address what offline evaluation tells them vs what it does not tell them about production performance, and how they close that gap.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_analytics_ai_specific',
+        entry_family: 'entry_ai_scientist_senior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate applies analytical rigour to AI-specific measurement challenges — do they identify confounders and statistical challenges unique to evaluating non-deterministic AI systems.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_analytics_unintended',
+        entry_family: 'entry_ai_scientist_senior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate designs to detect unintended consequences of model changes — do they think beyond the target metric to identify what else a model update might be degrading.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_data_flywheel',
+        entry_family: 'entry_ai_scientist_senior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate thinks about data as a compounding strategic asset — do they design data strategies where more usage creates better models creates more usage, rather than treating data as a static training input.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_data_responsibility',
+        entry_family: 'entry_ai_scientist_senior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate addresses bias, fairness, and governance in training data as first-class research concerns — not afterthoughts or compliance checkboxes.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_behavioral_ai_specific',
+        entry_family: 'entry_ai_scientist_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates AI research judgment — do they articulate what made their experience specifically about AI research and deployment, showing awareness of the unique responsibilities of deploying probabilistic systems.'
+    },
+    {
+        id: 'probe_ai_scientist_senior_behavioral_responsibility',
+        entry_family: 'entry_ai_scientist_senior_behavioral',
+        dimension: 'Behavioral',
+        intent: 'Evaluate whether the candidate demonstrates ethical reasoning about AI deployment — do they show they can navigate the tension between research excellence and responsible deployment, making principled tradeoffs when they conflict.'
     }
 ]
 

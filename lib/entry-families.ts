@@ -1592,5 +1592,729 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
     A candidate who discusses data strategy as a technical
     architecture problem rather than a business strategy problem
     has not met the Leader bar.`
+    },
+
+    // ==========================================
+    // AI PM - SENIOR
+    // ==========================================
+    {
+        id: 'entry_ai_pm_senior_product_sense',
+        dimension: 'Entry',
+        family_name: 'AI Product Sense Entry (AI PM Senior)',
+        prompt_guidance: `Present a concrete AI product design scenario appropriate
+    for an AI Product Manager at the Senior bar. The scenario must require
+    designing an AI-native product or feature — not adding AI to an existing
+    product. Choose a domain that has not already appeared in this session.
+    Vary across: AI-powered workflows, AI assistants, recommendation systems,
+    content generation tools, AI-native enterprise software.
+    Senior bar: Does the candidate design with AI constraints as first-class
+    concerns — not afterthoughts?
+    Key signals:
+    - Do they segment users before defining the AI use case?
+    - Do they identify where AI genuinely adds value vs where
+      a simpler approach would work better?
+    - Do they design feedback loops to improve the model over time?
+    - Do they address trust, transparency, and failure modes upfront?
+    Probe when shallow:
+    - "Who specifically benefits from the AI here and what would
+      they do without it?"
+    - "Where does AI create genuine value vs where is it just
+      pattern-matching on existing workflows?"
+    - "What does the product do when the AI output is wrong —
+      how does the user know and what can they do?"
+    - "How does this product get better over time —
+      what is the learning loop?"
+    A candidate who designs a product with AI as a feature layer
+    rather than as a core design constraint has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_pm_senior_ai_execution',
+        dimension: 'Entry',
+        family_name: 'AI Execution Entry (AI PM Senior)',
+        prompt_guidance: `Present a concrete AI product execution scenario appropriate
+    for an AI Product Manager at the Senior bar. The scenario must involve
+    a real execution challenge specific to AI products — model quality issues,
+    evaluation pipeline design, production monitoring, or success metric definition.
+    Choose a domain that has not already appeared in this session.
+    Vary across: model accuracy dropping in production, defining success metrics
+    for a generative AI feature, designing a human-in-the-loop evaluation system,
+    deciding when an AI feature is ready to ship.
+    Senior bar: Does the candidate reason about AI execution differently
+    from traditional software execution?
+    Key signals:
+    - Do they define success metrics that account for probabilistic outputs?
+    - Do they design evaluation systems with both offline and online components?
+    - Do they have concrete quality gates — not just "it feels good"?
+    - Do they think about silent degradation and how to detect it?
+    Probe:
+    - "How do you define done for this AI feature —
+      what is your go/no-go quality threshold and how did you set it?"
+    - "How would you know if this feature is getting worse in production
+      without users explicitly telling you?"
+    - "What is the difference between model quality and product quality here —
+      how do you measure each separately?"
+    - "What triggers a rollback vs a patch vs a full model retrain?"
+    A candidate who applies standard software execution metrics
+    to an AI product without adaptation has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_pm_senior_ai_technical',
+        dimension: 'Entry',
+        family_name: 'AI Technical Entry (AI PM Senior)',
+        prompt_guidance: `Present a concrete AI architectural decision scenario
+    appropriate for an AI Product Manager at the Senior bar.
+    The scenario must require the candidate to reason about a real
+    AI/ML architectural choice — not explain a concept.
+    Choose a domain that has not already appeared in this session.
+    Vary across: RAG vs fine-tuning decision, when not to use an LLM,
+    prompt engineering vs model training tradeoff,
+    latency vs quality tradeoff for a specific use case,
+    build vs buy a model capability.
+    Senior bar: Does the candidate reason about the tradeoff with
+    concrete criteria — not just name the options?
+    Do they understand the implications without needing to implement anything?
+    Key signals:
+    - Do they frame the decision around user and business requirements
+      before evaluating technical options?
+    - Do they reason about cost, latency, and quality as a tradeoff space?
+    - Do they know when NOT to use AI or a specific AI approach?
+    - Can they explain their reasoning to an engineering team?
+    Probe:
+    - "What would make you choose the other option —
+      what would have to be true about your requirements?"
+    - "What does this decision cost in terms of time, money,
+      and engineering complexity?"
+    - "How would you explain this tradeoff to an engineer
+      who thinks you're making the wrong call?"
+    - "What are you giving up with this choice —
+      what becomes harder to do later?"
+    A candidate who recites definitions or explains concepts
+    without applying them to the specific scenario
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_pm_senior_strategy',
+        dimension: 'Entry',
+        family_name: 'AI Strategy Entry (AI PM Senior)',
+        prompt_guidance: `Present a concrete AI product strategy scenario appropriate
+    for an AI Product Manager at the Senior bar. The scenario must involve
+    a real strategic decision about an AI product — competitive positioning,
+    build vs buy an AI capability, AI roadmap prioritisation,
+    or responding to a competitor shipping a better model.
+    Choose a domain that has not already appeared in this session.
+    Senior bar: Does the candidate reason about AI strategy with
+    the same rigour they would apply to any product strategy decision?
+    Do they account for the unique dynamics of AI —
+    data moats, model commoditisation, trust as a differentiator?
+    Key signals:
+    - Do they identify where AI creates sustainable competitive advantage
+      vs where it is easily copied?
+    - Do they reason about data strategy as part of product strategy?
+    - Do they think about what this decision locks them into?
+    Probe:
+    - "Where does your moat actually come from —
+      model, data, distribution, or workflow lock-in?"
+    - "What happens to your strategy when a competitor
+      ships a better base model next quarter?"
+    - "How does your data strategy connect to your AI product strategy —
+      what data do you need that you do not have?"
+    - "What does this roadmap decision make harder to change in 18 months?"
+    A candidate who applies generic product strategy thinking
+    without accounting for AI-specific dynamics
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_pm_senior_behavioral',
+        dimension: 'Entry',
+        family_name: 'AI Behavioral Entry (AI PM Senior)',
+        prompt_guidance: `Ask about a specific past experience that is directly
+    relevant to working on AI products, appropriate for an AI Product Manager
+    at the Senior bar. The experience must involve an AI-specific challenge —
+    not a generic product management situation.
+    Vary across: shipping an AI feature that underperformed, navigating
+    stakeholder skepticism about AI, making a product decision with
+    unreliable model outputs, handling an AI-related incident,
+    balancing AI capability with user trust.
+    Senior bar: Does the candidate demonstrate genuine AI product judgment —
+    not just general PM skills applied to an AI context?
+    Key signals:
+    - Do they articulate what made the situation AI-specific —
+      what would have been different with a non-AI product?
+    - Do they show ownership of both the product and the AI system?
+    - Do they demonstrate learning about AI product development
+      specifically, not just general lessons?
+    Probe:
+    - "What made this situation specifically hard because of AI —
+      what would have been easier with a deterministic system?"
+    - "What did you learn about building AI products that you
+      would not have learned building traditional software?"
+    - "If you faced the same situation again, what would you
+      do differently — specifically around the AI component?"
+    - "How did this experience change how you think about
+      shipping AI features?"
+    A candidate who tells a generic product story with AI
+    mentioned as an afterthought has not met the Senior bar.`
+    },
+
+    // ==========================================
+    // AI ENGINEER - SENIOR
+    // ==========================================
+    {
+        id: 'entry_ai_engineer_senior_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML System Design Entry (AI Engineer Senior)',
+        prompt_guidance: `Present a concrete ML system design challenge appropriate
+    for an AI Engineer at the Senior bar. The challenge must require designing
+    a complete ML system — data pipeline, model training, evaluation, serving,
+    and monitoring. Choose a domain that has not already appeared in this session.
+    Vary across: recommendation systems, content ranking, fraud detection,
+    search relevance, demand forecasting, content moderation.
+    Senior bar: Does the candidate design the full system, not just the model?
+    Do they treat reliability, scalability, and observability as
+    first-class requirements?
+    Key signals:
+    - Do they start with requirements and constraints before architecture?
+    - Do they design the evaluation pipeline, not just the training pipeline?
+    - Do they address model serving latency and throughput requirements?
+    - Do they design for model degradation detection and recovery?
+    Probe when incomplete:
+    - "Walk me through your feature pipeline —
+      how does raw data become model-ready features at serving time?"
+    - "What is your retraining strategy —
+      triggered by what signal, on what cadence?"
+    - "How do you serve this at p99 latency requirements —
+      what is your serving architecture?"
+    - "What monitoring tells you the model is degrading
+      before users start complaining?"
+    A candidate who designs only the model without the surrounding
+    system infrastructure has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_engineer_senior_llm_deep_dive',
+        dimension: 'Entry',
+        family_name: 'LLM Deep Dive Entry (AI Engineer Senior)',
+        prompt_guidance: `Present a concrete LLM engineering challenge appropriate
+    for an AI Engineer at the Senior bar. The challenge must require deep
+    technical reasoning about LLM systems — not surface-level API integration.
+    Choose a domain that has not already appeared in this session.
+    Vary across: RAG system design, fine-tuning pipeline architecture,
+    prompt engineering at scale, LLM evaluation framework design,
+    context window management, multi-model routing systems.
+    Senior bar: Does the candidate reason about LLM systems at
+    architectural depth — tradeoffs, failure modes, and operational reality?
+    Key signals:
+    - Do they reason about the tradeoff between RAG, fine-tuning,
+      and prompt engineering with concrete criteria?
+    - Do they address hallucination as an engineering problem
+      with concrete mitigation strategies?
+    - Do they think about cost, latency, and quality as a
+      three-way tradeoff space?
+    - Do they design for LLM failure modes specifically —
+      not just generic distributed systems failure?
+    Probe:
+    - "How do you decide between RAG and fine-tuning for this use case —
+      what criteria drive that decision?"
+    - "What does your evaluation framework look like —
+      how do you measure quality when there is no ground truth label?"
+    - "How do you handle context window limits at scale —
+      what is your chunking and retrieval strategy?"
+    - "What happens when the LLM produces a confident but wrong answer —
+      how does your system detect and handle that?"
+    A candidate who describes LLM capabilities without reasoning
+    about failure modes and operational tradeoffs
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_engineer_senior_ai_systems',
+        dimension: 'Entry',
+        family_name: 'AI Systems Entry (AI Engineer Senior)',
+        prompt_guidance: `Present a concrete AI infrastructure or platform
+    engineering challenge appropriate for an AI Engineer at the Senior bar.
+    The challenge must involve building or scaling AI systems beyond
+    a single model — inference infrastructure, model serving platforms,
+    AI evaluation pipelines, or multi-model orchestration.
+    Choose a domain that has not already appeared in this session.
+    Senior bar: Does the candidate reason about AI infrastructure
+    as an engineering discipline with unique constraints?
+    Do they address the non-determinism, latency variability,
+    and silent failure modes specific to AI systems?
+    Key signals:
+    - Do they design for AI-specific reliability requirements —
+      graceful degradation when model quality drops?
+    - Do they address cost management as a first-class engineering concern?
+    - Do they think about observability for AI systems differently
+      than for deterministic systems?
+    Probe:
+    - "How do you design circuit breakers for an LLM endpoint —
+      what triggers them and what is the fallback?"
+    - "How do you manage GPU/compute costs at scale —
+      what levers do you have and how do you use them?"
+    - "What does your observability stack look like for an AI system —
+      what metrics matter that do not exist in traditional monitoring?"
+    - "How do you test an AI system —
+      what does your test suite look like when outputs are non-deterministic?"
+    A candidate who designs AI infrastructure like traditional
+    software infrastructure without accounting for non-determinism
+    and probabilistic quality has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_engineer_senior_behavioral',
+        dimension: 'Entry',
+        family_name: 'AI Behavioral Entry (AI Engineer Senior)',
+        prompt_guidance: `Ask about a specific past experience that is directly
+    relevant to building AI systems, appropriate for an AI Engineer at
+    the Senior bar. The experience must involve an AI-specific engineering
+    challenge — not a generic software engineering situation.
+    Vary across: debugging a model quality regression in production,
+    designing a system that failed because of non-deterministic AI outputs,
+    making a build vs buy decision for an AI component,
+    handling a production incident caused by model drift,
+    collaborating with research to ship a model to production.
+    Senior bar: Does the candidate demonstrate genuine AI engineering
+    judgment — specifically the ability to reason about systems where
+    outputs are probabilistic and failures are silent?
+    Key signals:
+    - Do they articulate what made the engineering challenge
+      AI-specific vs generic?
+    - Do they show deep ownership of both the system and the model?
+    - Do they demonstrate learning about AI system reliability
+      that changed how they build?
+    Probe:
+    - "What made this specifically hard because of AI —
+      what debugging approaches that work for deterministic systems
+      failed you here?"
+    - "What did you learn about operating AI in production that
+      surprised you compared to traditional software?"
+    - "How did this experience change your approach to
+      testing and monitoring AI systems?"
+    - "What would you design differently if you rebuilt this
+      system today?"
+    A candidate who tells a generic engineering story where AI
+    is incidental rather than central has not met the Senior bar.`
+    },
+
+    // ==========================================
+    // AI MARKETER - SENIOR
+    // ==========================================
+    {
+        id: 'entry_ai_marketer_senior_ai_marketing',
+        dimension: 'Entry',
+        family_name: 'AI Marketing Entry (AI Marketer Senior)',
+        prompt_guidance: `Present a concrete AI marketing scenario appropriate
+    for an AI Marketer at the Senior bar. The scenario must involve
+    a real decision about using AI in a marketing context — not a
+    generic marketing challenge with AI mentioned.
+    Choose a domain that has not already appeared in this session.
+    Vary across: AI-generated content strategy, AI-driven personalisation
+    at scale, AI attribution modelling, AI campaign optimisation,
+    marketing automation with AI.
+    Senior bar: Does the candidate treat AI as a tool with real
+    constraints — brand risk, quality thresholds, trust implications?
+    Do they reason about where AI genuinely improves marketing
+    outcomes vs where it creates new risks?
+    Key signals:
+    - Do they define quality thresholds before deploying AI in
+      customer-facing contexts?
+    - Do they identify brand safety risks specific to AI outputs?
+    - Do they design human review processes that scale?
+    - Do they measure AI marketing outcomes differently from
+      traditional marketing outcomes?
+    Probe:
+    - "What is the minimum quality bar before you let AI
+      generate customer-facing content without human review?"
+    - "How do you know if AI-generated content is helping
+      or hurting brand perception?"
+    - "What is your response plan when an AI marketing output
+      causes a brand incident?"
+    - "How do you measure the success of AI-driven personalisation —
+      what metrics are different from non-AI personalisation?"
+    A candidate who treats AI as a pure efficiency tool without
+    reasoning about quality thresholds and brand risk
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_marketer_senior_growth',
+        dimension: 'Entry',
+        family_name: 'AI Growth Entry (AI Marketer Senior)',
+        prompt_guidance: `Present a concrete growth or analytics challenge
+    in an AI marketing context, appropriate for an AI Marketer at
+    the Senior bar. The scenario must involve AI-specific growth
+    challenges — not generic growth problems with AI mentioned.
+    Choose a domain that has not already appeared in this session.
+    Vary across: measuring ROI of AI marketing investments,
+    A/B testing AI-driven personalisation, diagnosing why an
+    AI recommendation system is underperforming,
+    designing experiments to validate AI marketing claims.
+    Senior bar: Does the candidate apply analytical rigour
+    specifically to AI marketing systems — accounting for
+    the unique measurement challenges AI creates?
+    Key signals:
+    - Do they identify measurement challenges specific to AI —
+      attribution complexity, novelty effects,
+      model drift affecting results over time?
+    - Do they design experiments that isolate AI impact
+      from other variables?
+    - Do they reason about statistical validity in AI experiments?
+    Probe:
+    - "How do you isolate the impact of the AI component
+      from everything else changing in the same period?"
+    - "How do you handle novelty effects in AI personalisation experiments —
+      users behaving differently because something is new?"
+    - "What does model drift look like in your growth metrics —
+      how would you detect that the AI is degrading your numbers?"
+    - "How do you make the ROI case for AI marketing investment
+      to a CFO who is sceptical?"
+    A candidate who applies standard growth analytics to AI marketing
+    without acknowledging AI-specific measurement challenges
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_marketer_senior_strategy',
+        dimension: 'Entry',
+        family_name: 'AI Marketing Strategy Entry (AI Marketer Senior)',
+        prompt_guidance: `Present a concrete AI marketing strategy scenario
+    appropriate for an AI Marketer at the Senior bar. The scenario must
+    involve a real strategic decision about AI in marketing — competitive
+    positioning of an AI product, building an AI-native marketing stack,
+    or responding to competitors using AI more effectively.
+    Choose a domain that has not already appeared in this session.
+    Senior bar: Does the candidate connect AI marketing strategy
+    to sustainable competitive advantage?
+    Do they think about first-party data as a strategic asset
+    and privacy as a constraint that shapes strategy?
+    Key signals:
+    - Do they identify where AI creates durable marketing advantage
+      vs where it is easily copied?
+    - Do they reason about data strategy as part of marketing strategy?
+    - Do they account for privacy regulation as a strategic constraint?
+    Probe:
+    - "Where does your AI marketing advantage actually come from —
+      tools, data, or execution capability?"
+    - "What happens to your strategy when your competitor
+      has access to the same AI tools?"
+    - "How does your first-party data strategy connect to
+      your AI marketing capability?"
+    - "How does your strategy need to adapt as privacy
+      regulation restricts data usage?"
+    A candidate who describes AI marketing tactics without reasoning
+    about sustainable advantage and data strategy
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_marketer_senior_behavioral',
+        dimension: 'Entry',
+        family_name: 'AI Behavioral Entry (AI Marketer Senior)',
+        prompt_guidance: `Ask about a specific past experience that is directly
+    relevant to AI-augmented marketing, appropriate for an AI Marketer
+    at the Senior bar. The experience must involve an AI-specific marketing
+    challenge — not a generic marketing situation.
+    Vary across: launching an AI-powered marketing campaign,
+    navigating a brand safety incident from AI-generated content,
+    making a decision about AI tool adoption with uncertain ROI,
+    managing stakeholder skepticism about AI in marketing,
+    measuring the impact of AI personalisation.
+    Senior bar: Does the candidate demonstrate genuine AI marketing
+    judgment — specifically the ability to navigate the tension between
+    AI efficiency and brand/trust risk?
+    Key signals:
+    - Do they articulate what made the situation AI-specific?
+    - Do they show awareness of both the opportunity and the risk?
+    - Do they demonstrate learning about AI in marketing
+      that changed their practice?
+    Probe:
+    - "What made this specifically hard because of AI —
+      what would have been easier with traditional marketing?"
+    - "How did you balance the efficiency gain from AI
+      with the brand or trust risk it created?"
+    - "What did you learn about using AI in customer-facing
+      marketing that you would not have learned otherwise?"
+    - "How has this experience changed how you evaluate
+      AI tools for marketing use cases?"
+    A candidate who tells a generic marketing story where AI
+    is incidental rather than central has not met the Senior bar.`
+    },
+
+    // ==========================================
+    // AI PROJECT MANAGER - SENIOR
+    // ==========================================
+    {
+        id: 'entry_ai_project_manager_senior_ai_delivery',
+        dimension: 'Entry',
+        family_name: 'AI Delivery Entry (AI Project Manager Senior)',
+        prompt_guidance: `Present a concrete AI project delivery scenario appropriate
+    for an AI Project Manager at the Senior bar. The scenario must involve
+    a delivery challenge that is specifically caused by the AI nature of
+    the project — not a generic delivery problem.
+    Choose a domain that has not already appeared in this session.
+    Vary across: managing a project where model quality is not meeting
+    the go-live threshold, handling scope creep caused by AI capability
+    uncertainty, delivering a project where the AI vendor model changed
+    unexpectedly, managing stakeholder expectations when AI outputs
+    are probabilistic.
+    Senior bar: Does the candidate demonstrate that they understand
+    what makes AI projects fundamentally different from software projects?
+    Do they have concrete approaches to AI-specific delivery risks?
+    Key signals:
+    - Do they distinguish between AI delivery risks and traditional
+      software delivery risks?
+    - Do they have concrete quality gates for AI —
+      not binary done/not-done?
+    - Do they manage stakeholder expectations around probabilistic outputs?
+    Probe:
+    - "What is your quality gate for this AI deliverable —
+      how do you define done when outputs are probabilistic?"
+    - "How do you manage the timeline when model iteration
+      cycles are unpredictable?"
+    - "What is your escalation trigger when model quality
+      is not improving despite multiple iterations?"
+    - "How do you communicate to a business stakeholder that
+      85% accuracy is actually the right threshold to ship at?"
+    A candidate who manages an AI project with the same
+    approach as a traditional software project has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_project_manager_senior_program_management',
+        dimension: 'Entry',
+        family_name: 'AI Program Management Entry (AI Project Manager Senior)',
+        prompt_guidance: `Present a concrete program management challenge
+    in an AI project context, appropriate for an AI Project Manager
+    at the Senior bar. The scenario must involve coordination complexity
+    specific to AI programs — cross-functional teams including data scientists
+    and ML engineers, dependency on external model providers,
+    or managing parallel AI experimentation tracks.
+    Choose a domain that has not already appeared in this session.
+    Senior bar: Does the candidate understand the unique coordination
+    challenges of AI programs — where requirements emerge through
+    experimentation rather than specification?
+    Key signals:
+    - Do they manage the research-to-production handoff explicitly?
+    - Do they coordinate between technical and business stakeholders
+      who have fundamentally different mental models of AI?
+    - Do they build flexibility into the program plan for
+      AI-specific uncertainty?
+    Probe:
+    - "How do you create a program plan when the ML team
+      cannot commit to a timeline until they have run experiments?"
+    - "How do you manage the handoff between the data science
+      team and the engineering team in an AI project?"
+    - "What is different about stakeholder communication
+      in an AI program vs a traditional software program?"
+    - "How do you prevent the program from stalling when
+      a model experiment fails and the team needs to restart?"
+    A candidate who manages an AI program like a traditional
+    waterfall or agile software project without adapting for
+    AI-specific uncertainty has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_project_manager_senior_stakeholder_management',
+        dimension: 'Entry',
+        family_name: 'AI Stakeholder Management Entry (AI Project Manager Senior)',
+        prompt_guidance: `Present a concrete stakeholder management challenge
+    in an AI project context, appropriate for an AI Project Manager
+    at the Senior bar. The scenario must involve stakeholder dynamics
+    specific to AI — managing executives who have unrealistic AI expectations,
+    navigating conflict between the AI team and business stakeholders,
+    or aligning stakeholders when AI outputs are probabilistic
+    and hard to evaluate.
+    Choose a domain that has not already appeared in this session.
+    Senior bar: Does the candidate demonstrate the ability to bridge
+    the gap between AI technical reality and business stakeholder expectations?
+    Key signals:
+    - Do they proactively manage AI expectation gaps —
+      not just react when stakeholders are disappointed?
+    - Do they translate AI technical constraints into business language?
+    - Do they find alignment strategies that work despite the
+      inherent uncertainty of AI projects?
+    Probe:
+    - "How do you align a business stakeholder who expected
+      deterministic outputs with the reality of probabilistic AI?"
+    - "What do you do when the executive sponsor has seen
+      a ChatGPT demo and now has expectations your project cannot meet?"
+    - "How do you manage the relationship between the AI team
+      and business stakeholders who do not trust the model outputs?"
+    - "How do you maintain stakeholder confidence when the
+      project timeline has slipped because of model quality issues?"
+    A candidate who handles AI stakeholder management with
+    generic conflict resolution techniques without addressing
+    AI-specific expectation challenges has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_project_manager_senior_behavioral',
+        dimension: 'Entry',
+        family_name: 'AI Behavioral Entry (AI Project Manager Senior)',
+        prompt_guidance: `Ask about a specific past experience that is directly
+    relevant to delivering AI projects, appropriate for an AI Project Manager
+    at the Senior bar. The experience must involve an AI-specific delivery
+    challenge — not a generic project management situation.
+    Vary across: delivering a project where the model quality never reached
+    the target threshold, managing a team through a failed AI experiment,
+    navigating a stakeholder crisis caused by AI output quality,
+    making a go/no-go decision on an AI feature that was not fully ready,
+    managing an AI vendor relationship that went wrong.
+    Senior bar: Does the candidate demonstrate genuine AI delivery judgment —
+    specifically the ability to make hard calls when AI uncertainty
+    creates delivery risk?
+    Key signals:
+    - Do they articulate what made the delivery challenge
+      specifically AI-related?
+    - Do they show ownership of both the delivery and the
+      AI quality decisions?
+    - Do they demonstrate learning about AI project management
+      that changed their practice?
+    Probe:
+    - "What made this delivery challenge specifically hard because of AI —
+      what would have been easier with a traditional software project?"
+    - "What was the hardest call you had to make and how did
+      you make it given the AI uncertainty?"
+    - "What did you learn about managing AI projects that you
+      would not have learned managing traditional software projects?"
+    - "How has this experience changed how you set up
+      AI projects from the start?"
+    A candidate who tells a generic project management story
+    where AI is incidental rather than the source of the
+    specific challenge has not met the Senior bar.`
+    },
+
+    // ==========================================
+    // AI SCIENTIST - SENIOR
+    // ==========================================
+    {
+        id: 'entry_ai_scientist_senior_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML System Design Entry (AI Scientist Senior)',
+        prompt_guidance: `Present a concrete ML system design challenge appropriate
+    for an AI Scientist at the Senior bar. The challenge must require both
+    research-level ML thinking and production-readiness thinking — not just
+    model selection. Choose a domain that has not already appeared in this
+    session. Vary across: designing a new recommendation approach,
+    architecting a multi-modal ML system, designing an online learning system,
+    building a causal ML pipeline, designing a self-improving AI system.
+    Senior bar: Does the candidate reason about both research quality
+    and production reliability as joint constraints?
+    Do they think about the path from experiment to production —
+    not just the experiment itself?
+    Key signals:
+    - Do they define evaluation methodology before model architecture?
+    - Do they reason about the research-to-production gap explicitly?
+    - Do they address both offline and online performance?
+    - Do they think about what makes the system maintainable
+      as data and requirements evolve?
+    Probe:
+    - "How do you evaluate this system — what does offline evaluation
+      tell you and what does it not tell you about production performance?"
+    - "What is the hardest part of taking this from experiment to production —
+      what typically breaks in that transition?"
+    - "How does this system degrade gracefully when it encounters
+      data it was not trained on?"
+    - "What would make you decide to retrain vs redesign
+      when performance drops?"
+    A candidate who designs an impressive model without reasoning
+    about evaluation rigour and production path
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_scientist_senior_analytics',
+        dimension: 'Entry',
+        family_name: 'Analytics Entry (AI Scientist Senior)',
+        prompt_guidance: `Present a concrete analytical challenge appropriate
+    for an AI Scientist at the Senior bar. The challenge must involve
+    research-level analytical thinking — experimental design, causal inference,
+    or statistical methodology for AI systems.
+    Choose a domain that has not already appeared in this session.
+    Vary across: designing an A/B test for a model update,
+    causal analysis of model impact, measuring the business value
+    of an AI feature, detecting and diagnosing model bias.
+    Senior bar: Does the candidate apply rigorous statistical thinking
+    to AI evaluation problems — not just standard A/B testing?
+    Do they understand the unique challenges of evaluating AI systems
+    vs deterministic systems?
+    Key signals:
+    - Do they identify the specific challenges of applying statistical
+      methods to non-deterministic AI outputs?
+    - Do they reason about confounders in AI experiments
+      that do not exist in traditional software experiments?
+    - Do they design for detecting unintended consequences
+      of model changes?
+    Probe:
+    - "How do you handle the fact that your model outputs change
+      over time — what does that do to your experimental design?"
+    - "What confounders are specific to evaluating AI that
+      do not exist when evaluating deterministic software?"
+    - "How do you detect that a model update improved the target metric
+      but degraded something you were not measuring?"
+    - "How do you make a causal claim about AI model impact
+      when you cannot fully control what the model does?"
+    A candidate who applies standard A/B testing methodology
+    to AI evaluation without adapting for AI-specific challenges
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_scientist_senior_data_strategy',
+        dimension: 'Entry',
+        family_name: 'Data Strategy Entry (AI Scientist Senior)',
+        prompt_guidance: `Present a concrete data strategy challenge appropriate
+    for an AI Scientist at the Senior bar. The challenge must involve
+    research-level data thinking — data flywheel design, training data
+    strategy, data quality for AI, or responsible data practices
+    for AI systems. Choose a domain that has not already appeared
+    in this session. Vary across: designing a data flywheel that
+    improves the model with usage, managing training data bias,
+    designing a data collection strategy for a new AI capability,
+    building a data governance framework for AI training data.
+    Senior bar: Does the candidate think about data as a strategic
+    asset that shapes AI capability — not just an input to clean and process?
+    Do they reason about data quality, bias, and governance as
+    first-class research concerns?
+    Key signals:
+    - Do they design data strategies that compound over time?
+    - Do they address bias and fairness in training data explicitly?
+    - Do they think about data governance as an enabler
+      of responsible AI research?
+    Probe:
+    - "How does this data strategy create a compounding advantage —
+      how does more usage make the model better?"
+    - "What biases are baked into this training data and
+      how do they affect model outputs?"
+    - "How do you balance the need for more training data
+      with privacy and consent requirements?"
+    - "What data governance framework do you put around AI training data —
+      who decides what data the model learns from?"
+    A candidate who treats training data as a static input
+    rather than a strategic asset to design and govern
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_ai_scientist_senior_behavioral',
+        dimension: 'Entry',
+        family_name: 'AI Behavioral Entry (AI Scientist Senior)',
+        prompt_guidance: `Ask about a specific past experience that is directly
+    relevant to AI research and production deployment, appropriate for
+    an AI Scientist at the Senior bar. The experience must involve an
+    AI research or deployment challenge — not a generic data science situation.
+    Vary across: research that did not translate to production performance,
+    making a responsible AI decision that slowed the project,
+    navigating the gap between research metrics and business metrics,
+    communicating a model limitation that stakeholders did not want to hear,
+    making a tradeoff between model performance and fairness.
+    Senior bar: Does the candidate demonstrate genuine AI research judgment —
+    specifically the ability to navigate the tension between research
+    excellence and responsible, practical deployment?
+    Key signals:
+    - Do they articulate what made the situation AI-research-specific?
+    - Do they show maturity about the research-to-production gap?
+    - Do they demonstrate ethical reasoning about AI deployment
+      not just technical reasoning?
+    Probe:
+    - "What made this situation specifically hard because it involved AI —
+      what would have been easier with a traditional analytical approach?"
+    - "How did you navigate the tension between what was
+      technically possible and what was responsible to deploy?"
+    - "What did you learn about the gap between research performance
+      and production impact?"
+    - "How has this experience changed how you think about
+      the responsibility that comes with deploying AI systems?"
+    A candidate who tells a generic data science story without
+    demonstrating awareness of AI-specific research and
+    ethical considerations has not met the Senior bar.`
     }
 ]
