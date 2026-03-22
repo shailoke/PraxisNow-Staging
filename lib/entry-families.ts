@@ -560,5 +560,231 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
     Reject candidates who design a single-team AI system and call it
     a platform. Push until they reason about multi-team, multi-model,
     long-term operational reality.`
+    },
+
+    // ==========================================
+    // MARKETER - STRATEGY
+    // ==========================================
+    {
+        id: 'entry_marketing_senior_strategy',
+        dimension: 'Entry',
+        family_name: 'Marketing Strategy Entry (Senior)',
+        prompt_guidance: `Generate a marketing strategy challenge appropriate for
+    a Marketer interviewing at the Senior bar. The challenge must involve
+    a genuine strategic decision — positioning, GTM, competitive response,
+    or market entry. Choose a domain that has not already appeared in this
+    session. Vary across: B2B SaaS, consumer tech, marketplace,
+    enterprise software, developer tools.
+    Senior bar: Does the candidate structure their answer across
+    market sizing → customer segmentation → positioning → GTM motion →
+    success metrics?
+    Do they make deliberate tradeoffs rather than trying to do everything?
+    Probe when steps are missing:
+    - No segmentation: "Who specifically are you targeting first and why
+      that segment over others?"
+    - No positioning: "How does this positioning differ from the top
+      two competitors?"
+    - No GTM: "What is your acquisition motion — paid, organic,
+      partnerships, or product-led?"
+    - No metrics: "How would you know in 6 months if this strategy is working?"
+    A candidate who describes a strategy without making explicit tradeoffs
+    or acknowledging what they are NOT doing has not met the Senior bar.`
+    },
+    {
+        id: 'entry_marketing_principal_strategy',
+        dimension: 'Entry',
+        family_name: 'Marketing Strategy Entry (Principal)',
+        prompt_guidance: `Generate a marketing strategy challenge at portfolio or
+    org scale, appropriate for a Marketer interviewing at the Principal bar.
+    The challenge must involve multi-product, multi-segment, or multi-market
+    complexity — not a single campaign or launch decision.
+    Choose a domain that has not already appeared in this session.
+    Vary across: platform business marketing, enterprise category creation,
+    international expansion, brand architecture decisions.
+    Principal bar: Does the candidate reason about portfolio tradeoffs —
+    where to invest, where to harvest, where to exit?
+    Do they think about brand architecture, channel conflict, and
+    long-term category positioning?
+    Probe on:
+    - "How do you allocate marketing budget across segments when
+      they have conflicting needs?"
+    - "What does winning this category look like in 3 years and
+      what do you need to be true today?"
+    - "How does this strategy change if your top competitor responds
+      aggressively in the first 90 days?"
+    - "What does this decision make harder to do in the future?"
+    A candidate who reasons at campaign level rather than portfolio level
+    has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // MARKETER - CAMPAIGN
+    // ==========================================
+    {
+        id: 'entry_marketing_senior_campaign',
+        dimension: 'Entry',
+        family_name: 'Campaign Execution Entry (Senior)',
+        prompt_guidance: `Generate a campaign execution challenge appropriate for
+    a Marketer interviewing at the Senior bar. The challenge must involve
+    a real execution decision — channel mix, creative strategy,
+    launch sequencing, or measurement design. Choose a domain that has
+    not already appeared in this session. Do not default to the same
+    channel type across sessions — vary across: paid acquisition,
+    content/SEO, email/lifecycle, events, partnerships.
+    Senior bar: Does the candidate think in systems — how channels
+    reinforce each other, how measurement connects back to business outcomes?
+    Do they design for learning, not just delivery?
+    Probe when shallow:
+    - "How do these channels reinforce each other — what does the
+      full customer journey look like?"
+    - "What does success look like at 30 days vs 90 days —
+      are those different metrics?"
+    - "What would cause you to kill this campaign mid-flight and
+      reallocate budget?"
+    - "How do you isolate what actually drove results vs what
+      was coincidental?"
+    A candidate who lists channels without reasoning about measurement
+    or learning has not met the Senior bar.`
+    },
+    {
+        id: 'entry_marketing_principal_campaign',
+        dimension: 'Entry',
+        family_name: 'Campaign Execution Entry (Principal)',
+        prompt_guidance: `Generate a campaign execution challenge at scale,
+    appropriate for a Marketer interviewing at the Principal bar.
+    The challenge must involve org-level execution complexity —
+    multi-team coordination, global campaign localisation,
+    brand consistency at scale, or platform-level campaign infrastructure.
+    Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate design systems that scale
+    beyond their own execution? Do they think about
+    repeatability, localisation, and brand governance?
+    Probe on:
+    - "How do you maintain brand consistency when 12 regional teams
+      are executing independently?"
+    - "What is the minimum viable centre of excellence for this —
+      what must be centralised vs what can be distributed?"
+    - "How do you build institutional campaign knowledge so the
+      org learns across every execution?"
+    - "What breaks first when you 10x the volume of this campaign?"
+    A candidate who describes a well-run single campaign without
+    reasoning about scale and governance has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // MARKETER - GROWTH
+    // ==========================================
+    {
+        id: 'entry_marketing_senior_growth',
+        dimension: 'Entry',
+        family_name: 'Growth & Analytics Entry (Senior)',
+        prompt_guidance: `Generate a growth or analytics challenge appropriate for
+    a Marketer interviewing at the Senior bar. The challenge must involve
+    a real measurement or experimentation decision — not a hypothetical
+    framework walkthrough. Choose a domain that has not already appeared
+    in this session. Vary across: funnel optimisation, CAC/LTV analysis,
+    attribution modelling, retention analysis, experiment design.
+    Senior bar: Does the candidate reason from data to decision —
+    not just describe metrics but use them to drive a specific action?
+    Do they understand the limits of their data?
+    Probe:
+    - "What is your north star metric for this and why that one
+      over the alternatives?"
+    - "How do you know if a change in this metric is signal or noise?"
+    - "What data would change your recommendation here?"
+    - "Walk me through how you would set up the experiment —
+      what is your null hypothesis?"
+    A candidate who describes metrics without connecting them to
+    decisions or acknowledging measurement limitations
+    has not met the Senior bar.`
+    },
+    {
+        id: 'entry_marketing_principal_growth',
+        dimension: 'Entry',
+        family_name: 'Growth & Analytics Entry (Principal)',
+        prompt_guidance: `Generate a growth strategy or analytics infrastructure
+    challenge at org scale, appropriate for a Marketer interviewing at
+    the Principal bar. The challenge must involve building or redesigning
+    a measurement system, not just analysing within one.
+    Choose a domain that has not already appeared in this session.
+    Vary across: attribution model design, marketing data infrastructure,
+    experimentation platform, customer data strategy.
+    Principal bar: Does the candidate think about measurement as a
+    strategic capability, not just a reporting function?
+    Do they reason about data quality, model assumptions,
+    and org adoption as first-class constraints?
+    Probe on:
+    - "What assumptions does this attribution model make that
+      could be wrong — and how would you know?"
+    - "How do you get the sales and finance teams to trust
+      and act on this data?"
+    - "What does this measurement system make impossible to measure —
+      and is that an acceptable tradeoff?"
+    - "How does this infrastructure need to change in 2 years
+      when the channel mix shifts?"
+    A candidate who describes a clean measurement system without
+    addressing org adoption and model assumptions has not met
+    the Principal bar.`
+    },
+
+    // ==========================================
+    // MARKETER - AI MARKETING
+    // ==========================================
+    {
+        id: 'entry_marketing_senior_ai_marketing',
+        dimension: 'Entry',
+        family_name: 'AI Marketing Entry (Senior)',
+        prompt_guidance: `Generate an AI marketing scenario appropriate for
+    a Marketer interviewing at the Senior bar. The scenario must present
+    a genuine decision point about AI in a marketing context — not a
+    hypothetical where the answer is obviously yes or no.
+    Vary the decision type across sessions: where to apply AI in a
+    campaign workflow, how to manage brand safety with AI-generated content,
+    how to evaluate AI-driven personalisation quality,
+    whether AI attribution is trustworthy enough to act on.
+    Senior bar: Can the candidate distinguish genuine AI value-add
+    in marketing from AI for AI's sake?
+    Do they reason about brand risk, content quality thresholds,
+    and what happens when AI gets it wrong in a customer-facing context?
+    Probe:
+    - "How would you know if the AI-generated content is hurting
+      brand perception rather than helping?"
+    - "What is the minimum quality bar before you let AI
+      generate customer-facing copy without human review?"
+    - "What happens to customer trust if this AI feature
+      produces a visibly wrong or offensive output?"
+    - "What is your non-AI fallback if the model underperforms
+      on a live campaign?"
+    Reject candidates who treat AI as a pure efficiency gain
+    with no brand or trust risk.`
+    },
+    {
+        id: 'entry_marketing_principal_ai_marketing',
+        dimension: 'Entry',
+        family_name: 'AI Marketing Strategy Entry (Principal)',
+        prompt_guidance: `Generate a strategic AI marketing decision at org scale,
+    appropriate for a Marketer interviewing at the Principal bar.
+    The scenario must involve a genuine strategic tradeoff —
+    not a question where the right answer is self-evident.
+    Vary the decision type across sessions: build vs buy AI marketing stack,
+    AI personalisation at scale vs privacy constraints,
+    AI content strategy vs brand consistency,
+    org-level AI marketing transformation.
+    Principal bar: Does the candidate reason about AI marketing strategy
+    with concrete, defensible criteria?
+    Do they think about competitive moat through first-party data,
+    privacy regulation implications, and org capability gaps?
+    Probe:
+    - "What first-party data advantage does this strategy build
+      over time — and what happens if that data becomes restricted?"
+    - "How do you make the case for this AI investment to a
+      CFO who wants immediate ROI?"
+    - "What org capabilities do you need that you don't have today
+      and how does that affect your sequencing?"
+    - "What does this decision lock you into — and is that
+      acceptable given how fast AI is moving?"
+    A candidate who produces strong marketing logic without addressing
+    data strategy, privacy risk, and org execution reality
+    has not met the Principal bar.`
     }
 ]

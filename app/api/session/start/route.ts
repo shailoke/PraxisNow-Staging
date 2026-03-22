@@ -425,7 +425,11 @@ export async function POST(req: NextRequest) {
             'Scale': 'write_path',
             'Leadership': 'discovery',
             'System Design': 'system_design',
-            'AI Systems': 'ai_systems'
+            'AI Systems': 'ai_systems',
+            'Strategy': 'strategy',
+            'Campaign': 'campaign',
+            'Growth': 'growth',
+            'AI Marketing': 'ai_marketing'
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'
