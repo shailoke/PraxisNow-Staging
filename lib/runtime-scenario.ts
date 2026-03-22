@@ -51,6 +51,12 @@ export const VALID_EVALUATION_DIMENSIONS = [
     'analytics',
     'ml_design',
     'data_strategy',
+    // AI-native role dimensions
+    'product_sense',
+    'ai_execution',
+    'ai_technical',
+    'llm_deep_dive',
+    'behavioral',
 ] as const
 
 // AI MANDATORY ROLE KEYS (Normalized)
@@ -353,6 +359,11 @@ export async function selectQuestionFamilies(
  */
 export function normalizeRole(role: string): string {
     const r = role.toLowerCase().trim()
+    if (r.includes('ai product manager') || r === 'ai pm') return 'ai_pm'
+    if (r.includes('ai engineer') || r.includes('ai ml engineer')) return 'ai_engineer'
+    if (r.includes('ai marketer') || r.includes('ai marketing manager')) return 'ai_marketer'
+    if (r.includes('ai project manager') || r.includes('ai program manager')) return 'ai_project_manager'
+    if (r.includes('ai scientist') || r.includes('ai researcher')) return 'ai_scientist'
     if (r.includes('engineer') || r.includes('developer') || r.includes('sde')) return 'sde'
     if (r.includes('project manager') || r.includes('program manager')) return 'project_manager'
     if (r.includes('product') || r.includes('pm')) return 'pm'

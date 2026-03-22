@@ -442,6 +442,11 @@ export async function POST(req: NextRequest) {
             'Data Strategy':        'data_strategy',
             'Product Design':       'product_design',
             'AI Product':           'ai_product',
+            'Product Sense':        'product_sense',
+            'AI Execution':         'ai_execution',
+            'AI Technical':         'ai_technical',
+            'LLM Deep Dive':        'llm_deep_dive',
+            'Behavioral':           'behavioral',
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'
