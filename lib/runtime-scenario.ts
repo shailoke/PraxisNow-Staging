@@ -24,7 +24,25 @@ export const VALID_EVALUATION_DIMENSIONS = [
     'Culture',
     'Collaboration',
     'Dependencies',
-    'ai_fluency'
+    'ai_fluency',
+    // PM dimensions
+    'product_design',
+    'execution_diagnosis',
+    'ai_product',
+    'ai_strategy',
+    // SDE dimensions
+    'system_design',
+    'ai_systems',
+    // Marketing dimensions
+    'campaign',
+    'growth',
+    'ai_marketing',
+    // Project Manager dimensions
+    'delivery',
+    'stakeholder_management',
+    'risk',
+    'program_management',
+    'ai_delivery',
 ] as const
 
 // AI MANDATORY ROLE KEYS (Normalized)
