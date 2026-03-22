@@ -31,24 +31,9 @@ interface UIScenario {
     isCustom?: boolean
 }
 
-const AI_ROLES = [
-    'AI Product Manager',
-    'AI Engineer',
-    'AI Marketer',
-    'AI Project Manager',
-    'AI Scientist',
-]
-
-const TRADITIONAL_ROLES = [
-    'Product Manager',
-    'Software Development Engineer',
-    'Marketer',
-    'Data Scientist',
-    'Project Manager',
-]
-
 function getLevelDisplay(role: string, level: string): string {
-    if (AI_ROLES.includes(role)) return 'Experienced · 5-10 yrs'
+    const aiRoles = ['AI Product Manager', 'AI Engineer', 'AI Marketer', 'AI Project Manager', 'AI Scientist']
+    if (aiRoles.includes(role)) return 'Experienced · 5-10 yrs'
     return `${level} calibration`
 }
 
@@ -76,18 +61,6 @@ export default function DashboardPage() {
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null)
     const [isSupportOpen, setIsSupportOpen] = useState(false)
     const [currentBar, setCurrentBar] = useState<CurrentBarCardProps | null>(null)
-
-    const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set())
-    const [aiSectionExpanded, setAiSectionExpanded] = useState(true)
-
-    const toggleRole = (role: string) => {
-        setExpandedRoles(prev => {
-            const next = new Set(prev)
-            if (next.has(role)) next.delete(role)
-            else next.add(role)
-            return next
-        })
-    }
 
     const handleGeneratePDF = async (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation(); // Prevent row click
@@ -337,10 +310,6 @@ export default function DashboardPage() {
 
                 if (targetRole && availableRoles.includes(targetRole)) {
                     setFilters(prev => ({ ...prev, role: targetRole }))
-                    setExpandedRoles(new Set([targetRole]))
-                    if (AI_ROLES.includes(targetRole)) {
-                        setAiSectionExpanded(true)
-                    }
                 }
             }
 
@@ -458,8 +427,6 @@ export default function DashboardPage() {
     </div>
 
     const hasActivePack = !!(userProfile?.package_tier && userProfile.package_tier !== 'Free');
-    const hasSessions = (userProfile?.available_sessions || 0) > 0
-    const packageTier = userProfile?.package_tier
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-purple-500/30">
@@ -723,182 +690,145 @@ export default function DashboardPage() {
                                         </Link>
                                     )}
 
-                                </div>
 
-                                {/* ── AI-Native Role Simulations ──────────────────── */}
-                                {(() => {
-                                    const aiScenarios = sortedScenarios.filter(s =>
-                                        AI_ROLES.includes(s.role) && s.role !== 'Negotiation Coach'
-                                    )
-                                    if (aiScenarios.length === 0) return null
-                                    const aiByRole = AI_ROLES.map(role => ({
-                                        role,
-                                        scenarios: aiScenarios.filter(s => s.role === role)
-                                    })).filter(g => g.scenarios.length > 0)
-                                    return (
-                                        <div className="mb-8">
-                                            {/* Super-section header */}
-                                            <button
-                                                onClick={() => setAiSectionExpanded(v => !v)}
-                                                className="w-full flex items-center justify-between mb-4 group"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-px flex-1 w-8 bg-purple-500/30" />
-                                                    <span className="text-xs font-semibold tracking-widest uppercase text-purple-400">
-                                                        AI-Native Role Simulations
-                                                    </span>
-                                                    <div className="h-px flex-1 w-8 bg-purple-500/30" />
-                                                </div>
-                                                <span className="text-white/40 text-xs ml-4">
-                                                    {aiSectionExpanded ? '↑ collapse' : '↓ expand'}
-                                                </span>
-                                            </button>
-                                            {aiSectionExpanded && (
-                                                <div className="space-y-6">
-                                                    {aiByRole.map(({ role, scenarios: roleScenarios }) => {
-                                                        const isExpanded = expandedRoles.has(role)
-                                                        return (
-                                                            <div key={role}>
-                                                                <button
-                                                                    onClick={() => toggleRole(role)}
-                                                                    className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-sm font-semibold text-white/80">
-                                                                            {role}
-                                                                        </span>
-                                                                        <span className="text-xs text-white/30">
-                                                                            {roleScenarios.length} session{roleScenarios.length !== 1 ? 's' : ''}
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className="text-white/30 text-xs">
-                                                                        {isExpanded ? '−' : '+'}
-                                                                    </span>
-                                                                </button>
-                                                                {isExpanded && (
-                                                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                                        {roleScenarios.map(scenario => {
-                                                                            if (
-                                                                                scenario.dimensions.length === 1 &&
-                                                                                scenario.dimensions[0] === 'ai_fluency'
-                                                                            ) {
-                                                                                if (packageTier !== 'Pro' && packageTier !== 'Pro+') return null
-                                                                            }
-                                                                            return (
-                                                                                <div key={scenario.id} className="block h-full min-w-0">
-                                                                                    <ScenarioCard
-                                                                                        scenario={scenario}
-                                                                                        disabled={!hasSessions}
-                                                                                        duration="30 min"
-                                                                                        locked={!hasActivePack}
-                                                                                        levelDisplay={getLevelDisplay(scenario.role, scenario.level)}
-                                                                                        onClick={() => router.push(`/simulator/${scenario.id}`)}
-                                                                                    />
-                                                                                </div>
-                                                                            )
-                                                                        })}
-                                                                    </div>
-                                                                )}
+                                    {sortedScenarios
+                                        .filter(s => s.role !== 'Negotiation Coach')
+                                        .map((scenario) => {
+                                            const hasSessions = (userProfile?.available_sessions || 0) > 0
+                                            const duration = '30 min'
+
+                                            // App-level visibility logic for AI-Only Rounds
+                                            const isAIOnly = scenario.dimensions?.length === 1 && scenario.dimensions[0] === 'ai_fluency'
+
+                                            if (isAIOnly && userProfile?.package_tier !== 'Pro') {
+                                                return null
+                                            }
+
+                                            if (isAIOnly) {
+                                                return (
+                                                    <div
+                                                        key={scenario.id}
+                                                        onClick={(e) => {
+                                                            if (!hasActivePack) { e.preventDefault(); e.stopPropagation(); router.push('/pricing'); return; }
+                                                            if (hasSessions) router.push(`/simulator/${scenario.id}`)
+                                                            else router.push('/pricing')
+                                                        }}
+                                                        className={`block h-full cursor-pointer min-w-0 relative group`}
+                                                    >
+                                                        {!hasActivePack && (
+                                                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[3px] rounded-2xl border border-white/10 transition-colors group-hover:bg-black/50">
+                                                                <div className="bg-purple-600/80 rounded-full p-3 mb-2 shadow-lg backdrop-blur-md border border-purple-400/30">
+                                                                    <Lock className="w-6 h-6 text-white" />
+                                                                </div>
+                                                                <span className="font-semibold text-white tracking-wide">Unlock with a plan</span>
                                                             </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                })()}
+                                                        )}
+                                                        <div className={`h-full rounded-2xl border border-cyan-500/30 bg-[#081824] hover:bg-cyan-900/20 hover:border-cyan-500/50 transition-all flex flex-col overflow-hidden ${!hasActivePack ? 'opacity-40' : ''}`}>
+                                                            <div className="p-6 flex flex-col h-full relative">
+                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-cyan-500/10 transition-colors pointer-events-none"></div>
 
-                                {/* ── Traditional Role Interviews ──────────────────── */}
-                                {(() => {
-                                    const traditionalScenarios = sortedScenarios.filter(s =>
-                                        TRADITIONAL_ROLES.includes(s.role) && s.role !== 'Negotiation Coach'
-                                    )
-                                    if (traditionalScenarios.length === 0) return null
-                                    const filtered = traditionalScenarios.filter(s => {
-                                        if (filters.role && s.role !== filters.role) return false
-                                        if (filters.dimension && !s.dimensions.includes(filters.dimension)) return false
-                                        if (filters.search) {
-                                            const q = filters.search.toLowerCase()
-                                            if (!s.title.toLowerCase().includes(q) && !s.description.toLowerCase().includes(q)) return false
-                                        }
-                                        return true
-                                    })
-                                    const byRole = TRADITIONAL_ROLES.map(role => ({
-                                        role,
-                                        scenarios: filtered.filter(s => s.role === role)
-                                    })).filter(g => g.scenarios.length > 0)
-                                    return (
-                                        <div>
-                                            <div className="flex items-center gap-3 mb-6">
-                                                <div className="h-px flex-1 bg-white/10" />
-                                                <span className="text-xs font-semibold tracking-widest uppercase text-white/30">
-                                                    Role Interviews
-                                                </span>
-                                                <div className="h-px flex-1 bg-white/10" />
-                                            </div>
-                                            {filtered.length === 0 && (
-                                                <div className="py-20 text-center text-gray-500">
-                                                    No scenarios found matching your filters.
-                                                    <Button variant="ghost" onClick={() => setFilters({ role: '', dimension: '', search: '' })} className="text-purple-400 hover:text-purple-300">
-                                                        Clear all filters
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            <div className="space-y-6">
-                                                {byRole.map(({ role, scenarios: roleScenarios }) => {
-                                                    const isExpanded = expandedRoles.has(role)
-                                                    return (
-                                                        <div key={role}>
-                                                            <button
-                                                                onClick={() => toggleRole(role)}
-                                                                className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-semibold text-white/70">
-                                                                        {role === 'Software Development Engineer' ? 'Software Engineer' : role}
+                                                                <div className="flex justify-between items-start mb-4 relative z-10">
+                                                                    <span className="px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wider uppercase border text-cyan-400 border-cyan-500/30 bg-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+                                                                        PRO ONLY
                                                                     </span>
-                                                                    <span className="text-xs text-white/30">
-                                                                        {roleScenarios.length} session{roleScenarios.length !== 1 ? 's' : ''}
+                                                                    <div className="text-right shadow-sm">
+                                                                        <div className="text-white font-bold text-sm tracking-wide">{scenario.role}</div>
+                                                                        <div className="text-gray-500 text-xs mt-0.5">{scenario.level}</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mb-4 relative z-10 flex-grow">
+                                                                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
+                                                                        {scenario.title}
+                                                                    </h3>
+                                                                    <p className="text-gray-400 text-sm line-clamp-3">
+                                                                        {scenario.description}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Dimensions Tags */}
+                                                                <div className="flex flex-wrap gap-2 mb-4 relative z-10">
+                                                                    <span className="px-2.5 py-1 rounded bg-white/5 border border-cyan-500/30 text-[10px] font-bold text-cyan-300 uppercase tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.1)] flex items-center gap-1.5">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 relative">
+                                                                            <span className="absolute inset-0 rounded-full bg-cyan-500 animate-ping opacity-50"></span>
+                                                                        </span>
+                                                                        AI Fluency
                                                                     </span>
                                                                 </div>
-                                                                <span className="text-white/30 text-xs">
-                                                                    {isExpanded ? '−' : '+'}
-                                                                </span>
-                                                            </button>
-                                                            {isExpanded && (
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                                    {roleScenarios.map(scenario => {
-                                                                        if (
-                                                                            scenario.dimensions.length === 1 &&
-                                                                            scenario.dimensions[0] === 'ai_fluency'
-                                                                        ) {
-                                                                            if (packageTier !== 'Pro' && packageTier !== 'Pro+') return null
-                                                                        }
-                                                                        return (
-                                                                            <div key={scenario.id} className="block h-full min-w-0">
-                                                                                <ScenarioCard
-                                                                                    scenario={scenario}
-                                                                                    disabled={!hasSessions}
-                                                                                    duration="30 min"
-                                                                                    locked={!hasActivePack}
-                                                                                    levelDisplay={getLevelDisplay(scenario.role, scenario.level)}
-                                                                                    onClick={() => router.push(`/simulator/${scenario.id}`)}
-                                                                                />
-                                                                                {scenario.isCustom && (
-                                                                                    <div className="mt-2 text-center text-xs text-purple-400 uppercase tracking-widest font-bold">Custom Build</div>
-                                                                                )}
+
+                                                                {/* Footer identical to ScenarioCard.tsx structure but with cyan accents */}
+                                                                <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
+                                                                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Clock className="w-3 h-3" />
+                                                                            {duration}
+                                                                        </div>
+                                                                        {scenario.level && (
+                                                                            <div className="text-[10px] opacity-40">
+                                                                                {scenario.level} calibration
                                                                             </div>
-                                                                        )
-                                                                    })}
+                                                                        )}
+                                                                    </div>
+                                                                    <Button
+                                                                        variant="glass"
+                                                                        disabled={(!hasSessions) && hasActivePack}
+                                                                        className={`${(!hasSessions && hasActivePack) ? 'opacity-50' : 'group-hover:bg-cyan-600 group-hover:border-cyan-500'} transition-colors text-xs h-8`}
+                                                                    >
+                                                                        {!hasActivePack ? (
+                                                                            <>
+                                                                                <Lock className="w-3 h-3 mr-2" />
+                                                                                Locked
+                                                                            </>
+                                                                        ) : !hasSessions ? (
+                                                                            <>Out of Sessions</>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Play className="w-3 h-3 mr-2" />
+                                                                                Practice
+                                                                            </>
+                                                                        )}
+                                                                    </Button>
                                                                 </div>
-                                                            )}
+                                                            </div>
                                                         </div>
-                                                    )
-                                                })}
-                                            </div>
+                                                    </div>
+                                                )
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={scenario.id}
+                                                    className="block h-full min-w-0"
+                                                >
+                                                    <ScenarioCard
+                                                        scenario={scenario}
+                                                        disabled={!hasSessions}
+                                                        duration={duration}
+                                                        locked={!hasActivePack}
+                                                        onClick={() => {
+                                                            if (hasSessions) {
+                                                                router.push(`/simulator/${scenario.id}`)
+                                                            } else {
+                                                                router.push('/pricing')
+                                                            }
+                                                        }}
+                                                    />
+                                                    {scenario.isCustom && (
+                                                        <div className="mt-2 text-center text-xs text-purple-400 uppercase tracking-widest font-bold">Custom Build</div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+
+                                    {filteredScenarios.length === 0 && (
+                                        <div className="col-span-full py-20 text-center text-gray-500">
+                                            No scenarios found matching your filters.
+                                            <Button variant="ghost" onClick={() => setFilters({ role: '', dimension: '', search: '' })} className="text-purple-400 hover:text-purple-300">
+                                                Clear all filters
+                                            </Button>
                                         </div>
-                                    )
-                                })()}
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             // HISTORY TAB
