@@ -46,6 +46,11 @@ export const VALID_EVALUATION_DIMENSIONS = [
     'ai_delivery',
     'metrics_accountability',
     'risk_management',
+    // Marketing + Data Science dimensions
+    'brand',
+    'analytics',
+    'ml_design',
+    'data_strategy',
 ] as const
 
 // AI MANDATORY ROLE KEYS (Normalized)

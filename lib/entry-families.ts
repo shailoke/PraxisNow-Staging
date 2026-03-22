@@ -1133,5 +1133,464 @@ export const ENTRY_FAMILIES: QuestionFamily[] = [
     A candidate who describes good single-project AI delivery
     without addressing org-level AI delivery capability
     has not met the Principal bar.`
+    },
+
+    // ==========================================
+    // MARKETING — JUNIOR / LEADER GAPS
+    // ==========================================
+    {
+        id: 'entry_marketing_junior_brand',
+        dimension: 'Entry',
+        family_name: 'Brand & Messaging Entry (Junior)',
+        prompt_guidance: `Generate a brand or messaging challenge appropriate for
+    a Marketer interviewing at the Junior bar. The challenge must involve
+    a real execution decision — writing positioning copy, identifying the
+    right audience for a message, or evaluating whether a creative concept
+    is on-brand. Choose a domain that has not already appeared in this
+    session. Vary across: B2C product launches, SaaS tool messaging,
+    social campaign copy, email subject lines, landing page positioning.
+    Junior bar: Can the candidate identify the target audience and their
+    core need before writing or evaluating copy?
+    Do they understand what makes messaging resonate vs fall flat?
+    Probe when shallow:
+    - "Who specifically is this message for — what do they care about
+      and why does this message speak to that?"
+    - "What is the one thing you want the reader to do or feel
+      after seeing this?"
+    - "How does this differ from how a competitor would say the same thing?"
+    - "What would you change if this message was underperforming?"
+    A candidate who writes copy without first identifying the audience
+    and their core need has not met the Junior bar.`
+    },
+    {
+        id: 'entry_marketing_junior_campaign',
+        dimension: 'Entry',
+        family_name: 'Campaign Execution Entry (Junior)',
+        prompt_guidance: `Generate a campaign execution challenge appropriate for
+    a Marketer interviewing at the Junior bar. The challenge must involve
+    a real tactical decision — channel selection, creative brief,
+    launch checklist, or basic campaign measurement. Choose a domain
+    that has not already appeared in this session.
+    Do not default to the same channel type across sessions.
+    Junior bar: Can the candidate describe a complete campaign execution
+    plan with clear success criteria?
+    Do they think about the audience, the message, the channel,
+    and the measurement — all four?
+    Probe when incomplete:
+    - "What channel are you using and why that one over the alternatives?"
+    - "What does success look like — what specific number would tell
+      you this campaign worked?"
+    - "What would you do differently if the campaign is halfway through
+      and not hitting its targets?"
+    - "Who needs to approve this before it goes live?"
+    A candidate who describes a campaign without defining success
+    metrics has not met the Junior bar.`
+    },
+    {
+        id: 'entry_marketing_junior_growth',
+        dimension: 'Entry',
+        family_name: 'Growth & Analytics Entry (Junior)',
+        prompt_guidance: `Generate a growth or analytics challenge appropriate for
+    a Marketer interviewing at the Junior bar. The challenge must involve
+    basic data interpretation — reading a funnel, identifying a drop-off,
+    or explaining what a metric means. Choose a domain that has not
+    already appeared in this session.
+    Junior bar: Can the candidate read marketing data and draw a simple,
+    defensible conclusion from it?
+    Do they know what questions to ask when a metric looks wrong?
+    Probe when shallow:
+    - "What does this number actually tell you — what would cause it
+      to go up or down?"
+    - "Is this metric good or bad — how do you know without a benchmark?"
+    - "What would you look at next to understand why this is happening?"
+    - "What action would you take based on this data?"
+    A candidate who describes data without connecting it to a
+    specific action has not met the Junior bar.`
+    },
+    {
+        id: 'entry_marketing_leader_strategy',
+        dimension: 'Entry',
+        family_name: 'Marketing Strategy Entry (Leader)',
+        prompt_guidance: `Generate a marketing strategy challenge at executive
+    scale, appropriate for a Marketer interviewing at the Director/VP bar.
+    The challenge must involve org-level strategic decisions —
+    category ownership, brand architecture across a portfolio,
+    marketing org design, or long-term competitive positioning.
+    Choose a domain that has not already appeared in this session.
+    Leader bar: Does the candidate reason about marketing as a
+    business function, not just a campaign machine?
+    Do they connect marketing strategy to revenue, competitive moat,
+    and org capability?
+    Probe on:
+    - "How does this marketing strategy connect to the company's
+      revenue model — where specifically does it drive growth?"
+    - "What org capability do you need to execute this that
+      you don't have today?"
+    - "How do you know when to reposition vs double down on
+      current positioning?"
+    - "What does this strategy make harder to do — what are
+      you giving up?"
+    A candidate who describes marketing strategy without connecting
+    it to business outcomes and org capability
+    has not met the Leader bar.`
+    },
+    {
+        id: 'entry_marketing_leader_campaign',
+        dimension: 'Entry',
+        family_name: 'Campaign Execution Entry (Leader)',
+        prompt_guidance: `Generate a campaign execution challenge at org or
+    portfolio scale, appropriate for a Marketer interviewing at the
+    Director/VP bar. The challenge must involve designing or governing
+    a campaign system across multiple teams or markets — not running
+    a single campaign.
+    Choose a domain that has not already appeared in this session.
+    Leader bar: Does the candidate design for scale and governance —
+    how do you maintain quality and consistency when you are not
+    personally executing?
+    Do they think about measurement systems and institutional learning?
+    Probe on:
+    - "How do you maintain creative quality when 8 agencies are
+      executing in parallel?"
+    - "What is your governance model — what decisions are centralised
+      vs delegated?"
+    - "How does the organisation learn from each campaign so the
+      next one is better?"
+    - "What breaks first when campaign volume doubles?"
+    A candidate who describes campaign leadership as hands-on
+    execution rather than system design has not met the Leader bar.`
+    },
+    {
+        id: 'entry_marketing_leader_ai_marketing',
+        dimension: 'Entry',
+        family_name: 'AI Marketing Strategy Entry (Leader)',
+        prompt_guidance: `Generate a strategic AI marketing challenge at
+    executive scale, appropriate for a Marketer interviewing at the
+    Director/VP bar. The challenge must involve org-level AI marketing
+    decisions — build vs buy AI marketing stack, AI content strategy
+    at scale, privacy and first-party data strategy, or AI marketing
+    team capability building.
+    Choose a domain that has not already appeared in this session.
+    Leader bar: Does the candidate reason about AI marketing strategy
+    as an executive — connecting AI investments to competitive advantage,
+    revenue impact, and org capability?
+    Do they think about what this decision locks them into long-term?
+    Probe on:
+    - "How do you make the case for this AI investment to the CFO —
+      what is the ROI model?"
+    - "What first-party data advantage does this build over time
+      and how do you protect it?"
+    - "How do you build the team capability to execute this —
+      what skills do you hire vs develop?"
+    - "What does this decision make harder to change in 2 years?"
+    A candidate who describes AI marketing tactics without reasoning
+    about strategic investment, data moat, and org capability
+    has not met the Leader bar.`
+    },
+
+    // ==========================================
+    // DATA SCIENTIST — ALL LEVELS
+    // ==========================================
+    {
+        id: 'entry_data_junior_analytics',
+        dimension: 'Entry',
+        family_name: 'Analytics Entry (Junior)',
+        prompt_guidance: `Generate a data analytics challenge appropriate for
+    a Data Scientist interviewing at the Junior bar. The challenge must
+    involve real data analysis work — SQL query design, data interpretation,
+    statistical reasoning, or identifying patterns in a dataset.
+    Choose a domain that has not already appeared in this session.
+    Vary across: user behaviour analysis, product metrics,
+    A/B test result interpretation, cohort analysis, funnel analysis.
+    Junior bar: Can the candidate write correct SQL or describe the
+    right analytical approach for the problem?
+    Do they identify the right question before reaching for a query?
+    Probe when shallow:
+    - "What question are you actually trying to answer with this query?"
+    - "What would cause this result to be misleading —
+      what are the gotchas?"
+    - "How would you validate that your query is returning
+      the right data?"
+    - "What would you look at next if this result is surprising?"
+    A candidate who writes a query without first clarifying
+    what question it answers has not met the Junior bar.`
+    },
+    {
+        id: 'entry_data_junior_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML Design Entry (Junior)',
+        prompt_guidance: `Generate an ML problem framing challenge appropriate
+    for a Data Scientist interviewing at the Junior bar. The challenge
+    must involve selecting the right ML approach for a given problem —
+    not implementing it. Choose a domain that has not already appeared
+    in this session. Vary across: classification, regression,
+    recommendation, anomaly detection, NLP tasks.
+    Junior bar: Can the candidate identify whether ML is the right
+    tool for the problem and choose a reasonable approach?
+    Do they think about the training data requirements before
+    proposing a solution?
+    Probe when shallow:
+    - "What training data do you need and do you have it?"
+    - "How would you know if this model is working —
+      what metric are you optimising for?"
+    - "What is your baseline — what does the system do today
+      without ML?"
+    - "What are the consequences of a false positive vs
+      a false negative here?"
+    A candidate who proposes an ML solution without reasoning
+    about data requirements and evaluation metrics
+    has not met the Junior bar.`
+    },
+    {
+        id: 'entry_data_junior_data_strategy',
+        dimension: 'Entry',
+        family_name: 'Data Strategy Entry (Junior)',
+        prompt_guidance: `Generate a data quality or data communication challenge
+    appropriate for a Data Scientist interviewing at the Junior bar.
+    The challenge must involve explaining a data finding to a
+    non-technical stakeholder or identifying a data quality issue.
+    Choose a domain that has not already appeared in this session.
+    Junior bar: Can the candidate communicate a data insight clearly
+    without jargon? Do they identify the business implication,
+    not just the statistical finding?
+    Probe when shallow:
+    - "How would you explain this finding to a marketing manager
+      who doesn't know what a p-value is?"
+    - "What is the business decision this finding should inform?"
+    - "What data quality issues could make this finding wrong?"
+    - "What would you need to be true before you'd act on this?"
+    A candidate who communicates data findings in technical terms
+    without translating to business impact has not met the Junior bar.`
+    },
+    {
+        id: 'entry_data_senior_analytics',
+        dimension: 'Entry',
+        family_name: 'Analytics Entry (Senior)',
+        prompt_guidance: `Generate a data analytics challenge appropriate for
+    a Data Scientist interviewing at the Senior bar. The challenge must
+    involve complex analytical reasoning — causal inference, experiment
+    design, statistical modelling, or multi-dimensional analysis.
+    Choose a domain that has not already appeared in this session.
+    Vary across: experimentation platform design, causal analysis,
+    segmentation strategy, predictive modelling approach.
+    Senior bar: Does the candidate distinguish between correlation
+    and causation? Do they design for statistical validity,
+    not just analytical convenience?
+    Probe when shallow:
+    - "How do you establish causality here — not just correlation?"
+    - "What confounders could make this analysis misleading?"
+    - "How would you design an experiment to validate this finding?"
+    - "What sample size do you need and how did you arrive at that?"
+    A candidate who draws causal conclusions from observational
+    data without addressing confounders has not met the Senior bar.`
+    },
+    {
+        id: 'entry_data_senior_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML System Design Entry (Senior)',
+        prompt_guidance: `Generate an ML system design challenge appropriate
+    for a Data Scientist interviewing at the Senior bar. The challenge
+    must involve designing an end-to-end ML system — not just the model.
+    Choose a domain that has not already appeared in this session.
+    Vary across: recommendation systems, fraud detection,
+    content ranking, demand forecasting, churn prediction.
+    Senior bar: Does the candidate design the full pipeline —
+    data ingestion, feature engineering, training, evaluation,
+    serving, and monitoring?
+    Do they address model degradation and retraining triggers?
+    Probe when incomplete:
+    - "How does this system handle feature drift over time?"
+    - "What is your retraining trigger — how do you know
+      when to retrain?"
+    - "How do you serve this model at low latency —
+      what is your serving architecture?"
+    - "What monitoring do you put in place to detect
+      silent model degradation?"
+    A candidate who designs only the model without the
+    surrounding system has not met the Senior bar.`
+    },
+    {
+        id: 'entry_data_senior_data_strategy',
+        dimension: 'Entry',
+        family_name: 'Data Strategy Entry (Senior)',
+        prompt_guidance: `Generate a data strategy challenge appropriate for
+    a Data Scientist interviewing at the Senior bar. The challenge must
+    involve influencing product or business decisions with data —
+    not just analysing data. Choose a domain that has not already
+    appeared in this session. Vary across: defining success metrics
+    for a new product, making a build vs buy data infrastructure
+    decision, designing an experimentation roadmap.
+    Senior bar: Does the candidate connect data strategy to
+    business outcomes? Do they identify what data capability
+    the organisation needs and how to build it?
+    Probe when shallow:
+    - "How do you get the product team to act on this analysis
+      rather than ignore it?"
+    - "What data capability are you building here —
+      what will be easier to do in 6 months because of this work?"
+    - "What is the cost of getting this wrong —
+      what is the downside risk?"
+    - "How do you measure the impact of your data work itself?"
+    A candidate who does excellent analysis but cannot connect
+    it to business decisions has not met the Senior bar.`
+    },
+    {
+        id: 'entry_data_principal_analytics',
+        dimension: 'Entry',
+        family_name: 'Analytics Entry (Principal)',
+        prompt_guidance: `Generate an advanced analytics challenge appropriate
+    for a Data Scientist interviewing at the Principal bar. The challenge
+    must involve methodology design at scale — designing an experimentation
+    platform, solving a measurement problem affecting multiple teams,
+    or establishing analytical standards across an organisation.
+    Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate design analytical systems
+    that scale across teams, not just solve a single analysis problem?
+    Do they think about how their methodology choices affect
+    what the organisation can and cannot learn?
+    Probe on:
+    - "How does this methodology scale when 20 teams are running
+      experiments simultaneously?"
+    - "What does this approach make impossible to measure —
+      and is that an acceptable tradeoff?"
+    - "How do you prevent p-hacking and multiple comparisons
+      problems at org scale?"
+    - "How do you get teams with different statistical maturity
+      to use this correctly?"
+    A candidate who designs a sophisticated analysis without
+    addressing org adoption and scale has not met the Principal bar.`
+    },
+    {
+        id: 'entry_data_principal_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML Platform Design Entry (Principal)',
+        prompt_guidance: `Generate an ML platform design challenge appropriate
+    for a Data Scientist interviewing at the Principal bar. The challenge
+    must involve designing infrastructure that multiple teams depend on —
+    feature stores, model registries, training pipelines, evaluation
+    platforms. Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate reason about ML infrastructure
+    as a platform that enables other teams?
+    Do they think about versioning, reproducibility, and
+    governance as first-class concerns?
+    Probe on:
+    - "How do you handle breaking changes to shared features
+      that multiple models depend on?"
+    - "How do you ensure reproducibility — can you retrain a
+      model from 6 months ago and get the same result?"
+    - "What governance do you put around model deployment —
+      who can ship what to production?"
+    - "How does this platform need to evolve as the number of
+      models grows from 10 to 100?"
+    A candidate who designs a single-team ML system and calls
+    it a platform has not met the Principal bar.`
+    },
+    {
+        id: 'entry_data_principal_data_strategy',
+        dimension: 'Entry',
+        family_name: 'Data Strategy Entry (Principal)',
+        prompt_guidance: `Generate a data strategy challenge at org scale,
+    appropriate for a Data Scientist interviewing at the Principal bar.
+    The challenge must involve strategic data decisions — data mesh vs
+    centralised data platform, privacy-preserving analytics,
+    data monetisation, or cross-org data sharing.
+    Choose a domain that has not already appeared in this session.
+    Principal bar: Does the candidate reason about data as a
+    strategic asset, not just an analytical input?
+    Do they address data governance, privacy, and competitive
+    moat through data?
+    Probe on:
+    - "How does this data strategy create competitive advantage —
+      what does it enable that competitors cannot easily copy?"
+    - "What privacy and regulatory constraints shape this strategy
+      and how do you design around them?"
+    - "What does centralising vs decentralising this data capability
+      cost you — what do you lose with each approach?"
+    - "How does this strategy need to evolve as privacy regulation
+      tightens over the next 3 years?"
+    A candidate who discusses data strategy without addressing
+    privacy, governance, and competitive moat
+    has not met the Principal bar.`
+    },
+    {
+        id: 'entry_data_leader_analytics',
+        dimension: 'Entry',
+        family_name: 'Analytics Entry (Leader)',
+        prompt_guidance: `Generate an analytics leadership challenge appropriate
+    for a Data Scientist interviewing at the Director/VP bar. The challenge
+    must involve building org-wide analytical capability — not doing
+    analysis personally. Choose a domain that has not already appeared
+    in this session. Vary across: data literacy programmes,
+    analytical centre of excellence design,
+    democratising data access across business units.
+    Leader bar: Does the candidate think about analytical capability
+    as an organisational muscle to build, not a service to provide?
+    Do they address culture change and adoption, not just tooling?
+    Probe on:
+    - "How do you build data literacy in teams that have always
+      made decisions on gut feel?"
+    - "What does self-service analytics actually mean in practice —
+      what can teams do without coming to you?"
+    - "How do you measure whether the organisation is becoming
+      more data-driven?"
+    - "What is the right size and shape of a centralised data
+      team vs embedded analysts?"
+    A candidate who describes analytical leadership as doing
+    better analysis rather than building capability
+    has not met the Leader bar.`
+    },
+    {
+        id: 'entry_data_leader_ml_design',
+        dimension: 'Entry',
+        family_name: 'ML Strategy Entry (Leader)',
+        prompt_guidance: `Generate an ML strategy challenge at executive scale,
+    appropriate for a Data Scientist interviewing at the Director/VP bar.
+    The challenge must involve org-level ML investment decisions —
+    build vs buy ML platform, ML talent strategy,
+    responsible AI governance, or ML roadmap prioritisation.
+    Choose a domain that has not already appeared in this session.
+    Leader bar: Does the candidate reason about ML as a
+    business capability investment, not a technical project?
+    Do they connect ML strategy to competitive advantage,
+    org structure, and responsible deployment?
+    Probe on:
+    - "How do you decide which ML investments to prioritise
+      when everything seems equally important?"
+    - "What ML capability do you build vs buy —
+      and what makes that the right call for your org?"
+    - "How do you govern responsible AI deployment at org scale
+      without slowing teams down?"
+    - "What does the ML team look like in 3 years and how do
+      you build toward that from today?"
+    A candidate who discusses ML strategy without addressing
+    org structure, talent, and responsible deployment
+    has not met the Leader bar.`
+    },
+    {
+        id: 'entry_data_leader_data_strategy',
+        dimension: 'Entry',
+        family_name: 'Data Strategy Entry (Leader)',
+        prompt_guidance: `Generate a data strategy challenge at executive scale,
+    appropriate for a Data Scientist interviewing at the Director/VP bar.
+    The challenge must involve C-suite level data decisions —
+    data as a product, data monetisation, data partnership strategy,
+    or org-wide data governance framework.
+    Choose a domain that has not already appeared in this session.
+    Leader bar: Does the candidate reason about data strategy
+    at the board level — connecting data assets to business value,
+    regulatory risk, and competitive positioning?
+    Do they think about data as something to govern and monetise,
+    not just analyse?
+    Probe on:
+    - "How do you make the case to the board that data is a
+      strategic asset worth investing in?"
+    - "What data assets does this organisation have that
+      competitors don't — and how do you protect them?"
+    - "How does your data strategy change if a key regulation
+      restricts your ability to use customer data?"
+    - "What does data governance mean operationally —
+      not as a principle but as a process with owners and teeth?"
+    A candidate who discusses data strategy as a technical
+    architecture problem rather than a business strategy problem
+    has not met the Leader bar.`
     }
 ]

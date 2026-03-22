@@ -913,6 +913,246 @@ export const PROBES: Probe[] = [
         entry_family: 'entry_project_manager_principal_ai_delivery',
         dimension: 'ai_delivery',
         intent: 'Evaluate whether the candidate can build AI delivery capability across teams — do they identify the skills gaps that prevent teams from delivering AI projects reliably and have a structured approach to closing those gaps, rather than solving AI delivery challenges through heroics or workarounds.'
+    },
+
+    // ==========================================
+    // MARKETING JUNIOR — BRAND / CAMPAIGN / GROWTH
+    // ==========================================
+    {
+        id: 'probe_marketing_junior_brand_audience',
+        entry_family: 'entry_marketing_junior_brand',
+        dimension: 'Brand',
+        intent: 'Evaluate whether the candidate identifies the target audience before writing or evaluating copy — do they define who the message is for and what that audience specifically cares about.'
+    },
+    {
+        id: 'probe_marketing_junior_brand_differentiation',
+        entry_family: 'entry_marketing_junior_brand',
+        dimension: 'Brand',
+        intent: 'Evaluate whether the candidate can differentiate a message from competitors — do they identify what makes the positioning distinct rather than producing generic copy.'
+    },
+    {
+        id: 'probe_marketing_junior_campaign_metrics',
+        entry_family: 'entry_marketing_junior_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate defines success metrics before executing — do they specify what number would tell them the campaign worked and how they would measure it.'
+    },
+    {
+        id: 'probe_marketing_junior_campaign_channels',
+        entry_family: 'entry_marketing_junior_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate can justify channel selection — do they explain why a specific channel fits the audience and goal rather than defaulting to the most familiar channel.'
+    },
+    {
+        id: 'probe_marketing_junior_growth_interpretation',
+        entry_family: 'entry_marketing_junior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate can interpret marketing data correctly — do they identify what a metric actually means and what would cause it to move before drawing conclusions.'
+    },
+    {
+        id: 'probe_marketing_junior_growth_action',
+        entry_family: 'entry_marketing_junior_growth',
+        dimension: 'Growth',
+        intent: 'Evaluate whether the candidate connects data to action — do they specify what they would do differently based on a data finding rather than just describing what the data shows.'
+    },
+
+    // ==========================================
+    // MARKETING LEADER — STRATEGY / CAMPAIGN / AI MARKETING
+    // ==========================================
+    {
+        id: 'probe_marketing_leader_strategy_business_outcomes',
+        entry_family: 'entry_marketing_leader_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate connects marketing strategy to business outcomes — do they articulate specifically how the strategy drives revenue, competitive moat, or org capability.'
+    },
+    {
+        id: 'probe_marketing_leader_strategy_org_capability',
+        entry_family: 'entry_marketing_leader_strategy',
+        dimension: 'Strategy',
+        intent: 'Evaluate whether the candidate identifies org capability gaps in their strategy — do they specify what skills and infrastructure they need that they don\'t have today and how that affects sequencing.'
+    },
+    {
+        id: 'probe_marketing_leader_campaign_governance',
+        entry_family: 'entry_marketing_leader_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate designs campaign governance systems — do they think about how to maintain quality and consistency at scale rather than relying on personal oversight.'
+    },
+    {
+        id: 'probe_marketing_leader_campaign_learning',
+        entry_family: 'entry_marketing_leader_campaign',
+        dimension: 'Campaign',
+        intent: 'Evaluate whether the candidate builds institutional learning into campaign operations — do they design systems that capture and apply learnings across campaigns rather than starting from scratch each time.'
+    },
+    {
+        id: 'probe_marketing_leader_ai_investment',
+        entry_family: 'entry_marketing_leader_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate reasons about AI marketing as a strategic investment — do they connect AI decisions to competitive advantage and articulate a concrete ROI model for the CFO.'
+    },
+    {
+        id: 'probe_marketing_leader_ai_data_moat',
+        entry_family: 'entry_marketing_leader_ai_marketing',
+        dimension: 'AI Marketing',
+        intent: 'Evaluate whether the candidate thinks about first-party data as a long-term AI moat — do they reason about how data assets compound over time and what happens if data access is restricted.'
+    },
+
+    // ==========================================
+    // DATA SCIENTIST — JUNIOR
+    // ==========================================
+    {
+        id: 'probe_data_junior_analytics_question',
+        entry_family: 'entry_data_junior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate identifies the right analytical question before writing a query — do they clarify what business question they are answering rather than jumping to SQL.'
+    },
+    {
+        id: 'probe_data_junior_analytics_validation',
+        entry_family: 'entry_data_junior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate validates their analytical approach — do they identify what would make their query or analysis return misleading results and how they would catch it.'
+    },
+    {
+        id: 'probe_data_junior_ml_framing',
+        entry_family: 'entry_data_junior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate frames the ML problem correctly before proposing a solution — do they identify the right task type, success metric, and baseline before selecting an approach.'
+    },
+    {
+        id: 'probe_data_junior_ml_data_requirements',
+        entry_family: 'entry_data_junior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate reasons about training data requirements — do they identify what data they need, whether they have it, and what the consequences of data quality issues are.'
+    },
+    {
+        id: 'probe_data_junior_data_communication',
+        entry_family: 'entry_data_junior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate can communicate data findings to non-technical stakeholders — do they translate statistical findings into business implications without jargon.'
+    },
+    {
+        id: 'probe_data_junior_data_quality',
+        entry_family: 'entry_data_junior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate identifies data quality issues that could invalidate a finding — do they proactively flag what could make their analysis wrong before being asked.'
+    },
+
+    // ==========================================
+    // DATA SCIENTIST — SENIOR
+    // ==========================================
+    {
+        id: 'probe_data_senior_analytics_causality',
+        entry_family: 'entry_data_senior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate distinguishes correlation from causation — do they identify confounders and propose a causal inference approach rather than drawing causal conclusions from observational data.'
+    },
+    {
+        id: 'probe_data_senior_analytics_experiment_design',
+        entry_family: 'entry_data_senior_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate designs statistically valid experiments — do they address sample size, statistical power, and multiple comparisons rather than just describing what to test.'
+    },
+    {
+        id: 'probe_data_senior_ml_pipeline',
+        entry_family: 'entry_data_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs the full ML pipeline — do they address data ingestion, feature engineering, training, evaluation, serving, and monitoring rather than just the model selection.'
+    },
+    {
+        id: 'probe_data_senior_ml_degradation',
+        entry_family: 'entry_data_senior_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs for model degradation — do they specify retraining triggers, monitoring approach, and how they detect silent quality drops in production.'
+    },
+    {
+        id: 'probe_data_senior_data_influence',
+        entry_family: 'entry_data_senior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate can influence product and business decisions with data — do they think about how to get stakeholders to act on analysis rather than just producing correct analysis.'
+    },
+    {
+        id: 'probe_data_senior_data_capability',
+        entry_family: 'entry_data_senior_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate thinks about building data capability — do they identify what analytical infrastructure or skill the org needs and how their work contributes to building it.'
+    },
+
+    // ==========================================
+    // DATA SCIENTIST — PRINCIPAL
+    // ==========================================
+    {
+        id: 'probe_data_principal_analytics_scale',
+        entry_family: 'entry_data_principal_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate designs analytical systems that scale across teams — do they address how their methodology works when many teams are running experiments simultaneously and with varying statistical maturity.'
+    },
+    {
+        id: 'probe_data_principal_analytics_methodology',
+        entry_family: 'entry_data_principal_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate identifies what their analytical methodology makes impossible to measure — do they acknowledge the blind spots and tradeoffs of their chosen approach.'
+    },
+    {
+        id: 'probe_data_principal_ml_platform',
+        entry_family: 'entry_data_principal_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs ML infrastructure as a multi-team platform — do they address versioning, reproducibility, and how their platform handles breaking changes to shared components.'
+    },
+    {
+        id: 'probe_data_principal_ml_governance',
+        entry_family: 'entry_data_principal_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate designs governance for ML platform usage — do they specify who can ship what to production, how model lineage is tracked, and how the platform evolves as model count grows.'
+    },
+    {
+        id: 'probe_data_principal_data_competitive_moat',
+        entry_family: 'entry_data_principal_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate reasons about data as a competitive moat — do they identify what data assets create sustainable advantage and how to protect them as privacy regulation evolves.'
+    },
+    {
+        id: 'probe_data_principal_data_governance_design',
+        entry_family: 'entry_data_principal_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate designs data governance operationally — do they specify owners, processes, and enforcement mechanisms rather than treating governance as a principle.'
+    },
+
+    // ==========================================
+    // DATA SCIENTIST — LEADER
+    // ==========================================
+    {
+        id: 'probe_data_leader_analytics_capability',
+        entry_family: 'entry_data_leader_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate thinks about analytics as an org capability to build — do they reason about data literacy, self-service analytics, and how to measure whether the org is becoming more data-driven.'
+    },
+    {
+        id: 'probe_data_leader_analytics_org_design',
+        entry_family: 'entry_data_leader_analytics',
+        dimension: 'Analytics',
+        intent: 'Evaluate whether the candidate can design the right analytical org structure — do they reason about centralised vs embedded analysts and what each model enables or constrains.'
+    },
+    {
+        id: 'probe_data_leader_ml_investment',
+        entry_family: 'entry_data_leader_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate reasons about ML as a business capability investment — do they connect ML strategy to competitive advantage and articulate a build vs buy framework with concrete criteria.'
+    },
+    {
+        id: 'probe_data_leader_ml_responsible_ai',
+        entry_family: 'entry_data_leader_ml_design',
+        dimension: 'ML System Design',
+        intent: 'Evaluate whether the candidate addresses responsible AI deployment at org scale — do they specify governance processes that enable teams to move fast while managing ethical and regulatory risk.'
+    },
+    {
+        id: 'probe_data_leader_data_board_level',
+        entry_family: 'entry_data_leader_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate can make the board-level case for data as a strategic asset — do they connect data investments to business value and competitive positioning in language a CFO would act on.'
+    },
+    {
+        id: 'probe_data_leader_data_regulatory',
+        entry_family: 'entry_data_leader_data_strategy',
+        dimension: 'Data Strategy',
+        intent: 'Evaluate whether the candidate reasons about regulatory risk in data strategy — do they identify how their strategy needs to adapt as privacy regulation evolves and what they would do if a key data source was restricted.'
     }
 ]
 
