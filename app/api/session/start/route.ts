@@ -429,7 +429,13 @@ export async function POST(req: NextRequest) {
             'Strategy': 'strategy',
             'Campaign': 'campaign',
             'Growth': 'growth',
-            'AI Marketing': 'ai_marketing'
+            'AI Marketing': 'ai_marketing',
+            'Program Management': 'program_management',
+            'Delivery': 'delivery',
+            'Stakeholder Management': 'stakeholder_management',
+            'Metrics & Accountability': 'metrics_accountability',
+            'Risk Management': 'risk_management',
+            'AI Delivery': 'ai_delivery'
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'

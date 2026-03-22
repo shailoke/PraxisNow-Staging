@@ -43,6 +43,8 @@ export const VALID_EVALUATION_DIMENSIONS = [
     'risk',
     'program_management',
     'ai_delivery',
+    'metrics_accountability',
+    'risk_management',
 ] as const
 
 // AI MANDATORY ROLE KEYS (Normalized)
