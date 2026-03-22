@@ -8,6 +8,7 @@ export const VALID_EVALUATION_DIMENSIONS = [
     'risks',
     'tradeoffs',
     'write_path',
+    'read_path',
     'Product Sense',
     'User Empathy',
     'Leadership',
