@@ -1,6 +1,6 @@
 'use client'
 
-import { useRealtimeVoice } from '@/hooks/useRealtimeVoice'
+import { useRealtimeVoice } from '@/hooks/useBatchVoice'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'

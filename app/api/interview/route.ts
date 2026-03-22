@@ -4,6 +4,9 @@ import { generateInterviewerPrompt } from '@/app/config/interview-prompts'
 import { INTERVIEW_SCENARIOS } from '@/lib/runtime-scenario'
 import type { Database } from '@/lib/database.types'
 
+// No-op on Hobby plan; required when Vercel Pro is activated.
+export const maxDuration = 60
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 })
@@ -51,7 +54,7 @@ function computeDimensionState(
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { scenarioId, messages, userMessage, sessionStartTime, targetDuration = 45, session_id, turn_authority, is_first_question } = body
+        const { scenarioId, messages, userMessage, sessionStartTime, targetDuration = 45, session_id, turn_authority, is_first_question, pending_system_messages } = body
 
         // =========================================================
         // INVARIANT C: TURN ADVANCEMENT RULES
@@ -518,6 +521,13 @@ export async function POST(request: NextRequest) {
         })
 
         // Build messages array for OpenAI
+        // pending_system_messages are buffered time-checkpoint injections from the batch voice hook.
+        // They are prepended immediately before the user message so GPT sees them in recency order.
+        const systemOverrides: OpenAI.Chat.ChatCompletionMessageParam[] =
+            Array.isArray(pending_system_messages) && pending_system_messages.length > 0
+                ? pending_system_messages.map((msg: string) => ({ role: 'system' as const, content: msg }))
+                : []
+
         const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
             {
                 role: 'system',
@@ -526,7 +536,8 @@ export async function POST(request: NextRequest) {
             ...messages.map((msg: any) => ({
                 role: msg.role as 'user' | 'assistant',
                 content: msg.content
-            }))
+            })),
+            ...systemOverrides,
         ]
 
         // Only append user message if present

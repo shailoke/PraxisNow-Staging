@@ -1,6 +1,6 @@
 'use client'
 
-import { useRealtimeVoice } from '@/hooks/useRealtimeVoice'
+import { useRealtimeVoice } from '@/hooks/useBatchVoice'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { SCENARIOS } from '@/lib/scenarios'
 import { createClient } from '@/lib/supabase'
