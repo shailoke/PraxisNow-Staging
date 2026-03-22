@@ -420,7 +420,12 @@ export async function POST(req: NextRequest) {
             'Technical Depth': 'write_path',
             'Problem Solving': 'read_path',
             'Collaboration': ' discovery',
-            'Impact': 'metrics'
+            'Impact': 'metrics',
+            'Architecture': 'write_path',
+            'Scale': 'write_path',
+            'Leadership': 'discovery',
+            'System Design': 'system_design',
+            'AI Systems': 'ai_systems'
         }
 
         const firstDimension = dimensionNames[0] || 'Strategic Thinking'
