@@ -37,6 +37,36 @@ function getLevelDisplay(role: string, level: string): string {
     return `${level} calibration`
 }
 
+const SCENARIO_DESCRIPTIONS: Record<number, string> = {
+    50: 'Practice structured thinking, metrics framing, and execution under pressure. Entry level.',
+    29: 'Practice user empathy, product discovery, and problem framing. Junior level.',
+    30: 'Practice product strategy, prioritisation, and market analysis. Senior level.',
+    31: 'Practice strategic vision and executive-level product thinking. Principal level.',
+    32: 'Practice leadership, stakeholder management, and org-level influence. Director level.',
+    49: 'Practice coding fundamentals, problem solving, and CS basics. Entry level.',
+    25: 'Practice coding, algorithms, and problem solving. Junior level.',
+    26: 'Practice system design, scalability, and architectural tradeoffs. Senior level.',
+    27: 'Practice advanced system design and architectural decision-making. Principal level.',
+    28: 'Practice technical leadership, strategy, and engineering org thinking. Director level.',
+    46: 'Practice technical depth, debugging, and performance optimisation. Senior level.',
+    33: 'Practice brand messaging, audience segmentation, and positioning. Junior level.',
+    34: 'Practice GTM strategy, channel mix, and campaign metrics. Senior level.',
+    35: 'Practice category design, brand strategy, and market positioning. Principal level.',
+    36: 'Practice brand leadership, budget management, and executive communication. Director level.',
+    37: 'Practice SQL, data analysis, and statistical reasoning. Junior level.',
+    38: 'Practice ML system design and feature engineering. Senior level.',
+    40: 'Practice data culture, leadership, and cross-functional influence. Director level.',
+    41: 'Practice planning, scheduling, and risk identification. Junior level.',
+    42: 'Practice risk management, delivery execution, and stakeholder negotiation. Senior level.',
+    43: 'Practice program management, governance, and strategic alignment. Principal level.',
+    44: 'Practice delivery leadership, team execution, and org building. Director level.',
+    57: 'Full AI PM loop — product sense, execution metrics, technical depth, and AI strategy.',
+    58: 'Full AI Engineer loop — ML system design, LLM architecture, and AI infrastructure.',
+    59: 'Full AI Marketer loop — AI campaign strategy, growth analytics, and marketing strategy.',
+    60: 'Full AI Project Manager loop — AI delivery, program management, and stakeholder alignment.',
+    61: 'Full AI Scientist loop — ML system design, analytics rigour, and data strategy.',
+}
+
 export default function DashboardPage() {
     const supabase = createClient()
     const router = useRouter()
@@ -166,27 +196,33 @@ export default function DashboardPage() {
                     // Generate description based on dimensions, not level
                     let desc = `${s.scenario_title} — difficulty calibrates to your responses in real-time.`
 
-                    // Role-specific copy refinements (NO level mentions)
-                    if (s.role === 'Software Engineer' && s.evaluation_dimensions?.includes('Architecture')) {
-                        desc = "Interview focused on system design, scalability, and trade-off discussions. Depth adjusts based on your answers."
-                    }
-                    if (s.role === 'Product Manager' && s.evaluation_dimensions?.includes('Product Sense')) {
-                        desc = "Product interview focused on user empathy, structured thinking, and prioritization. Rigor adapts dynamically."
-                    }
-                    if (s.role === 'AI Product Manager') {
-                        desc = 'Simulates a full AI PM interview loop — product sense, execution, technical depth, and strategy. Calibrated to the hiring bar at top-tier AI-first product companies.'
-                    }
-                    if (s.role === 'AI Engineer') {
-                        desc = 'Simulates a full AI Engineer interview loop — ML system design, LLM architecture, and AI infrastructure. Calibrated to the hiring bar at top-tier AI engineering teams.'
-                    }
-                    if (s.role === 'AI Marketer') {
-                        desc = 'Simulates a full AI Marketer interview loop — AI campaign strategy, growth analytics, and marketing strategy. Calibrated to the hiring bar at top-tier AI-driven marketing teams.'
-                    }
-                    if (s.role === 'AI Project Manager') {
-                        desc = 'Simulates a full AI Project Manager interview loop — AI delivery, program management, and stakeholder alignment. Calibrated to the hiring bar at top-tier AI product companies.'
-                    }
-                    if (s.role === 'AI Scientist') {
-                        desc = 'Simulates a full AI Scientist interview loop — ML system design, analytics rigour, and data strategy. Calibrated to the hiring bar at top-tier AI research and applied science teams.'
+                    // Primary: ID-keyed lookup — exact copy per scenario
+                    const scenarioId = typeof s.id === 'string' ? parseInt(s.id) : s.id
+                    if (SCENARIO_DESCRIPTIONS[scenarioId]) {
+                        desc = SCENARIO_DESCRIPTIONS[scenarioId]
+                    } else {
+                        // Role-specific copy refinements (NO level mentions)
+                        if (s.role === 'Software Engineer' && s.evaluation_dimensions?.includes('Architecture')) {
+                            desc = "Interview focused on system design, scalability, and trade-off discussions. Depth adjusts based on your answers."
+                        }
+                        if (s.role === 'Product Manager' && s.evaluation_dimensions?.includes('Product Sense')) {
+                            desc = "Product interview focused on user empathy, structured thinking, and prioritization. Rigor adapts dynamically."
+                        }
+                        if (s.role === 'AI Product Manager') {
+                            desc = 'Simulates a full AI PM interview loop — product sense, execution, technical depth, and strategy. Calibrated to the hiring bar at top-tier AI-first product companies.'
+                        }
+                        if (s.role === 'AI Engineer') {
+                            desc = 'Simulates a full AI Engineer interview loop — ML system design, LLM architecture, and AI infrastructure. Calibrated to the hiring bar at top-tier AI engineering teams.'
+                        }
+                        if (s.role === 'AI Marketer') {
+                            desc = 'Simulates a full AI Marketer interview loop — AI campaign strategy, growth analytics, and marketing strategy. Calibrated to the hiring bar at top-tier AI-driven marketing teams.'
+                        }
+                        if (s.role === 'AI Project Manager') {
+                            desc = 'Simulates a full AI Project Manager interview loop — AI delivery, program management, and stakeholder alignment. Calibrated to the hiring bar at top-tier AI product companies.'
+                        }
+                        if (s.role === 'AI Scientist') {
+                            desc = 'Simulates a full AI Scientist interview loop — ML system design, analytics rigour, and data strategy. Calibrated to the hiring bar at top-tier AI research and applied science teams.'
+                        }
                     }
 
                     const mappedScenario = {
