@@ -202,38 +202,22 @@ export function useBatchVoice(
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
             mediaStreamRef.current = stream
 
-            // 2. Activate session status in DB (repurposed /api/session route)
-            await fetch('/api/session', {
+            setIsConnected(true)
+
+            // 2. Fetch Turn 0 (TMAY) from DB via server-side API route (bypasses RLS).
+            //    TMAY is NEVER generated here. /api/interview must not be called for Turn 0.
+            //    Invariant: turn_index=0 always exists at this point (session/start pre-seeds it).
+            const openingRes = await fetch('/api/voice/opening', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId }),
-            }).catch((err) => {
-                // Non-fatal — interview route also handles status update on first turn
-                console.warn('[useBatchVoice] Session activation fetch failed (non-fatal):', err)
             })
 
-            setIsConnected(true)
-
-            // 3. Fetch Turn 0 (TMAY) from DB — pre-seeded by /api/session/start.
-            //    TMAY is NEVER generated here. /api/interview must not be called for Turn 0.
-            //    Invariant: turn_index=0 always exists at this point (session/start pre-seeds it).
-            const { createClient } = await import('@/lib/supabase')
-            const supabase = createClient()
-
-            const { data: tmayTurn, error: tmayError } = await supabase
-                .from('interview_turns')
-                .select('content')
-                .eq('session_id', sessionId)
-                .eq('turn_index', 0)
-                .single()
-
-            if (tmayError || !tmayTurn?.content) {
-                throw new Error(
-                    `[useBatchVoice] Failed to fetch TMAY turn: ${tmayError?.message ?? 'no content'}`
-                )
+            if (!openingRes.ok) {
+                throw new Error('Failed to fetch opening question')
             }
 
-            const tmayContent: string = tmayTurn.content
+            const { content: tmayContent } = await openingRes.json()
 
             // Track TMAY as the first assistant message
             assistantTurnCount.current += 1
