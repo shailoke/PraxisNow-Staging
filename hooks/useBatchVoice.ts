@@ -48,6 +48,7 @@ export function useBatchVoice(
     const [error,                setError]                = useState<string | null>(null)
 
     // ── Refs ───────────────────────────────────────────────────────────────
+    const isStartingRef             = useRef(false)
     const messagesRef               = useRef<Message[]>([])
     const mediaStreamRef            = useRef<MediaStream | null>(null)
     const mediaRecorderRef          = useRef<MediaRecorder | null>(null)
@@ -191,10 +192,15 @@ export function useBatchVoice(
 
     // ── startSession ───────────────────────────────────────────────────────
     const startSession = useCallback(async () => {
+        if (isStartingRef.current) {
+            console.warn('[useBatchVoice] startSession already in progress — skipping')
+            return
+        }
         if (!sessionId) {
             console.error('[useBatchVoice] Cannot start: no sessionId')
             return
         }
+        isStartingRef.current = true
         setError(null)
 
         try {
@@ -241,6 +247,8 @@ export function useBatchVoice(
                 mediaStreamRef.current.getTracks().forEach(t => t.stop())
                 mediaStreamRef.current = null
             }
+        } finally {
+            isStartingRef.current = false
         }
     }, [sessionId, speakText])
 
