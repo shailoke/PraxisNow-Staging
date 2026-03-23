@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const { session_id } = await req.json();
+        console.log('[evaluate] session_id:', session_id)
 
         const cookieStore = await cookies()
         const supabase = createServerClient<Database>(
@@ -157,6 +158,9 @@ export async function POST(req: NextRequest) {
             .select('*') // Select ALL columns to find the user answer field
             .eq('session_id', session_id)
             .order('turn_index', { ascending: true });
+
+        console.log('[evaluate] turns count:', turns?.length)
+        console.log('[evaluate] first turn:', turns?.[0])
 
         if (turnsError) {
             console.error('Failed to fetch interview_turns:', turnsError);
