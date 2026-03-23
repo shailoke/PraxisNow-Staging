@@ -30,11 +30,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Whisper requires a File with a name that has a recognisable extension.
-        // MediaRecorder typically produces audio/webm; name it accordingly.
-        const file = new File([audioBlob], 'audio.webm', { type: audioBlob.type || 'audio/webm' })
+        // MediaRecorder may produce 'audio/webm;codecs=opus' which Whisper rejects —
+        // always pin to plain 'audio/webm'.
+        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' })
+
+        console.log('[stt] file name:', audioFile.name, 'type:', audioFile.type, 'size:', audioFile.size)
 
         const transcription = await openai.audio.transcriptions.create({
-            file,
+            file: audioFile,
             model: 'whisper-1',
             response_format: 'json',
         })
