@@ -16,7 +16,7 @@ export default function NegotiatorPage() {
     const [checkingAccess, setCheckingAccess] = useState(true)
 
     // Session State
-    const [sessionId, setSessionId] = useState<number | null>(null)
+    const [sessionId, setSessionId] = useState<string | null>(null)
     const [sessionStarted, setSessionStarted] = useState(false)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [summary, setSummary] = useState<any | null>(null) // NegotiationEvaluation

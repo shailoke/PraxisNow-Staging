@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
     const { session_id } = await req.json()
+    console.log('[opening] session_id received:', session_id, typeof session_id)
 
     const adminClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

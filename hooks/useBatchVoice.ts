@@ -34,7 +34,7 @@ export type InterviewState =
  *   7. On audio end: restart MediaRecorder, setInterviewState('WAITING_FOR_USER')
  */
 export function useBatchVoice(
-    sessionId: number | null,
+    sessionId: string | null,
     initialInstruction: string = 'Introduce yourself briefly as the interviewer, then ask me to tell you about myself.',
     isPausedExternal: boolean = false,
     targetDuration: number = 30
@@ -202,8 +202,6 @@ export function useBatchVoice(
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
             mediaStreamRef.current = stream
 
-            setIsConnected(true)
-
             // 2. Fetch Turn 0 (TMAY) from DB via server-side API route (bypasses RLS).
             //    TMAY is NEVER generated here. /api/interview must not be called for Turn 0.
             //    Invariant: turn_index=0 always exists at this point (session/start pre-seeds it).
@@ -219,14 +217,17 @@ export function useBatchVoice(
 
             const { content: tmayContent } = await openingRes.json()
 
-            // Track TMAY as the first assistant message
-            assistantTurnCount.current += 1
+            // 3. Speak TMAY — blocks until audio finishes.
+            //    startRecording() is called by speakText's onended handler.
+            await speakText(tmayContent)
+
+            // 4. Mark connected ONLY after TMAY has been spoken successfully.
+            //    The simulator enters live-session UI state here — not before.
             const tmayMsg: Message = { role: 'assistant', content: tmayContent }
             messagesRef.current = [tmayMsg]
             setMessages([tmayMsg])
-
-            // 4. Speak TMAY — after audio ends, startRecording() is called by speakText's onended
-            await speakText(tmayContent)
+            assistantTurnCount.current += 1
+            setIsConnected(true)
 
         } catch (err: any) {
             console.error('[useBatchVoice] startSession error:', err)
@@ -234,6 +235,12 @@ export function useBatchVoice(
             setIsConnected(false)
             setIsInterviewerSpeaking(false)
             setIsSpeaking(false)
+            setInterviewState('ASSISTANT_SPEAKING')
+            // Stop mic stream if it was acquired before the failure
+            if (mediaStreamRef.current) {
+                mediaStreamRef.current.getTracks().forEach(t => t.stop())
+                mediaStreamRef.current = null
+            }
         }
     }, [sessionId, speakText])
 
@@ -260,7 +267,7 @@ export function useBatchVoice(
             // 2. STT
             const sttFormData = new FormData()
             sttFormData.append('audio', audioBlob, 'audio.webm')
-            sttFormData.append('session_id', String(sessionId ?? ''))
+            sttFormData.append('session_id', sessionId ?? '')
 
             const sttRes = await fetch('/api/voice/stt', {
                 method: 'POST',
