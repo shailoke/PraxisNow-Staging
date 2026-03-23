@@ -215,6 +215,7 @@ export function useBatchVoice(
             // 3. Speak TMAY — blocks until audio finishes.
             //    startRecording() is called by speakText's onended handler.
             await speakText(tmayContent)
+            isFirstQuestionPending.current = false
 
             // 4. Mark connected ONLY after TMAY has been spoken successfully.
             //    The simulator enters live-session UI state here — not before.
