@@ -248,11 +248,18 @@ export function useBatchVoice(
         }
 
         try {
-            // AMENDMENT 3: Clear chunk buffer at the START, before collecting new chunks
+            // 1. Stop MediaRecorder and assemble blob FIRST, then clear the chunk buffer.
+            //    Clearing before stopRecording() produces an empty blob (root cause of 965B bug).
+            const audioBlob = await stopRecording()
             audioChunksRef.current = []
 
-            // 1. Stop MediaRecorder and collect audio blob
-            const audioBlob = await stopRecording()
+            // Guard: reject blobs too small to contain real speech (~5KB minimum)
+            if (audioBlob.size < 5000) {
+                console.warn('[useBatchVoice] Audio blob too small:', audioBlob.size, 'bytes — likely empty recording')
+                audioChunksRef.current = []
+                startRecording()
+                return
+            }
 
             // 2. STT
             const sttFormData = new FormData()
