@@ -13,15 +13,15 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
  * Accepts: { text: string, voice?: string }
  * Returns: ReadableStream<audio/mpeg>
  *
- * Voice defaults to 'verse' — matches the Realtime API voice used in
- * /api/session/route.ts. Configurable per call for future persona mapping.
+ * Voice defaults to 'onyx' — deep, authoritative; closest TTS-1 match to
+ * the Realtime API 'verse' voice. Configurable per call for future persona mapping.
  *
  * Called by useBatchVoice.ts inside askNextQuestion() after the /api/interview
  * response is received, to synthesise the interviewer's spoken question.
  */
 export async function POST(request: NextRequest) {
     try {
-        const { text, voice = 'verse' } = await request.json()
+        const { text, voice = 'onyx' } = await request.json()
 
         if (!text || typeof text !== 'string' || !text.trim()) {
             return NextResponse.json(

@@ -135,7 +135,7 @@ export function useBatchVoice(
             const ttsRes = await fetch('/api/voice/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, voice: 'verse' }),
+                body: JSON.stringify({ text, voice: 'onyx' }),
                 signal: abortController.signal,
             })
 
