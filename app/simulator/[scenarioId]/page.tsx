@@ -38,7 +38,7 @@ export default function SimulatorPage() {
     const [loading, setLoading] = useState(true)
 
     // Session State
-    const [sessionId, setSessionId] = useState<number | null>(null)
+    const [sessionId, setSessionId] = useState<string | null>(null)
     const [evalResult, setEvalResult] = useState<EvalResult | null>(null)
     const [isEvaluating, setIsEvaluating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
