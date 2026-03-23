@@ -315,9 +315,13 @@ export function useBatchVoice(
             turnAuthorityTokens.current += 1
 
             // 6. Call /api/interview
-            //    messages = history WITHOUT current user message (passed as userMessage separately)
-            //    Amendment 2: push user message to ref AFTER interview returns
-            const historySnapshot = [...messagesRef.current]
+            //    messages = full history INCLUDING current user answer so GPT-4o
+            //    has context of what the user said when generating the next question.
+            //    userMessage field is still sent separately for turn-authority bookkeeping.
+            const historySnapshot = [
+                ...messagesRef.current,
+                { role: 'user' as const, content: sttTranscript.trim() },
+            ]
 
             setInterviewState('READY_FOR_NEXT')
 
