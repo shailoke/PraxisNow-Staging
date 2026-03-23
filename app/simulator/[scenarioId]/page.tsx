@@ -248,6 +248,7 @@ export default function SimulatorPage() {
     }, [messages])
 
     const handleStart = async () => {
+        console.log('[handleStart] called')
         if (!scenario) return
 
         setLoading(true)
@@ -265,6 +266,7 @@ export default function SimulatorPage() {
             })
 
             const data = await res.json()
+            console.log('[handleStart] session/start response:', data)
 
             if (!res.ok) {
                 // Handle specific errors
