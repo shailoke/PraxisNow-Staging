@@ -103,13 +103,14 @@ export async function POST(request: NextRequest) {
         let isReplaySession = false
         let originalSessionId: string | null = null
         let originalTurns: any[] = []
+        let sessionScenarioId: number | null = null  // fallback when scenarioId absent from request body
 
         if (session_id) {
             // Fetch session metadata to check if this is a replay
             // NOTE: user_id added here (first fetch only). Do NOT add to the hydration-fix fetch below.
             const { data: sessionData, error: sessionFetchError } = await supabase
                 .from('sessions')
-                .select('replay_of_session_id, family_selections, dimension_order, user_id')
+                .select('replay_of_session_id, family_selections, dimension_order, user_id, scenario_id')
                 .eq('id', session_id)
                 .single()
 
@@ -190,7 +191,14 @@ export async function POST(request: NextRequest) {
                 dimensionOrder = (sessionData as any).dimension_order as string[]
                 console.log(`✅ [DIMENSION_ORDER_LOADED] ${isReplaySession ? 'Replay' : 'Fresh'} session order: ${dimensionOrder.join(' → ')}`)
             }
+
+            // Capture scenario_id from session row as fallback for callers that omit it
+            sessionScenarioId = (sessionData as any)?.scenario_id ?? null
         }
+
+        // Resolve scenarioId: prefer request body value, fall back to session row
+        const resolvedScenarioId = scenarioId ?? sessionScenarioId
+        console.log('[/api/interview] resolvedScenarioId:', resolvedScenarioId, '(body:', scenarioId, ', session row:', sessionScenarioId, ')')
 
         // FIX HYDRATION BUG: Merge DB into runtime BEFORE validation
         if (session_id && dbFamilySelectionsCache) {
@@ -228,24 +236,24 @@ export async function POST(request: NextRequest) {
 
         let scenarioConfig: any = null
 
-        // Check if scenarioId is a hardcoded key (e.g., 'sde-l5-system-design')
-        const isHardcodedKey = scenarioId && INTERVIEW_SCENARIOS[scenarioId]
+        // Check if resolvedScenarioId is a hardcoded key (e.g., 'sde-l5-system-design')
+        const isHardcodedKey = resolvedScenarioId && INTERVIEW_SCENARIOS[resolvedScenarioId]
 
         if (isHardcodedKey) {
             console.log('[/api/interview] Scenario type: HARDCODED')
             // SHALLOW COPY to avoid mutating the global constant when we strip questions
-            scenarioConfig = { ...INTERVIEW_SCENARIOS[scenarioId] }
+            scenarioConfig = { ...INTERVIEW_SCENARIOS[resolvedScenarioId] }
         } else {
             console.log('[/api/interview] Scenario type: DATABASE')
 
             const { data: dbScenario, error } = await supabase
                 .from('scenarios')
                 .select('*')
-                .eq('id', scenarioId)
+                .eq('id', resolvedScenarioId)
                 .single()
 
             if (error || !dbScenario) {
-                console.error('[/api/interview] Database scenario not found:', scenarioId, error)
+                console.error('[/api/interview] Database scenario not found:', resolvedScenarioId, error)
                 return NextResponse.json(
                     { error: 'Scenario not found' },
                     { status: 404 }

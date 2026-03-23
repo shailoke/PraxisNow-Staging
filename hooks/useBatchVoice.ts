@@ -71,6 +71,13 @@ export function useBatchVoice(
     /** Start a fresh MediaRecorder session. Called after each interviewer turn. */
     const startRecording = useCallback(() => {
         if (!mediaStreamRef.current) return
+        const track = mediaStreamRef.current?.getAudioTracks()[0]
+        console.log('[startRecording] track state:', track?.readyState)
+        if (!track || track.readyState === 'ended') {
+            console.error('[useBatchVoice] Mic track is dead — cannot record')
+            setError('Microphone disconnected. Please refresh.')
+            return
+        }
         const recorder = new MediaRecorder(mediaStreamRef.current, {
             mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
                 ? 'audio/webm;codecs=opus'
@@ -250,6 +257,8 @@ export function useBatchVoice(
         try {
             // 1. Stop MediaRecorder and assemble blob FIRST, then clear the chunk buffer.
             //    Clearing before stopRecording() produces an empty blob (root cause of 965B bug).
+            console.log('[askNext] recorder state:', mediaRecorderRef.current?.state)
+            console.log('[askNext] chunks before stop:', audioChunksRef.current.length)
             const audioBlob = await stopRecording()
             audioChunksRef.current = []
 
