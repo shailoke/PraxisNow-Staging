@@ -6,6 +6,7 @@ import { Database } from '@/lib/database.types'
 
 export async function POST(req: NextRequest) {
     try {
+        console.log('[session/start] handler called')
         console.log("DEBUG: Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
         const { scenario_id, custom_scenario_id, duration_seconds, session_type, replay_session_id } = await req.json()
         const cookieStore = await cookies()
@@ -545,6 +546,8 @@ export async function POST(req: NextRequest) {
             .insert(sessionPayload)
             .select()
             .single<Database['public']['Tables']['sessions']['Row']>()
+
+        console.log('[session/start] insert result:', session, insertError)
 
         // DIAGNOSTIC A2: Session Start - Verify what was actually inserted
         if (session) {
