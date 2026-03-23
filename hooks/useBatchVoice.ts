@@ -30,7 +30,7 @@ export type InterviewState =
  *   3. POST { session_id, answer_text } → /api/turns/answer   (ordering invariant)
  *   4. POST { session_id, messages: history, userMessage } → /api/interview
  *   5. Push user + assistant messages to messagesRef / state
- *   6. POST llmText → /api/voice/tts → audio blob → play
+ *   6. POST llmText → /api/voice/tts → audio buffer → play via AudioContext
  *   7. On audio end: restart MediaRecorder, setInterviewState('WAITING_FOR_USER')
  */
 export function useBatchVoice(
@@ -53,8 +53,8 @@ export function useBatchVoice(
     const mediaStreamRef            = useRef<MediaStream | null>(null)
     const mediaRecorderRef          = useRef<MediaRecorder | null>(null)
     const audioChunksRef            = useRef<Blob[]>([])
-    const currentAudioRef           = useRef<HTMLAudioElement | null>(null)
-    const currentObjectUrlRef       = useRef<string | null>(null)
+    const audioContextRef           = useRef<AudioContext | null>(null)
+    const audioSourceRef            = useRef<AudioBufferSourceNode | null>(null)
     const ttsAbortControllerRef     = useRef<AbortController | null>(null)
     const pendingSystemMessagesRef  = useRef<string[]>([])
     const isPausedRef               = useRef(isPausedExternal)
@@ -67,14 +67,6 @@ export function useBatchVoice(
     isPausedRef.current = isPausedExternal
 
     // ── Helpers ────────────────────────────────────────────────────────────
-
-    /** Revoke the current TTS object URL and clear the ref. */
-    const revokeCurrentUrl = useCallback(() => {
-        if (currentObjectUrlRef.current) {
-            URL.revokeObjectURL(currentObjectUrlRef.current)
-            currentObjectUrlRef.current = null
-        }
-    }, [])
 
     /** Start a fresh MediaRecorder session. Called after each interviewer turn. */
     const startRecording = useCallback(() => {
@@ -111,19 +103,17 @@ export function useBatchVoice(
 
     // ── speakText ─────────────────────────────────────────────────────────
     /**
-     * Synthesise `text` via /api/voice/tts, buffer the full response, and
-     * play it via URL.createObjectURL.
+     * Synthesise `text` via /api/voice/tts, decode the response buffer, and
+     * play it via AudioContext (reliable cross-browser, avoids HTMLAudioElement
+     * autoplay restrictions and blob URL errors on iOS/Chrome).
      *
-     * V1: Full buffer before play. MediaSource streaming is a future optimisation
-     * (iOS Safari compatibility with MediaSource for audio/mpeg is unverified).
-     * TODO: replace with MediaSource streaming once iOS Safari support is confirmed.
+     * Returns a Promise that resolves after the audio finishes playing so
+     * startSession can await TMAY before marking the session connected.
      *
      * Declared before startSession so startSession can reference it in its
      * useCallback dependency array without a forward-reference TS error.
      */
     const speakText = useCallback(async (text: string) => {
-        revokeCurrentUrl()
-
         const abortController = new AbortController()
         ttsAbortControllerRef.current = abortController
 
@@ -143,38 +133,30 @@ export function useBatchVoice(
                 throw new Error(`TTS error: ${ttsRes.status}`)
             }
 
-            // Buffer the full response before playing
             const audioBuffer = await ttsRes.arrayBuffer()
-            const blob = new Blob([audioBuffer], { type: 'audio/mpeg' })
-            const objectUrl = URL.createObjectURL(blob)
-            currentObjectUrlRef.current = objectUrl
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+            audioContextRef.current = audioContext
+            const decodedBuffer = await audioContext.decodeAudioData(audioBuffer)
+            const source = audioContext.createBufferSource()
+            audioSourceRef.current = source
+            source.buffer = decodedBuffer
+            source.connect(audioContext.destination)
 
-            const audio = new Audio(objectUrl)
-            currentAudioRef.current = audio
-
-            audio.onended = () => {
-                revokeCurrentUrl()
-                setIsInterviewerSpeaking(false)
-                setIsSpeaking(false)
-                setInterviewState('WAITING_FOR_USER')
-                assistantTurnCount.current += 1
-
-                // Start recording user's response
-                audioChunksRef.current = []
-                startRecording()
-            }
-
-            audio.onerror = (e) => {
-                console.error('[useBatchVoice] Audio playback error:', e)
-                revokeCurrentUrl()
-                setIsInterviewerSpeaking(false)
-                setIsSpeaking(false)
-                setInterviewState('WAITING_FOR_USER')
-                audioChunksRef.current = []
-                startRecording()
-            }
-
-            await audio.play()
+            await new Promise<void>((resolve) => {
+                source.onended = () => {
+                    setIsInterviewerSpeaking(false)
+                    setIsSpeaking(false)
+                    setInterviewState('WAITING_FOR_USER')
+                    assistantTurnCount.current += 1
+                    audioChunksRef.current = []
+                    startRecording()
+                    audioContext.close()
+                    audioContextRef.current = null
+                    audioSourceRef.current = null
+                    resolve()
+                }
+                source.start(0)
+            })
 
         } catch (err: any) {
             if (err.name === 'AbortError') {
@@ -188,7 +170,7 @@ export function useBatchVoice(
             audioChunksRef.current = []
             startRecording()
         }
-    }, [revokeCurrentUrl, startRecording])
+    }, [startRecording])
 
     // ── startSession ───────────────────────────────────────────────────────
     const startSession = useCallback(async () => {
@@ -405,25 +387,19 @@ export function useBatchVoice(
 
     // ── abortInterviewerAudio ──────────────────────────────────────────────
     /**
-     * Amendment 8:
-     * (a) pause + clear currentAudioRef
-     * (b) abort TTS fetch
-     * (c) revoke object URL (memory leak prevention)
-     * (d) set speaking state false
+     * Stop AudioContext playback, abort TTS fetch, reset speaking state.
      */
     const abortInterviewerAudio = useCallback(() => {
-        if (currentAudioRef.current) {
-            currentAudioRef.current.pause()
-            currentAudioRef.current.src = ''
-            currentAudioRef.current = null
-        }
+        audioSourceRef.current?.stop()
+        audioContextRef.current?.close()
+        audioContextRef.current = null
+        audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
-        revokeCurrentUrl()
         setIsInterviewerSpeaking(false)
         setIsSpeaking(false)
-        console.log('[useBatchVoice] abortInterviewerAudio — audio stopped, URL revoked')
-    }, [revokeCurrentUrl])
+        console.log('[useBatchVoice] abortInterviewerAudio — audio stopped')
+    }, [])
 
     // ── endSession ─────────────────────────────────────────────────────────
     /**
@@ -442,15 +418,13 @@ export function useBatchVoice(
             mediaStreamRef.current = null
         }
 
-        // Stop audio + revoke URL
-        if (currentAudioRef.current) {
-            currentAudioRef.current.pause()
-            currentAudioRef.current.src = ''
-            currentAudioRef.current = null
-        }
+        // Stop AudioContext
+        audioSourceRef.current?.stop()
+        audioContextRef.current?.close()
+        audioContextRef.current = null
+        audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
-        revokeCurrentUrl()
 
         // Clear buffers
         audioChunksRef.current = []
@@ -462,7 +436,7 @@ export function useBatchVoice(
         setInterviewState('SESSION_ENDING')
 
         console.log('[useBatchVoice] endSession — fully torn down')
-    }, [revokeCurrentUrl])
+    }, [])
 
     // ── getTurnStats ───────────────────────────────────────────────────────
     const getTurnStats = useCallback(() => ({
