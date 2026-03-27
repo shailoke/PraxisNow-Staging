@@ -523,13 +523,13 @@ export async function POST(req: NextRequest) {
         };
 
         // strongest_signal: top strength skill, truncated to 6 words
-        const rawSkill: string | undefined = stage2.top_strengths[0]?.skill;
+        const rawSkill: string | undefined = (stage2.top_strengths ?? [])[0]?.skill;
         const strongestSignalRaw = rawSkill || dimensionNames[0] || 'Strong communication';
         const strongest_signal = strongestSignalRaw.split(' ').slice(0, 6).join(' ');
 
         // one_fix: gaps[0].fix_in_one_sentence → first sentence of primary_blocker → fallback
         let one_fix = 'Focus on adding measurable outcomes to your answers.';
-        const rawFix: string | null = stage2.gaps[0]?.fix_in_one_sentence ?? null;
+        const rawFix: string | null = (stage2.gaps ?? [])[0]?.fix_in_one_sentence ?? null;
         const rawBlocker: string | null = stage2.distance_to_strong_hire?.primary_blocker ?? null;
         if (rawFix) {
             one_fix = rawFix;
