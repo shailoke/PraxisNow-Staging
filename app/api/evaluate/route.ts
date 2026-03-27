@@ -363,13 +363,20 @@ export async function POST(req: NextRequest) {
         }
 
         // ── Assemble evaluation object ────────────────────────────────────────────────
+        console.log('[STAGE2_OUTPUT]', JSON.stringify(stage2, null, 2))
+
+        const topStrengths: any[] = stage2.top_strengths ?? []
+        const gaps: any[] = stage2.gaps ?? []
+        const hiringSignal: string = stage2.hiring_signal ?? 'No Hire'
+        const primaryBlocker: string = stage2.distance_to_strong_hire?.primary_blocker ?? ''
+
         const evaluation: any = {
-            hiring_signal: stage2.hiring_signal,
+            hiring_signal: hiringSignal,
             hiring_confidence: stage2.hiring_confidence,
             hireable_level: stage2.hireable_level,
             distance_to_strong_hire: stage2.distance_to_strong_hire,
-            confidence_calibration: stage2.hiring_confidence >= 0.85 ? 'above_bar'
-                : stage2.hiring_confidence >= 0.65 ? 'at_bar' : 'below_bar',
+            confidence_calibration: (stage2.hiring_confidence ?? 0) >= 0.85 ? 'above_bar'
+                : (stage2.hiring_confidence ?? 0) >= 0.65 ? 'at_bar' : 'below_bar',
 
             tmay_analysis: stage2.tmay_diagnostic ? {
                 critique: stage2.tmay_diagnostic.key_risk,
@@ -377,17 +384,17 @@ export async function POST(req: NextRequest) {
             } : null,
 
             high_level_assessment: {
-                seniority_observation: `${stage2.hireable_level}. ${stage2.distance_to_strong_hire.primary_blocker}`,
-                strongest_signals: stage2.top_strengths.map((s: any) => s.skill).join(', '),
-                barriers_to_next_level: stage2.distance_to_strong_hire.primary_blocker,
+                seniority_observation: `${stage2.hireable_level ?? ''}. ${primaryBlocker}`.trim(),
+                strongest_signals: topStrengths.map((s: any) => s.skill).join(', '),
+                barriers_to_next_level: primaryBlocker,
             },
 
-            strengths: stage2.top_strengths.map((s: any) => ({
+            strengths: topStrengths.map((s: any) => ({
                 skill: s.skill,
                 observation: `Turn ${s.evidence_from_turn}: "${s.exact_quote_fragment}"`,
                 why_it_matters: s.why_it_signals_seniority,
             })),
-            areas_for_improvement: stage2.gaps,
+            areas_for_improvement: gaps,
 
             // Stage 3 — grounded rewrites only (no BUILD_PROMPT answer_upgrades)
             answer_upgrades: answerUpgrades,
@@ -412,12 +419,12 @@ export async function POST(req: NextRequest) {
         try {
             const synthesized = synthesizePreparationSignals({
                 evaluation: {
-                    primary_failure_mode: stage2.gaps[0] ? {
-                        label: stage2.gaps[0].gap_type || 'Structure',
-                        diagnosis: stage2.gaps[0].limit,
-                        why_it_hurt: stage2.gaps[0].why_it_matters,
+                    primary_failure_mode: gaps[0] ? {
+                        label: gaps[0].gap_type || 'Structure',
+                        diagnosis: gaps[0].limit,
+                        why_it_hurt: gaps[0].why_it_matters,
                     } : null,
-                    corrections: stage2.gaps.map(g => ({
+                    corrections: gaps.map(g => ({
                         issue: g.limit,
                         evidence_scope: 'session',
                         severity: g.impact_scope === 'blocks_hire' ? 'HIGH' as const
@@ -429,7 +436,7 @@ export async function POST(req: NextRequest) {
                     })),
                     communication_diagnostics: {
                         structure: stage2.tmay_diagnostic?.structure || null,
-                        evidence_grounding: stage2.turn_diagnostics.some(d => d.signal_strength === 'weak')
+                        evidence_grounding: (stage2.turn_diagnostics ?? []).some(d => d.signal_strength === 'weak')
                             ? 'Partial' : 'Strong',
                         verbal_noise: { detected: null, patterns: null },
                     },
@@ -516,13 +523,13 @@ export async function POST(req: NextRequest) {
         };
 
         // strongest_signal: top strength skill, truncated to 6 words
-        const rawSkill: string | undefined = stage2.top_strengths[0]?.skill;
+        const rawSkill: string | undefined = (stage2.top_strengths ?? [])[0]?.skill;
         const strongestSignalRaw = rawSkill || dimensionNames[0] || 'Strong communication';
         const strongest_signal = strongestSignalRaw.split(' ').slice(0, 6).join(' ');
 
         // one_fix: gaps[0].fix_in_one_sentence → first sentence of primary_blocker → fallback
         let one_fix = 'Focus on adding measurable outcomes to your answers.';
-        const rawFix: string | null = stage2.gaps[0]?.fix_in_one_sentence ?? null;
+        const rawFix: string | null = (stage2.gaps ?? [])[0]?.fix_in_one_sentence ?? null;
         const rawBlocker: string | null = stage2.distance_to_strong_hire?.primary_blocker ?? null;
         if (rawFix) {
             one_fix = rawFix;
