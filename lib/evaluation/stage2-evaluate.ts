@@ -56,14 +56,34 @@ function buildStage2Prompt(role: string, level: string, tier: string): string {
 
 You have received structured extraction of the candidate's exact answers (from a prior analysis pass). Every assessment you make MUST reference the specific turn index and quote from that extraction.
 
+REQUIRED TOP-LEVEL OUTPUT FIELDS (exact names, all mandatory):
+- hiring_signal: "NO_HIRE" | "BORDERLINE" | "HIRE" | "STRONG_HIRE"
+- hiring_confidence: number 0.0–1.0
+- hireable_level: string (e.g. "Senior Product Manager")
+- distance_to_strong_hire: { gaps_blocking: number, primary_blocker: string }
+- top_strengths: array of { skill, evidence_from_turn, exact_quote_fragment, why_it_signals_seniority }
+- gaps: array of { limit, gap_type, impact_scope, why_it_matters, fix_in_one_sentence }
+- dominant_failure_pattern: string | null
+- answer_level_diagnostics: array (see FIELD TYPES below)
+- tell_me_about_yourself_diagnostic: object | null
+
 RULES:
-- exact_quote_fragment in strengths: Must be 4–8 words taken verbatim from the Stage 1 extraction. If you cannot quote it, do not claim the strength.
+- top_strengths[].exact_quote_fragment: Must be 4–8 words taken verbatim from the Stage 1 extraction. If you cannot quote it, do not claim the strength.
 - answer_level_diagnostics[].issues_detected: Array of specific structural absences — not "they should have been more specific" but "the answer named the decision but not the uncertainty that preceded it."
 - dominant_failure_pattern: Only populate if the same structural gap appears in 2 or more turns. Otherwise null.
 - hiring_confidence: 0.5 = borderline, 0.7 = solid hire, 0.9 = strong hire. Be calibrated — do not default to 0.7.
 - distance_to_strong_hire.primary_blocker: One sentence naming the single specific behaviour change that would move this to STRONG_HIRE.
 
 FIELD TYPES (exact match required for downstream synthesis):
+- top_strengths[].skill: string (skill name)
+- top_strengths[].evidence_from_turn: number (turn index)
+- top_strengths[].exact_quote_fragment: string (4–8 verbatim words)
+- top_strengths[].why_it_signals_seniority: string
+- gaps[].limit: string
+- gaps[].gap_type: "fundamental" | "role_level" | "polish"
+- gaps[].impact_scope: "blocks_hire" | "blocks_next_level" | "polish_only"
+- gaps[].why_it_matters: string
+- gaps[].fix_in_one_sentence: string
 - answer_level_diagnostics[].question_type: "tell_me_about_yourself" | "behavioral" | "case" | "technical" | "leadership"
 - answer_level_diagnostics[].signal_strength: "strong" | "mixed" | "weak"
 - answer_level_diagnostics[].severity: "HIGH" | "MEDIUM" | "LOW"
@@ -77,7 +97,7 @@ INVARIANTS (from eval-logic.ts):
 - If hiring_signal is HIRE or STRONG_HIRE, no gap may have gap_type = 'fundamental'.
 - If hiring_confidence >= 0.85, at least one strength must explicitly affirm readiness.
 
-Return valid JSON only.${isExtended ? '\nInclude all fields. Generate 3–5 gaps typed by severity.' : '\nStarter tier: 3 strengths, 3 gaps with gap_type, no issues_detected depth needed.'}`;
+Return valid JSON only. Use EXACTLY the field names listed above — no aliases, no camelCase variants.${isExtended ? '\nInclude all fields. Generate 3–5 gaps typed by severity.' : '\nStarter tier: 3 strengths, 3 gaps with gap_type, no issues_detected depth needed.'}`;
 }
 
 export async function runStage2(
