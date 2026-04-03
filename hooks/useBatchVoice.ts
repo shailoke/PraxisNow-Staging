@@ -13,25 +13,27 @@ export type InterviewState =
     | 'WAITING_FOR_USER'
     | 'READY_FOR_NEXT'
     | 'SESSION_ENDING'
+    | 'TRANSCRIBING'
+    | 'THINKING'
 
 // ─── useBatchVoice ────────────────────────────────────────────────────────────
 /**
  * Drop-in replacement for useRealtimeVoice.
  *
- * Architecture: STT (Whisper) → /api/interview (GPT-4o) → TTS (tts-1)
+ * Architecture: STT (Whisper) → /api/interview (streaming) → sentence-level TTS
  * No WebRTC, no DataChannel, no Realtime API.
  *
  * Interface contract: identical return shape to useRealtimeVoice so the
  * simulator and negotiator pages need only a one-line import change.
  *
  * Turn flow inside askNextQuestion():
- *   1. Stop MediaRecorder, collect blob
- *   2. POST blob → /api/voice/stt → sttTranscript
- *   3. POST { session_id, answer_text } → /api/turns/answer   (ordering invariant)
- *   4. POST { session_id, messages: history, userMessage } → /api/interview
- *   5. Push user + assistant messages to messagesRef / state
- *   6. POST llmText → /api/voice/tts → audio buffer → play via AudioContext
- *   7. On audio end: restart MediaRecorder, setInterviewState('WAITING_FOR_USER')
+ *   1. Stop MediaRecorder, collect blob         → TRANSCRIBING state
+ *   2. POST blob → /api/voice/stt → transcript  → THINKING state
+ *   3. POST answer_text → /api/turns/answer     (ordering invariant)
+ *   4. POST → /api/interview (stream mode)      → sentence chunks piped to TTS queue
+ *   5. processTtsQueue plays sentences as they arrive → ASSISTANT_SPEAKING on first
+ *   6. After queuePromise resolves: push messages to ref, set WAITING_FOR_USER
+ *   7. startRecording() called after all audio done
  */
 export function useBatchVoice(
     sessionId: string | null,
@@ -40,12 +42,12 @@ export function useBatchVoice(
     targetDuration: number = 30
 ) {
     // ── State ──────────────────────────────────────────────────────────────
-    const [isConnected,          setIsConnected]          = useState(false)
-    const [isSpeaking,           setIsSpeaking]           = useState(false)
+    const [isConnected,           setIsConnected]           = useState(false)
+    const [isSpeaking,            setIsSpeaking]            = useState(false)
     const [isInterviewerSpeaking, setIsInterviewerSpeaking] = useState(false)
-    const [messages,             setMessages]             = useState<Message[]>([])
-    const [interviewState,       setInterviewState]       = useState<InterviewState>('ASSISTANT_SPEAKING')
-    const [error,                setError]                = useState<string | null>(null)
+    const [messages,              setMessages]              = useState<Message[]>([])
+    const [interviewState,        setInterviewState]        = useState<InterviewState>('ASSISTANT_SPEAKING')
+    const [error,                 setError]                 = useState<string | null>(null)
 
     // ── Refs ───────────────────────────────────────────────────────────────
     const isStartingRef             = useRef(false)
@@ -62,6 +64,11 @@ export function useBatchVoice(
     const turnAuthorityTokens       = useRef(0)
     const assistantTurnCount        = useRef(0)
     const userTurnCount             = useRef(0)
+
+    // ── Streaming TTS pipeline refs ────────────────────────────────────────
+    const ttsQueueRef        = useRef<string[]>([])
+    const isTtsProcessingRef = useRef(false)
+    const streamCompleteRef  = useRef(false)
 
     // Keep pause ref in sync with external prop
     isPausedRef.current = isPausedExternal
@@ -108,25 +115,21 @@ export function useBatchVoice(
         })
     }, [])
 
-    // ── speakText ─────────────────────────────────────────────────────────
+    // ── speakSentence ─────────────────────────────────────────────────────
     /**
-     * Synthesise `text` via /api/voice/tts, decode the response buffer, and
-     * play it via AudioContext (reliable cross-browser, avoids HTMLAudioElement
-     * autoplay restrictions and blob URL errors on iOS/Chrome).
+     * Synthesise a single sentence via /api/voice/tts and play it via AudioContext.
      *
-     * Returns a Promise that resolves after the audio finishes playing so
-     * startSession can await TMAY before marking the session connected.
+     * Returns a Promise that resolves after the sentence finishes playing.
+     * Does NOT set interviewState, does NOT call startRecording, does NOT
+     * increment assistantTurnCount — all post-turn logic is handled by
+     * askNextQuestion() after processTtsQueue resolves.
      *
-     * Declared before startSession so startSession can reference it in its
-     * useCallback dependency array without a forward-reference TS error.
+     * Used by both startSession() (for TMAY, full utterance) and
+     * processTtsQueue() (for streaming sentence-by-sentence playback).
      */
-    const speakText = useCallback(async (text: string) => {
+    const speakSentence = useCallback(async (text: string) => {
         const abortController = new AbortController()
         ttsAbortControllerRef.current = abortController
-
-        setIsInterviewerSpeaking(true)
-        setIsSpeaking(true)
-        setInterviewState('ASSISTANT_SPEAKING')
 
         try {
             const ttsRes = await fetch('/api/voice/tts', {
@@ -151,12 +154,6 @@ export function useBatchVoice(
 
             await new Promise<void>((resolve) => {
                 source.onended = () => {
-                    setIsInterviewerSpeaking(false)
-                    setIsSpeaking(false)
-                    setInterviewState('WAITING_FOR_USER')
-                    assistantTurnCount.current += 1
-                    audioChunksRef.current = []
-                    startRecording()
                     audioContext.close()
                     audioContextRef.current = null
                     audioSourceRef.current = null
@@ -170,14 +167,46 @@ export function useBatchVoice(
                 console.log('[useBatchVoice] TTS fetch aborted (pause or end)')
                 return
             }
-            console.error('[useBatchVoice] speakText error:', err)
-            setIsInterviewerSpeaking(false)
-            setIsSpeaking(false)
-            setInterviewState('WAITING_FOR_USER')
-            audioChunksRef.current = []
-            startRecording()
+            console.error('[useBatchVoice] speakSentence error:', err)
+            // Resolve rather than reject so the queue continues
         }
-    }, [startRecording])
+    }, [])
+
+    // ── processTtsQueue ───────────────────────────────────────────────────
+    /**
+     * Drain the TTS sentence queue concurrently with the streaming interview call.
+     * Plays sentences as they arrive; waits 50 ms when queue is empty but stream
+     * is still running. Resolves when both stream is complete and queue is empty.
+     */
+    const processTtsQueue = useCallback(async () => {
+        if (isTtsProcessingRef.current) return
+        isTtsProcessingRef.current = true
+        let isFirstSentence = true
+
+        while (true) {
+            if (ttsQueueRef.current.length > 0) {
+                const sentence = ttsQueueRef.current.shift()!
+
+                if (isFirstSentence) {
+                    setInterviewState('ASSISTANT_SPEAKING')
+                    setIsInterviewerSpeaking(true)
+                    setIsSpeaking(true)
+                    isFirstSentence = false
+                }
+
+                await speakSentence(sentence)
+
+            } else if (streamCompleteRef.current) {
+                // Stream done and queue drained — all audio played
+                break
+            } else {
+                // Stream still running, wait for more sentences
+                await new Promise(r => setTimeout(r, 50))
+            }
+        }
+
+        isTtsProcessingRef.current = false
+    }, [speakSentence])
 
     // ── startSession ───────────────────────────────────────────────────────
     const startSession = useCallback(async () => {
@@ -213,9 +242,17 @@ export function useBatchVoice(
             const { content: tmayContent } = await openingRes.json()
 
             // 3. Speak TMAY — blocks until audio finishes.
-            //    startRecording() is called by speakText's onended handler.
-            await speakText(tmayContent)
+            //    startRecording() is called after speakSentence resolves (below).
+            setIsInterviewerSpeaking(true)
+            setIsSpeaking(true)
+            setInterviewState('ASSISTANT_SPEAKING')
+            await speakSentence(tmayContent)
+            setIsInterviewerSpeaking(false)
+            setIsSpeaking(false)
+            setInterviewState('WAITING_FOR_USER')
             isFirstQuestionPending.current = false
+            audioChunksRef.current = []
+            startRecording()
 
             // 4. Mark connected ONLY after TMAY has been spoken successfully.
             //    The simulator enters live-session UI state here — not before.
@@ -240,7 +277,7 @@ export function useBatchVoice(
         } finally {
             isStartingRef.current = false
         }
-    }, [sessionId, speakText])
+    }, [sessionId, speakSentence, startRecording])
 
     // ── askNextQuestion ────────────────────────────────────────────────────
     const askNextQuestion = useCallback(async () => {
@@ -272,6 +309,8 @@ export function useBatchVoice(
             }
 
             // 2. STT
+            setInterviewState('TRANSCRIBING')
+
             const sttFormData = new FormData()
             sttFormData.append('audio', audioBlob, 'audio.webm')
             sttFormData.append('session_id', sessionId ?? '')
@@ -299,6 +338,8 @@ export function useBatchVoice(
             //    The interview route marks the previous turn answered=true atomically.
             //    user_answer MUST be written first so it is never null on answered=true.
             //    .catch() keeps this non-throwing on failure; await enforces sequencing.
+            setInterviewState('THINKING')
+
             await fetch('/api/turns/answer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -314,20 +355,27 @@ export function useBatchVoice(
             // 5. Token + authority
             turnAuthorityTokens.current += 1
 
-            // 6. Call /api/interview
-            //    messages = full history INCLUDING current user answer so GPT-4o
-            //    has context of what the user said when generating the next question.
-            //    userMessage field is still sent separately for turn-authority bookkeeping.
+            // 6. Build message history including current user answer for GPT context
             const historySnapshot = [
                 ...messagesRef.current,
                 { role: 'user' as const, content: sttTranscript.trim() },
             ]
 
-            setInterviewState('READY_FOR_NEXT')
+            // 7. Reset streaming state before starting
+            streamCompleteRef.current = false
+            ttsQueueRef.current = []
+            isTtsProcessingRef.current = false
 
+            // 8. Start TTS queue processor (runs concurrently with stream)
+            const queuePromise = processTtsQueue()
+
+            // 9. Fetch interview with streaming
             const interviewRes = await fetch('/api/interview', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-response-mode': 'stream',
+                },
                 body: JSON.stringify({
                     session_id: sessionId,
                     messages: historySnapshot,
@@ -340,31 +388,73 @@ export function useBatchVoice(
                 }),
             })
 
-            // 7. Clear the system message buffer AFTER interview call (whether it succeeded or not)
+            // 10. Clear the system message buffer AFTER interview call
             pendingSystemMessagesRef.current = []
 
-            if (!interviewRes.ok) {
+            if (!interviewRes.ok || !interviewRes.body) {
+                streamCompleteRef.current = true // unblock queue
                 const errData = await interviewRes.json().catch(() => ({}))
-                throw new Error(errData.error || `Interview API error: ${interviewRes.status}`)
+                throw new Error((errData as any).error || `Interview API error: ${interviewRes.status}`)
             }
 
-            const interviewData = await interviewRes.json()
-            const llmText: string = interviewData.message?.trim() ?? ''
+            // 11. Stream text, split on sentence boundaries
+            const reader = interviewRes.body.getReader()
+            const decoder = new TextDecoder()
+            let fullText = ''
+            let sentenceBuffer = ''
 
-            if (!llmText) throw new Error('Interview API returned empty message')
+            try {
+                while (true) {
+                    const { done, value } = await reader.read()
+                    if (done) break
+                    const chunk = decoder.decode(value, { stream: true })
+                    fullText += chunk
+                    sentenceBuffer += chunk
+
+                    // Split on sentence boundary: . ! ? followed by whitespace or end
+                    let boundary: number
+                    while ((boundary = sentenceBuffer.search(/[.!?](\s|$)/)) !== -1) {
+                        const sentence = sentenceBuffer.slice(0, boundary + 1).trim()
+                        sentenceBuffer = sentenceBuffer.slice(boundary + 2)
+                        if (sentence.length > 15) {
+                            ttsQueueRef.current.push(sentence)
+                        }
+                    }
+                }
+
+                // Flush remaining buffer
+                const remaining = sentenceBuffer.trim()
+                if (remaining.length > 15) {
+                    ttsQueueRef.current.push(remaining)
+                }
+            } finally {
+                // Always signal stream complete, even on error/abort
+                streamCompleteRef.current = true
+            }
+
+            // 12. Wait for all TTS sentences to finish playing
+            await queuePromise
+
+            // 13. Post-turn state updates (stream + audio both done)
+            const llmText = fullText.trim()
+            if (!llmText) throw new Error('Empty response from interview API')
 
             turnAuthorityTokens.current -= 1
             isFirstQuestionPending.current = false
             userTurnCount.current += 1
 
-            // Amendment 2: push BOTH user and assistant messages AFTER /api/interview returns
             const userMsg: Message      = { role: 'user',      content: sttTranscript.trim() }
             const assistantMsg: Message = { role: 'assistant', content: llmText }
             messagesRef.current = [...messagesRef.current, userMsg, assistantMsg]
             setMessages([...messagesRef.current])
 
-            // 8. Speak the interviewer's response
-            await speakText(llmText)
+            // 14. Completion UI state — hand back to user
+            setIsInterviewerSpeaking(false)
+            setIsSpeaking(false)
+            setInterviewState('WAITING_FOR_USER')
+            assistantTurnCount.current += 1
+            audioChunksRef.current = []
+            startRecording()
 
         } catch (err: any) {
             console.error('[useBatchVoice] askNextQuestion error:', err)
@@ -376,7 +466,7 @@ export function useBatchVoice(
             audioChunksRef.current = []
             startRecording()
         }
-    }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText, targetDuration])
+    }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, processTtsQueue, targetDuration])
 
     // ── injectSystemMessage ────────────────────────────────────────────────
     /**
@@ -408,23 +498,27 @@ export function useBatchVoice(
 
     // ── abortInterviewerAudio ──────────────────────────────────────────────
     /**
-     * Stop AudioContext playback, abort TTS fetch, reset speaking state.
+     * Stop AudioContext playback, abort TTS fetch, clear TTS queue, reset state.
      */
     const abortInterviewerAudio = useCallback(() => {
+        // Stop current audio
         audioSourceRef.current?.stop()
         audioContextRef.current?.close()
         audioContextRef.current = null
         audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
+        // Clear streaming TTS pipeline
+        ttsQueueRef.current = []
+        isTtsProcessingRef.current = false
         setIsInterviewerSpeaking(false)
         setIsSpeaking(false)
-        console.log('[useBatchVoice] abortInterviewerAudio — audio stopped')
+        console.log('[useBatchVoice] abortInterviewerAudio — audio stopped, queue cleared')
     }, [])
 
     // ── endSession ─────────────────────────────────────────────────────────
     /**
-     * Amendment 9: fully idempotent — safe to call multiple times.
+     * Fully idempotent — safe to call multiple times.
      */
     const endSession = useCallback(() => {
         // Stop MediaRecorder
@@ -446,6 +540,11 @@ export function useBatchVoice(
         audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
+
+        // Clear streaming TTS pipeline
+        ttsQueueRef.current = []
+        isTtsProcessingRef.current = false
+        streamCompleteRef.current = true // unblock any waiting processTtsQueue
 
         // Clear buffers
         audioChunksRef.current = []

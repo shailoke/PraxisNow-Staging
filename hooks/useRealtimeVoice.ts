@@ -7,7 +7,7 @@ export type Message = {
     content: string
 }
 
-export type InterviewState = 'ASSISTANT_SPEAKING' | 'WAITING_FOR_USER' | 'READY_FOR_NEXT' | 'SESSION_ENDING'
+export type InterviewState = 'ASSISTANT_SPEAKING' | 'WAITING_FOR_USER' | 'READY_FOR_NEXT' | 'SESSION_ENDING' | 'TRANSCRIBING' | 'THINKING'
 
 export function useRealtimeVoice(sessionId: number | null, initialInstruction: string = "Introduce yourself as the interviewer and ask the first question.", isPausedExternal: boolean = false) {
     const [isConnected, setIsConnected] = useState(false)
