@@ -423,7 +423,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                 .update({
                     transcript: finalTranscript,
                     duration_seconds: duration - timeLeft,
-                    status: 'completed' // CRITICAL: Always set to completed for evaluation trigger
+                    status: 'evaluating' // Results page polls while !== 'completed'; /api/evaluate sets 'completed'
                 } as any)
                 .eq('id', sessionId)
 
