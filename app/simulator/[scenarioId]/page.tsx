@@ -756,7 +756,10 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                                 {voiceError ? (
                                     <span className="text-red-400 font-bold bg-red-500/10 px-3 py-1 rounded border border-red-500/20">{voiceError}</span>
                                 ) : isConnected ? (
-                                    isSpeaking ? (scenarioIdStr === 'negotiation' ? "Simulation in progress..." : "Interviewer is speaking...") : "Listening..."
+                                    interviewState === 'TRANSCRIBING' ? 'Processing your answer...'
+                                    : interviewState === 'THINKING' ? 'Interviewer is thinking...'
+                                    : interviewState === 'ASSISTANT_SPEAKING' ? (scenarioIdStr === 'negotiation' ? 'Simulation in progress...' : 'Interviewer is speaking...')
+                                    : 'Listening...'
                                 ) : (
                                     <span className="animate-pulse">Connecting...</span>
                                 )}
