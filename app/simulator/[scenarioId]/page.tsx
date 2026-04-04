@@ -357,7 +357,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
 
     // Track when interviewer finishes speaking to show button
     useEffect(() => {
-        if (!isInterviewerSpeaking && isConnected && !isPaused && timeLeft > 0) {
+        if (interviewState === 'WAITING_FOR_USER' && isConnected && !isPaused && timeLeft > 0) {
             // First question auto-triggers, subsequent questions wait for button
             if (isFirstQuestion.current) {
                 isFirstQuestion.current = false
@@ -368,7 +368,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
         } else {
             setWaitingForNextQuestion(false)
         }
-    }, [isInterviewerSpeaking, isConnected, isPaused, timeLeft])
+    }, [interviewState, isConnected, isPaused, timeLeft])
 
     const handlePause = () => {
         setIsPaused(true)
