@@ -148,7 +148,7 @@ export default function DashboardPage() {
                 { data: profile },
                 { data: dbScenarios }
             ] = await Promise.all([
-                supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, display_pic_url, avatar_url, negotiation_credits').eq('id', user.id).single(),
+                supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, avatar_url').eq('id', user.id).single(),
                 supabase.from('scenarios').select('id, role, round, round_title, evaluation_dimensions').eq('is_active', true).order('round', { ascending: true })
             ]);
 
@@ -316,8 +316,8 @@ export default function DashboardPage() {
                             className="flex items-center gap-3 hover:bg-white/5 p-1 px-2 rounded-lg transition-colors group outline-none"
                         >
                             <div className="w-8 h-8 rounded-full bg-purple-500/20 overflow-hidden border border-purple-500/50 flex items-center justify-center relative">
-                                {(userProfile as any)?.display_pic_url || (userProfile as any)?.avatar_url ? (
-                                    <img src={(userProfile as any).display_pic_url || (userProfile as any).avatar_url} className="w-full h-full object-cover" />
+                                {(userProfile as any)?.avatar_url ? (
+                                    <img src={(userProfile as any).avatar_url} className="w-full h-full object-cover" />
                                 ) : (
                                     <UserIcon className="w-4 h-4 text-purple-400" />
                                 )}
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                                 {currentBar && <CurrentBarCard {...currentBar} />}
 
                                 {/* BONUS NEGOTIATION CARD (Pro+ Exclusive OR Credit Holders) */}
-                                {(((userProfile as any)?.package_tier === 'Pro+' && !sessions.find(s => s.session_type === 'negotiation_simulation')) || ((userProfile as any)?.negotiation_credits > 0)) && (
+                                {((userProfile as any)?.package_tier === 'Pro+' && !sessions.find(s => s.session_type === 'negotiation_simulation')) && (
                                     <div
                                         onClick={() => router.push('/simulator/negotiation')}
                                         className="mb-8 h-full p-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent hover:border-yellow-500/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden"
