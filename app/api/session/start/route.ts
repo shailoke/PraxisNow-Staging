@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
         console.log('[session/start] handler called')
         console.log("DEBUG: Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
         const { scenario_id, custom_scenario_id, duration_seconds, session_type, replay_session_id } = await req.json()
+        console.log('[SESSION_SCENARIO_ID]', scenario_id, 'custom:', custom_scenario_id)
         const cookieStore = await cookies()
 
         const supabase = createServerClient<Database>(
@@ -384,6 +385,9 @@ export async function POST(req: NextRequest) {
         // ===================================
         const normalizedRoleForAI = normalizeRole(roleForEntry)
 
+        const dimensionsBeforeInjection = [...dimensionNames]
+        console.log('[DIMENSIONS_PRE_AI_INJECTION]', dimensionsBeforeInjection)
+
         if (
             (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') &&
             AI_MANDATORY_ROLE_KEYS.includes(normalizedRoleForAI as any) &&
@@ -415,7 +419,6 @@ export async function POST(req: NextRequest) {
         // Map first evaluation dimension to Entry family probe type
         // Entry dimension determines the evaluation bar for Turn 1
         const dimensionToEntryProbe: Record<string, string> = {
-            'Strategic Thinking': 'metrics',
             'Execution': 'discovery',
             'Communication': 'risks',
             'Technical Depth': 'write_path',
@@ -450,7 +453,7 @@ export async function POST(req: NextRequest) {
             'Behavioral':           'behavioral',
         }
 
-        const firstDimension = dimensionNames[0] || 'Strategic Thinking'
+        const firstDimension = dimensionNames[0] || 'Strategy'
         const entryProbe = dimensionToEntryProbe[firstDimension] || 'metrics'
 
         console.log(`[ENTRY_DIMENSION_MAPPING]`, {
