@@ -71,10 +71,24 @@ export async function runStage1(
             }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 3000,
+        max_tokens: 8000,
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content || '{}');
+    const rawContent = response.choices[0].message.content || ''
+    let parsed: any
+    try {
+        parsed = JSON.parse(rawContent)
+    } catch (parseErr: any) {
+        console.error('[STAGE1] JSON parse failed:', {
+            rawLength: rawContent?.length,
+            preview: rawContent?.slice(-200),
+            error: parseErr.message
+        })
+        throw new Error(
+            `STAGE1_PARSE_FAILED: Response truncated at ${rawContent?.length} chars. ` +
+            `Increase max_tokens if this persists.`
+        )
+    }
     // Merge DB dimension into each extraction — dimension comes from the DB lookup,
     // never from GPT output (GPT has no knowledge of dimension assignments)
     const turnExtractions: TurnExtraction[] = (parsed.turns || []).map((t: any) => ({

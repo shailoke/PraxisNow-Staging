@@ -79,9 +79,23 @@ export async function runStage3(
             }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 2500,
+        max_tokens: 3000,
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content || '{}');
+    const rawContent = response.choices[0].message.content || ''
+    let parsed: any
+    try {
+        parsed = JSON.parse(rawContent)
+    } catch (parseErr: any) {
+        console.error('[STAGE3] JSON parse failed:', {
+            rawLength: rawContent?.length,
+            preview: rawContent?.slice(-200),
+            error: parseErr.message
+        })
+        throw new Error(
+            `STAGE3_PARSE_FAILED: Response truncated at ${rawContent?.length} chars. ` +
+            `Increase max_tokens if this persists.`
+        )
+    }
     return (parsed.upgrades || []) as AnswerUpgrade[];
 }
