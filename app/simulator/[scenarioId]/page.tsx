@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { EvalResult } from '@/lib/eval-logic'
 
 // ... imports
-import { resolveRuntimeScenario, RuntimeScenario, DbScenario, DbCustomScenario } from '@/lib/runtime-scenario'
+import { resolveRuntimeScenario, RuntimeScenario, DbScenario } from '@/lib/runtime-scenario'
 
 // Adapter type for efficient UI rendering
 type SimulatorScenario = RuntimeScenario & {
@@ -92,8 +92,7 @@ export default function SimulatorPage() {
 
                     // @ts-ignore
                     const base = customData.scenarios as DbScenario
-                    // @ts-ignore
-                    const custom = customData as DbCustomScenario
+                    const custom = customData as any
 
                     runtime = resolveRuntimeScenario(base, custom)
 

@@ -94,7 +94,6 @@ export interface RuntimeScenario {
 }
 
 export type DbScenario = Database['public']['Tables']['scenarios']['Row']
-export type DbCustomScenario = Database['public']['Tables']['custom_scenarios']['Row']
 
 // PERSONA SELECTION RULES (NON-NEGOTIABLE)
 // Helper to determine persona based on role + level (Deterministic)
@@ -171,7 +170,7 @@ export function derivePersona(role: string, level: string): RuntimeScenario['int
 
 export function resolveRuntimeScenario(
     base: DbScenario,
-    custom?: DbCustomScenario | null,
+    custom?: any,
     userTier: string = 'Starter'
 ): RuntimeScenario {
     // 1. Core Identity (Immutable from Base unless overridden by specific logic, but per rules user overrides Role/Level in custom builder?)
@@ -192,11 +191,10 @@ export function resolveRuntimeScenario(
     // So Role/Level come from Base.
 
     const role = base.role
-    const level = base.level
 
     // 2. Derive Persona (Strict Rule: derived from Role + Level)
     const safeRole = role ?? 'pm'
-    const safeLevel = level ?? 'senior'
+    const safeLevel = 'senior'
     const persona = derivePersona(safeRole, safeLevel)
 
     // 3. Resolve Dimensions
@@ -210,7 +208,7 @@ export function resolveRuntimeScenario(
 
     if (custom?.focus_dimensions && custom.focus_dimensions.length > 0) {
         // We trust the builder validated these against allowed set
-        dimensions = custom.focus_dimensions.map(d => ({
+        dimensions = custom.focus_dimensions.map((d: string | Record<string, string>) => ({
             name: d,
             description: `Focus on ${d}`,
             target_minutes: 15 // Tighter focus
