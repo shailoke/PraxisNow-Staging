@@ -43,85 +43,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
         }
 
-        // 3. Resolve role, level, dimension and select Entry Family
+        // 3. Create session record
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         const adminClient = createClient<Database>(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             serviceKey
         )
 
-        // Get scenario role, level, and dimensions
-        let roleForEntry = 'Generic'
-        let levelForEntry = 'Mid' // Default fallback
-        let dimensionForEntry = 'metrics' // Default dimension
-        const { INTERVIEW_SCENARIOS } = await import('@/lib/runtime-scenario')
-
-        if (INTERVIEW_SCENARIOS[scenario_id as string]) {
-            const scenario = INTERVIEW_SCENARIOS[scenario_id as string]
-            roleForEntry = scenario.role || 'Generic'
-            levelForEntry = scenario.level || 'Mid'
-            // Use first dimension from scenario (most important)
-            const dims = scenario.evaluation_dimensions
-            dimensionForEntry = (Array.isArray(dims) && dims.length > 0) ? dims[0] : 'metrics'
-            console.log(`[DEV_SESSION] Resolved hardcoded scenario:`, { roleForEntry, levelForEntry, dimensionForEntry })
-        } else if (typeof scenario_id === 'number' || !isNaN(Number(scenario_id))) {
-            const { data: s } = await adminClient
-                .from('scenarios')
-                .select('role, level, evaluation_dimensions')
-                .eq('id', scenario_id)
-                .single()
-
-            if (s) {
-                roleForEntry = (s as any).role || 'Generic'
-                levelForEntry = (s as any).level || 'Mid'
-                const dims = (s as any).evaluation_dimensions
-                dimensionForEntry = (Array.isArray(dims) && dims.length > 0) ? dims[0] : 'metrics'
-                console.log(`[DEV_SESSION] Resolved DB scenario:`, { roleForEntry, levelForEntry, dimensionForEntry })
-            }
-        }
-
-        // DIAGNOSTIC: Log exactly what we're passing to selectEntryFamily
-        console.log('[DEV_ENTRY_INPUT]', {
-            roleForEntry,
-            levelForEntry,
-            dimensionForEntry,
-            scenario_id
-        })
-
-        // GUARD: Ensure only canonical dimensions reach Entry Family resolution
-        const { VALID_EVALUATION_DIMENSIONS } = await import('@/lib/runtime-scenario')
-        if (!VALID_EVALUATION_DIMENSIONS.includes(dimensionForEntry as any)) {
-            throw new Error(
-                `[DEV_HARNESS_DIMENSION_LEAK] "${dimensionForEntry}" is not a canonical dimension. ` +
-                `Use scenario.evaluation_dimensions only. Valid: ${VALID_EVALUATION_DIMENSIONS.join(', ')}`
-            )
-        }
-
-        // Import and call selectEntryFamily with CORRECT arguments
-        const { selectEntryFamily } = await import('@/lib/runtime-scenario')
-        const entryFamilyId = await selectEntryFamily(
-            roleForEntry,
-            levelForEntry,      // ✅ FIXED: was user.id
-            dimensionForEntry   // ✅ FIXED: was package_tier
-        )
-
-        // HARD REQUIREMENT: Entry Family MUST exist
-        if (!entryFamilyId) {
-            console.error(`❌ [DEV_SESSION_ERROR] No Entry Family for role: ${roleForEntry}, level: ${levelForEntry}, dimension: ${dimensionForEntry}`, {
-                scenario_id,
-                user_id: user.id
-            })
-            return NextResponse.json({
-                error: `SESSION_START_ERROR: No Entry Family available for role "${roleForEntry}", level "${levelForEntry}", dimension "${dimensionForEntry}"`
-            }, { status: 500 })
-        }
-
-        const familySelections: Record<string, string> = {
-            'Entry': entryFamilyId
-        }
-        console.log(`✅ [DEV_ENTRY_GUARANTEED] Entry Family: ${entryFamilyId} for role: ${roleForEntry}`)
-
-        // 4. Create session record
         const sessionPayload: any = {
             user_id: user.id,
             scenario_id,
@@ -129,7 +57,7 @@ export async function POST(req: NextRequest) {
             session_type: 'interview',
             transcript: '',
             duration_seconds: 0,
-            family_selections: familySelections
+            family_selections: {}
         }
 
         if (custom_scenario_id) {
