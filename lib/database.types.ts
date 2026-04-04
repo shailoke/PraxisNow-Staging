@@ -52,44 +52,6 @@ export type Database = {
           },
         ]
       }
-      custom_scenarios: {
-        Row: {
-          base_scenario_id: number
-          company_context: string | null
-          created_at: string | null
-          focus_dimensions: string[] | null
-          id: string
-          title: string
-          user_id: string
-        }
-        Insert: {
-          base_scenario_id: number
-          company_context?: string | null
-          created_at?: string | null
-          focus_dimensions?: string[] | null
-          id?: string
-          title: string
-          user_id: string
-        }
-        Update: {
-          base_scenario_id?: number
-          company_context?: string | null
-          created_at?: string | null
-          focus_dimensions?: string[] | null
-          id?: string
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "custom_scenarios_base_scenario_id_fkey"
-            columns: ["base_scenario_id"]
-            isOneToOne: false
-            referencedRelation: "scenarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       interview_turns: {
         Row: {
           answered: boolean
@@ -219,30 +181,6 @@ export type Database = {
           },
         ]
       }
-      question_families: {
-        Row: {
-          created_at: string | null
-          dimension: string
-          family_name: string
-          id: string
-          prompt_guidance: string
-        }
-        Insert: {
-          created_at?: string | null
-          dimension: string
-          family_name: string
-          id: string
-          prompt_guidance: string
-        }
-        Update: {
-          created_at?: string | null
-          dimension?: string
-          family_name?: string
-          id?: string
-          prompt_guidance?: string
-        }
-        Relationships: []
-      }
       scenarios: {
         Row: {
           applicant_context: string | null
@@ -256,14 +194,15 @@ export type Database = {
           id: number
           interviewer_persona: Json | null
           is_active: boolean | null
-          level: string | null
           persona: string | null
           prompt: string | null
           role: string | null
+          round: number | null
+          round_title: string | null
           scenario_description: string | null
           scenario_title: string | null
           scenario_type: string | null
-          seeded_questions: Json | null
+          system_prompt: string | null
         }
         Insert: {
           applicant_context?: string | null
@@ -277,14 +216,15 @@ export type Database = {
           id?: number
           interviewer_persona?: Json | null
           is_active?: boolean | null
-          level?: string | null
           persona?: string | null
           prompt?: string | null
           role?: string | null
+          round?: number | null
+          round_title?: string | null
           scenario_description?: string | null
           scenario_title?: string | null
           scenario_type?: string | null
-          seeded_questions?: Json | null
+          system_prompt?: string | null
         }
         Update: {
           applicant_context?: string | null
@@ -298,14 +238,15 @@ export type Database = {
           id?: number
           interviewer_persona?: Json | null
           is_active?: boolean | null
-          level?: string | null
           persona?: string | null
           prompt?: string | null
           role?: string | null
+          round?: number | null
+          round_title?: string | null
           scenario_description?: string | null
           scenario_title?: string | null
           scenario_type?: string | null
-          seeded_questions?: Json | null
+          system_prompt?: string | null
         }
         Relationships: [
           {
@@ -317,138 +258,59 @@ export type Database = {
           },
         ]
       }
-      scenarios_prompt_backup_pre_variety: {
-        Row: {
-          id: number | null
-          level: string | null
-          prompt: string | null
-          role: string | null
-        }
-        Insert: {
-          id?: number | null
-          level?: string | null
-          prompt?: string | null
-          role?: string | null
-        }
-        Update: {
-          id?: number | null
-          level?: string | null
-          prompt?: string | null
-          role?: string | null
-        }
-        Relationships: []
-      }
       sessions: {
         Row: {
-          alternative_approaches: string[] | null
-          answer_upgrades: Json | null
-          clarity: number | null
-          confidence_score: number | null
           created_at: string | null
           custom_scenario_id: string | null
-          dimension_order: Json | null
           duration_seconds: number | null
-          evaluation: Json | null
           evaluation_data: Json | null
           evaluation_depth: string | null
-          family_selections: Json | null
-          framework_contrast: string | null
           id: string
-          improvement_priorities: string[] | null
-          key_insight: string | null
           momentum_card: Json | null
-          pattern_analysis: string | null
           pdf_url: string | null
-          progression_comparison: Json | null
-          readiness_assessment: string | null
-          recovery: number | null
-          replay_comparison: Json | null
           replay_of_session_id: string | null
-          risk_projection: string | null
+          round: number | null
           scenario_id: number | null
           session_type: string | null
-          signal_noise: number | null
           status: string | null
-          structure: number | null
           transcript: string | null
           user_id: string
         }
         Insert: {
-          alternative_approaches?: string[] | null
-          answer_upgrades?: Json | null
-          clarity?: number | null
-          confidence_score?: number | null
           created_at?: string | null
           custom_scenario_id?: string | null
-          dimension_order?: Json | null
           duration_seconds?: number | null
-          evaluation?: Json | null
           evaluation_data?: Json | null
           evaluation_depth?: string | null
-          family_selections?: Json | null
-          framework_contrast?: string | null
           id?: string
-          improvement_priorities?: string[] | null
-          key_insight?: string | null
           momentum_card?: Json | null
-          pattern_analysis?: string | null
           pdf_url?: string | null
-          progression_comparison?: Json | null
-          readiness_assessment?: string | null
-          recovery?: number | null
-          replay_comparison?: Json | null
           replay_of_session_id?: string | null
-          risk_projection?: string | null
+          round?: number | null
           scenario_id?: number | null
           session_type?: string | null
-          signal_noise?: number | null
           status?: string | null
-          structure?: number | null
           transcript?: string | null
           user_id: string
         }
         Update: {
-          alternative_approaches?: string[] | null
-          answer_upgrades?: Json | null
-          clarity?: number | null
-          confidence_score?: number | null
           created_at?: string | null
           custom_scenario_id?: string | null
-          dimension_order?: Json | null
           duration_seconds?: number | null
-          evaluation?: Json | null
           evaluation_data?: Json | null
           evaluation_depth?: string | null
-          family_selections?: Json | null
-          framework_contrast?: string | null
           id?: string
-          improvement_priorities?: string[] | null
-          key_insight?: string | null
           momentum_card?: Json | null
-          pattern_analysis?: string | null
           pdf_url?: string | null
-          progression_comparison?: Json | null
-          readiness_assessment?: string | null
-          recovery?: number | null
-          replay_comparison?: Json | null
           replay_of_session_id?: string | null
-          risk_projection?: string | null
+          round?: number | null
           scenario_id?: number | null
           session_type?: string | null
-          signal_noise?: number | null
           status?: string | null
-          structure?: number | null
           transcript?: string | null
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "sessions_custom_scenario_id_fkey"
-            columns: ["custom_scenario_id"]
-            isOneToOne: false
-            referencedRelation: "custom_scenarios"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sessions_scenario_id_fkey"
             columns: ["scenario_id"]
@@ -558,45 +420,6 @@ export type Database = {
           },
         ]
       }
-      user_family_usage: {
-        Row: {
-          dimension: string
-          family_id: string
-          id: string
-          used_at: string | null
-          user_id: string
-        }
-        Insert: {
-          dimension: string
-          family_id: string
-          id?: string
-          used_at?: string | null
-          user_id: string
-        }
-        Update: {
-          dimension?: string
-          family_id?: string
-          id?: string
-          used_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_family_usage_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "question_families"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_family_usage_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_question_history: {
         Row: {
           created_at: string | null
@@ -652,19 +475,16 @@ export type Database = {
           created_at: string
           current_company: string | null
           designation: string | null
-          display_pic_url: string | null
           email: string | null
           first_name: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
           last_name: string
-          negotiation_credits: number | null
           onboarding_complete: boolean | null
           package_tier: string | null
           phone: string | null
           primary_role: string | null
-          resume_url: string | null
           total_sessions_used: number | null
         }
         Insert: {
@@ -673,19 +493,16 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           designation?: string | null
-          display_pic_url?: string | null
           email?: string | null
           first_name?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
           last_name?: string
-          negotiation_credits?: number | null
           onboarding_complete?: boolean | null
           package_tier?: string | null
           phone?: string | null
           primary_role?: string | null
-          resume_url?: string | null
           total_sessions_used?: number | null
         }
         Update: {
@@ -694,46 +511,16 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           designation?: string | null
-          display_pic_url?: string | null
           email?: string | null
           first_name?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
           last_name?: string
-          negotiation_credits?: number | null
           onboarding_complete?: boolean | null
           package_tier?: string | null
           phone?: string | null
           primary_role?: string | null
-          resume_url?: string | null
-          total_sessions_used?: number | null
-        }
-        Relationships: []
-      }
-      users_pro_plus_backup: {
-        Row: {
-          available_sessions: number | null
-          created_at: string | null
-          email: string | null
-          id: string | null
-          package_tier: string | null
-          total_sessions_used: number | null
-        }
-        Insert: {
-          available_sessions?: number | null
-          created_at?: string | null
-          email?: string | null
-          id?: string | null
-          package_tier?: string | null
-          total_sessions_used?: number | null
-        }
-        Update: {
-          available_sessions?: number | null
-          created_at?: string | null
-          email?: string | null
-          id?: string | null
-          package_tier?: string | null
           total_sessions_used?: number | null
         }
         Relationships: []
