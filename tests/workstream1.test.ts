@@ -21,6 +21,8 @@
  */
 
 import assert from 'node:assert/strict'
+import fs     from 'node:fs'
+import path   from 'node:path'
 import { normalizeRole, VALID_EVALUATION_DIMENSIONS } from '../lib/runtime-scenario'
 import { ENTRY_FAMILIES } from '../lib/entry-families'
 import { PROBES }          from '../lib/probes'
@@ -101,34 +103,57 @@ const getDimensionDescriptor = (dimension: string | null): string | null => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// COPIED: dimensionToEntryProbe
-// Source: app/api/session/start/route.ts, lines 416-439
-// Reason: local const inside POST handler — not exported
+// DYNAMIC EXTRACT: dimensionToEntryProbe
+// Source: app/api/session/start/route.ts
+// Reason: local const inside POST handler — not exported.
+//   We parse the source file at test-runtime so this never goes stale.
+//   No changes to the source file are made.
 // ─────────────────────────────────────────────────────────────────────────────
-const dimensionToEntryProbe: Record<string, string> = {
-    'Strategic Thinking':       'metrics',
-    'Execution':                'discovery',
-    'Communication':            'risks',
-    'Technical Depth':          'write_path',
-    'Problem Solving':          'read_path',
-    'Collaboration':            'discovery',
-    'Impact':                   'metrics',
-    'Architecture':             'write_path',
-    'Scale':                    'write_path',
-    'Leadership':               'discovery',
-    'System Design':            'system_design',
-    'AI Systems':               'ai_systems',
-    'Strategy':                 'strategy',
-    'Campaign':                 'campaign',
-    'Growth':                   'growth',
-    'AI Marketing':             'ai_marketing',
-    'Program Management':       'program_management',
-    'Delivery':                 'delivery',
-    'Stakeholder Management':   'stakeholder_management',
-    'Metrics & Accountability': 'metrics_accountability',
-    'Risk Management':          'risk_management',
-    'AI Delivery':              'ai_delivery',
+function extractDimensionToEntryProbe(): Record<string, string> {
+    const srcPath = path.join(process.cwd(), 'app/api/session/start/route.ts')
+    const src = fs.readFileSync(srcPath, 'utf8')
+
+    const declStart = src.indexOf('const dimensionToEntryProbe: Record<string, string> = {')
+    if (declStart === -1) {
+        throw new Error(
+            '[TEST SETUP] dimensionToEntryProbe declaration not found in ' +
+            'app/api/session/start/route.ts — update the search string if it was renamed.'
+        )
+    }
+
+    // Walk forward to find the matching closing brace
+    const blockOpen = src.indexOf('{', declStart)
+    let depth = 0
+    let blockClose = blockOpen
+    for (let i = blockOpen; i < src.length; i++) {
+        if (src[i] === '{') depth++
+        else if (src[i] === '}') {
+            depth--
+            if (depth === 0) { blockClose = i; break }
+        }
+    }
+
+    const block = src.slice(blockOpen + 1, blockClose)
+
+    // Parse every  'Key': 'value'  or  "Key": "value"  line
+    const result: Record<string, string> = {}
+    const lineRe = /['"]([^'"]+)['"]\s*:\s*['"]([^'"]+)['"]/g
+    let m: RegExpExecArray | null
+    while ((m = lineRe.exec(block)) !== null) {
+        result[m[1]] = m[2]
+    }
+
+    if (Object.keys(result).length === 0) {
+        throw new Error(
+            '[TEST SETUP] Extracted dimensionToEntryProbe is empty — ' +
+            'regex may have failed to parse the block.'
+        )
+    }
+
+    return result
 }
+
+const dimensionToEntryProbe = extractDimensionToEntryProbe()
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TEST RUNNER
