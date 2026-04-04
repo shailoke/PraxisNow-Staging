@@ -36,7 +36,9 @@
       "Bash(powershell -Command \"Get-Content ''C:\\\\Users\\\\okes\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-okes-Projects-PraxisNow-PraxisNow-Staging--claude-worktrees-elegant-bohr\\\\0e358b5b-9f50-4dc8-a7d7-7ec49c5dfbbe\\\\tasks\\\\a5b8017a9fd548743.output'' -Tail 5 2>&1\")",
       "Bash(powershell -Command \"Test-Path ''C:\\\\Users\\\\okes\\\\Projects\\\\PraxisNow\\\\PraxisNow-Staging\\\\.claude\\\\worktrees\\\\elegant-bohr\\\\REBUILD_HANDOFF.md''\")",
       "Bash(SUPABASE_ACCESS_TOKEN=13f813a0 npx supabase gen types typescript --project-id wlfseesoezrtviexpawn --schema public)",
-      "Bash(powershell -Command \"\\(Get-Content lib/database.types.ts | Select-Object -First 670\\) | Set-Content lib/database.types.ts -Encoding UTF8\")"
+      "Bash(powershell -Command \"\\(Get-Content lib/database.types.ts | Select-Object -First 670\\) | Set-Content lib/database.types.ts -Encoding UTF8\")",
+      "Bash(grep -n \"lib/scenarios\\\\|from.*scenarios\" app/simulator/[scenarioId]/page.tsx)",
+      "Bash(grep -n \"SCENARIOS\" app/simulator/[scenarioId]/page.tsx)"
     ]
   }
 }

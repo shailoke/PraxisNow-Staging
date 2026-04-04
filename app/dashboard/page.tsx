@@ -423,9 +423,6 @@ export default function DashboardPage() {
         return recentSessions.map((s, idx) => ({
             session: idx + 1,
             date: new Date(s.created_at ?? 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            clarity: s.clarity ? s.clarity / 10 : null,
-            structure: s.structure ? s.structure / 10 : null,
-            signal: s.signal_noise ? s.signal_noise / 10 : null,
             isReplay: !!s.replay_of_session_id
         }))
     }, [sessions])
@@ -439,9 +436,6 @@ export default function DashboardPage() {
         const counts = { clarity: 0, structure: 0, signal_noise: 0 }
 
         recentSessions.forEach(s => {
-            if (s.clarity) { totals.clarity += s.clarity; counts.clarity++ }
-            if (s.structure) { totals.structure += s.structure; counts.structure++ }
-            if (s.signal_noise) { totals.signal_noise += s.signal_noise; counts.signal_noise++ }
         })
 
         const avg = (key: keyof typeof totals) => counts[key] ? totals[key] / counts[key] : 0
@@ -1152,10 +1146,7 @@ export default function DashboardPage() {
                                 ) : (
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                         {[
-                                            { label: 'Clarity', val: selectedSession.clarity },
-                                            { label: 'Structure', val: selectedSession.structure },
-                                            { label: 'Recovery', val: selectedSession.recovery },
-                                            { label: 'Signal', val: selectedSession.signal_noise }
+                                            { label: 'Recovery', val: selectedSession.recovery }
                                         ].map((stat) => (
                                             <div key={stat.label} className="bg-black/20 p-4 rounded-xl border border-white/5 text-center">
                                                 <div className="text-xs text-gray-500 uppercase font-bold mb-1">{stat.label}</div>

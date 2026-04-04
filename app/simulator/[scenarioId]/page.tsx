@@ -2,7 +2,6 @@
 
 import { useRealtimeVoice } from '@/hooks/useBatchVoice'
 import { useWakeLock } from '@/hooks/useWakeLock'
-import { SCENARIOS } from '@/lib/scenarios'
 import { createClient } from '@/lib/supabase'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
