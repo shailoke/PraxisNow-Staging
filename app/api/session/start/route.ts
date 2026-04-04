@@ -3,639 +3,224 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/database.types'
+import { normalizeRole } from '@/lib/runtime-scenario'
 
 export async function POST(req: NextRequest) {
     try {
-        console.log('[session/start] handler called')
-        console.log("DEBUG: Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-        const { scenario_id, custom_scenario_id, duration_seconds, session_type, replay_session_id } = await req.json()
-        console.log('[SESSION_SCENARIO_ID]', scenario_id, 'custom:', custom_scenario_id)
-        const cookieStore = await cookies()
+        const { scenario_id, duration_seconds, session_type = 'interview' } = await req.json()
 
+        // STEP 1 — AUTH CHECK
+        const cookieStore = await cookies()
         const supabase = createServerClient<Database>(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
                 cookies: {
-                    getAll() {
-                        return cookieStore.getAll()
+                    get(name: string) { return cookieStore.get(name)?.value },
+                    set(name: string, value: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value, ...options }) } catch { }
                     },
-                    setAll(cookiesToSet) {
-                        try {
-                            cookiesToSet.forEach(({ name, value, options }) => {
-                                cookieStore.set(name, value, options)
-                            })
-                        } catch {
-                            // The `setAll` method was called from a Server Component.
-                            // This can be ignored if you have middleware refreshing
-                            // user sessions.
-                        }
+                    remove(name: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value: '', ...options }) } catch { }
                     },
                 },
             }
         )
 
-        // 2. Auth Check
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-        // 3. Service Role Client
-        // 3. Service Role Client (Use clean supabase-js client to avoid SSR cookie validation errors)
+        // STEP 2 — ADMIN CLIENT
         const adminClient = createClient<Database>(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
         )
 
-        // 4. Parallel Session Check
-        // 4. Parallel Session Check & Resume Logic
-        const { data: activeSessionsData } = await adminClient
+        // STEP 3 — PARALLEL SESSION CHECK
+        const { data: existingSessions } = await adminClient
             .from('sessions')
-            .select('*') // Fetch full object to allow return/resume
+            .select('*')
             .eq('user_id', user.id)
             .in('status', ['created', 'active'])
-            .returns<Database['public']['Tables']['sessions']['Row'][]>()
 
-        const activeSessions = activeSessionsData as any[] | null
-
-        if (activeSessions && activeSessions.length > 0) {
-            const existing = activeSessions[0]
-
-            // 1. Exact Resume Match: Same Type
-            // For Negotiations:
-            if (session_type === 'negotiation_simulation' && existing.session_type === 'negotiation_simulation') {
-                return NextResponse.json(existing)
+        if (existingSessions && existingSessions.length > 0) {
+            const existing = existingSessions[0]
+            if (existing.session_type === session_type && existing.scenario_id === scenario_id) {
+                return NextResponse.json({
+                    ...existing,
+                    initial_turn: {
+                        turn_index: 0,
+                        content: 'Tell me about yourself.',
+                        role: 'assistant'
+                    }
+                })
             }
-            // For Interviews: (If scenario matches)
-            if (session_type === 'interview' && existing.session_type === 'interview' && existing.scenario_id === scenario_id) {
-                return NextResponse.json(existing)
-            }
-
-            // 2. Mismatch / Blocking Session Found -> Auto-Fail it to unblock user
-            console.log(`Auto-failing stuck session ${existing.id} to allow new session ${session_type}`)
+            // Auto-fail stale session
             await adminClient
                 .from('sessions')
-                // @ts-ignore
                 .update({ status: 'failed' })
                 .eq('id', existing.id)
-
-            // Proceed to create new session...
         }
 
-        // New Logic: Negotiation Simulation Verification
+        // STEP 4 — NEGOTIATION SIMULATION PATH
         if (session_type === 'negotiation_simulation') {
             const { data: profile } = await adminClient
                 .from('users')
                 .select('package_tier')
                 .eq('id', user.id)
-                .single<Database['public']['Tables']['users']['Row']>()
+                .single()
 
-            if (!profile || (profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+')) {
-                return NextResponse.json({ error: 'Salary Negotiation is available on Pro and above.' }, { status: 403 })
+            if (profile?.package_tier !== 'Pro' && profile?.package_tier !== 'Pro+') {
+                return NextResponse.json(
+                    { error: 'Salary Negotiation is available on Pro and above.' },
+                    { status: 403 }
+                )
             }
 
-            // Check if already used (One-time only - COMPLETED)
-            const { count } = await adminClient
+            const { data: priorNeg } = await adminClient
                 .from('sessions')
-                .select('*', { count: 'exact', head: true })
+                .select('id')
                 .eq('user_id', user.id)
                 .eq('session_type', 'negotiation_simulation')
                 .eq('status', 'completed')
+                .limit(1)
+                .maybeSingle()
 
-            if (count && count > 0) {
-                return NextResponse.json({ error: 'You have already used your free Negotiation Simulation session.' }, { status: 403 })
+            if (priorNeg) {
+                return NextResponse.json(
+                    { error: 'You have already used your free Negotiation Simulation session.' },
+                    { status: 403 }
+                )
             }
 
-
-
-            // Create Session WITHOUT credit deduction
-            const sessionPayload: any = {
-                user_id: user.id,
-                scenario_id: null, // Schema update required: ALTER COLUMN scenario_id DROP NOT NULL
-                custom_scenario_id: null,
-                duration_seconds: duration_seconds || 1800, // 30 mins default
-                status: 'created',
-                transcript: '',
-                session_type: 'negotiation_simulation'
-            }
-
-            const { data: session, error: insertError } = await adminClient
+            const { data: negSession, error: negError } = await adminClient
                 .from('sessions')
-                .insert(sessionPayload)
+                .insert({
+                    user_id: user.id,
+                    scenario_id: null,
+                    duration_seconds: duration_seconds || 1800,
+                    status: 'created',
+                    transcript: '',
+                    session_type: 'negotiation_simulation',
+                } as any)
                 .select()
                 .single()
 
-            if (insertError) throw new Error(`Failed to create negotiation session: ${insertError.message}`)
+            if (negError || !negSession) {
+                throw new Error(negError?.message || '[SESSION_START] Negotiation session insert returned null')
+            }
 
-            return NextResponse.json(session)
+            return NextResponse.json(negSession)
         }
 
-        // --- REPLAY LOGIC ---
-        if (replay_session_id) {
-            // 5a. Balance Check (Replay costs 1 credit)
-            const { data: profile } = await adminClient
-                .from('users')
-                .select('available_sessions, total_sessions_used, package_tier')
-                .eq('id', user.id)
-                .single<Database['public']['Tables']['users']['Row']>()
-
-            if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
-
-            // Enforce Tier: Pro or Pro+ only
-            if (profile.package_tier === 'Starter') {
-                return NextResponse.json({ error: 'Interview Replay is available on Pro and Pro+ plans.' }, { status: 403 })
-            }
-
-            if (!profile.available_sessions || profile.available_sessions < 1) {
-                return NextResponse.json({ error: 'Insufficient session credits' }, { status: 403 })
-            }
-
-            // 5b. Verify Original Session Ownership & Fetch Questions from interview_turns
-            const { data: originalSession } = await adminClient
-                .from('sessions')
-                .select(`
-                    id, 
-                    user_id, 
-                    scenario_id, 
-                    custom_scenario_id,
-                    family_selections
-                `)
-                .eq('id', replay_session_id)
-                .single() as any
-
-
-            if (!originalSession) {
-                return NextResponse.json({ error: 'Original session not found' }, { status: 404 })
-            }
-            if ((originalSession as any).user_id !== user.id) {
-                return NextResponse.json({ error: 'Unauthorized access to session' }, { status: 403 })
-            }
-
-            // CONTRACT: Fetch questions from interview_turns (canonical source)
-            // NO transcript parsing allowed
-            const { data: turns } = await adminClient
-                .from('interview_turns')
-                .select('content')
-                .eq('session_id', replay_session_id)
-                .order('turn_index', { ascending: true })
-
-            const questions = turns?.map((t: any) => t.content) || []
-
-            if (questions.length === 0) {
-                return NextResponse.json({ error: 'No questions found in original session to replay. Replay is unavailable for this session.' }, { status: 400 })
-            }
-
-            // 5c. Deduct Credit
-            const { error: updateError } = await adminClient
-                .from('users')
-                // @ts-ignore
-                .update({
-                    available_sessions: profile.available_sessions - 1,
-                    total_sessions_used: (profile.total_sessions_used || 0) + 1
-                })
-                .eq('id', user.id)
-
-            if (updateError) throw new Error(`Failed to deduct credit: ${updateError.message}`)
-
-            // 5d. Create Replay Session
-            const sessionPayload: any = {
-                user_id: user.id,
-                scenario_id: (originalSession as any).scenario_id,
-                custom_scenario_id: (originalSession as any).custom_scenario_id,
-                duration_seconds: duration_seconds,
-                status: 'created',
-                transcript: '',
-                session_type: 'interview',
-                replay_of_session_id: replay_session_id,
-                questions_to_ask: questions,
-                family_selections: originalSession.family_selections // Critical for Entry determinism
-            }
-
-            // PHASE 5 DIAGNOSTIC: Confirm Entry family reuse for replay
-            console.log(`🔁 [REPLAY_FAMILY_REUSE]`, {
-                replay_session_id,
-                original_entry_family: originalSession.family_selections?.['Entry'],
-                reusing_families: originalSession.family_selections,
-                will_skip_selection: true
-            })
-
-            const { data: session, error: insertError } = await adminClient
-                .from('sessions')
-                .insert(sessionPayload)
-                .select()
-                .single<Database['public']['Tables']['sessions']['Row']>()
-
-            if (insertError) {
-                // COMPENSATION
-                await adminClient.from('users').update({
-                    available_sessions: profile.available_sessions,
-                    total_sessions_used: profile.total_sessions_used
-                } as any).eq('id', user.id)
-                throw new Error(`Failed to create replay session: ${insertError.message}`)
-            }
-
-            return NextResponse.json(session)
-        }
-
-        // --- STANDARD INTERVIEW LOGIC ---
-
-        // 5. Balance Check
+        // STEP 5 — CREDIT CHECK
         const { data: profile } = await adminClient
             .from('users')
             .select('available_sessions, total_sessions_used, package_tier')
             .eq('id', user.id)
-            .single<Database['public']['Tables']['users']['Row']>()
+            .single()
 
-        if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+        if (!profile) return NextResponse.json({ error: 'User profile not found.' }, { status: 404 })
 
-        const hasActivePack = profile.package_tier && profile.package_tier !== 'Free';
-        const remainingSessions = profile.available_sessions || 0;
-
-        if (!hasActivePack) {
-            return NextResponse.json({ error: 'No active plan. Please purchase a plan to start an interview.' }, { status: 403 })
+        if (!profile.package_tier || profile.package_tier === 'Free') {
+            return NextResponse.json(
+                { error: 'No active plan. Please purchase a plan to start an interview.' },
+                { status: 403 }
+            )
         }
 
-        // ===================================
-        // 6. Fetch Scenario Dimensions (Needed for Tier Enforcement)
-        // ===================================
-        let dimensionNames: string[] = []
-
-        if (scenario_id) {
-            const { data: scenario } = await adminClient
-                .from('scenarios')
-                .select('evaluation_dimensions')
-                .eq('id', scenario_id)
-                .single()
-
-            if (scenario && scenario.evaluation_dimensions) {
-                dimensionNames = (scenario.evaluation_dimensions as any).map((d: any) => d.name || d)
-            }
-        } else if (custom_scenario_id) {
-            const { data: customScenario } = await adminClient
-                .from('custom_scenarios')
-                .select('focus_dimensions')
-                .eq('id', custom_scenario_id)
-                .single()
-
-            if (customScenario && customScenario.focus_dimensions) {
-                dimensionNames = customScenario.focus_dimensions as string[]
-            }
+        if ((profile.available_sessions ?? 0) < 1) {
+            return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
         }
 
-        // Import Hardcoded Scenarios early to check dimension resolution fallback
-        const { INTERVIEW_SCENARIOS } = await import('@/lib/runtime-scenario')
+        // STEP 6 — FETCH SCENARIO
+        const { data: scenario } = await adminClient
+            .from('scenarios')
+            .select('id, role, round, duration_minutes')
+            .eq('id', scenario_id)
+            .single()
 
-        // Dimension Resolution Fallback for Hardcoded Scenarios
-        if (dimensionNames.length === 0 && scenario_id && INTERVIEW_SCENARIOS[scenario_id as string]) {
-            dimensionNames = (INTERVIEW_SCENARIOS[scenario_id as string].evaluation_dimensions || []) as string[]
+        if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 })
+
+        // STEP 7 — TIER CHECK FOR AI ROUND
+        if ((scenario as any).round === 4 &&
+            profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+') {
+            return NextResponse.json({ error: 'AI Round requires Pro tier.' }, { status: 403 })
         }
 
-        // ===================================
-        // Explicit AI-Only Round Detection & Tier Enforcement
-        // ===================================
-        const isAIOnlyRound = dimensionNames.length === 1 && dimensionNames[0] === 'ai_fluency'
-
-        if (isAIOnlyRound && profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+') {
-            return NextResponse.json({ error: 'AI Fluency Round requires Pro tier' }, { status: 403 })
-        }
-
-        if (remainingSessions < 1) {
-            return NextResponse.json({ error: 'Insufficient session credits' }, { status: 403 })
-        }
-
-        // 7. Deduct Credit
-        const { error: updateError } = await adminClient
+        // STEP 8 — DEDUCT CREDIT ATOMICALLY
+        const { data: deducted, error: deductError } = await adminClient
             .from('users')
-            // @ts-ignore
             .update({
-                available_sessions: remainingSessions - 1,
-                total_sessions_used: (profile.total_sessions_used || 0) + 1
+                available_sessions: (profile.available_sessions ?? 1) - 1,
+                total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
             })
             .eq('id', user.id)
+            .gt('available_sessions', 0)
+            .select('id')
 
-        if (updateError) {
-            throw new Error(`Failed to deduct credit: ${updateError.message}`)
+        if (deductError || !deducted || deducted.length === 0) {
+            return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
         }
 
-        // ===================================
-        // 7b. ROLE RESOLUTION (Must happen BEFORE AI injection and family selection)
-        // ===================================
-        const { selectQuestionFamilies, selectEntryFamily, normalizeRole, AI_MANDATORY_ROLE_KEYS } = await import('@/lib/runtime-scenario')
-
-        let roleForEntry = 'Generic'
-        let levelForEntry = 'Senior'  // Default level
-
-        if (scenario_id) {
-            // CHECK HARDCODED FIRST
-            const hardcodedScenario = INTERVIEW_SCENARIOS[scenario_id as string]
-
-            if (hardcodedScenario) {
-                roleForEntry = hardcodedScenario.role!
-                levelForEntry = hardcodedScenario.level!
-                console.log(`[SESSION_START] Resolved hardcoded role: ${roleForEntry}, level: ${levelForEntry} for ${scenario_id}`)
-            }
-            // CHECK DATABASE (Only if ID is likely a number/integer)
-            else if (typeof scenario_id === 'number' || !isNaN(Number(scenario_id))) {
-                const { data: s } = await adminClient
-                    .from('scenarios')
-                    .select('role, level')
-                    .eq('id', scenario_id)
-                    .single()
-
-                if (s) {
-                    roleForEntry = s.role ?? roleForEntry
-                    levelForEntry = s.level ?? levelForEntry
-                }
-            }
-        } else if (custom_scenario_id) {
-            // Allow Custom scenarios to use base scenario role
-            const { data: c } = await adminClient
-                .from('custom_scenarios')
-                .select('base_scenario_id')
-                .eq('id', custom_scenario_id)
-                .single()
-
-            if (c) {
-                const { data: b } = await adminClient
-                    .from('scenarios')
-                    .select('role, level')
-                    .eq('id', c.base_scenario_id)
-                    .single()
-
-                if (b) {
-                    roleForEntry = b.role ?? roleForEntry
-                    levelForEntry = b.level ?? levelForEntry
-                }
-            }
-        }
-
-        // ===================================
-        // 7c. AI FLUENCY — Deterministic Injection (Pro Tier Only)
-        // ORDERING: After role resolution, BEFORE family selection and shuffle
-        // ===================================
-        const normalizedRoleForAI = normalizeRole(roleForEntry)
-
-        const dimensionsBeforeInjection = [...dimensionNames]
-        console.log('[DIMENSIONS_PRE_AI_INJECTION]', dimensionsBeforeInjection)
-
-        if (
-            (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') &&
-            AI_MANDATORY_ROLE_KEYS.includes(normalizedRoleForAI as any) &&
-            !dimensionNames.includes('ai_fluency')
-        ) {
-            dimensionNames.push('ai_fluency')
-            console.log(`✅ [AI_INJECTION] ai_fluency injected for role: ${normalizedRoleForAI} (${profile.package_tier})`)
-        }
-
-        console.log('[AI_DIMENSIONS_FINAL]', {
-            role: normalizedRoleForAI,
-            tier: profile.package_tier,
-            finalDimensions: dimensionNames
-        })
-
-        // ===================================
-        // 7d. Select Question Families (Tier-Based Randomization)
-        // ORDERING: AFTER AI injection so ai_fluency gets a family selected
-        // ===================================
-        const familySelections = await selectQuestionFamilies(
-            dimensionNames,
-            user.id,
-            profile.package_tier as any
-        )
-
-        // ===================================
-        // 7e. Entry Family (The "First Question" Randomizer)
-        // ===================================
-        // Map first evaluation dimension to Entry family probe type
-        // Entry dimension determines the evaluation bar for Turn 1
-        const dimensionToEntryProbe: Record<string, string> = {
-            'Execution': 'discovery',
-            'Communication': 'risks',
-            'Technical Depth': 'write_path',
-            'Problem Solving': 'read_path',
-            'Collaboration': 'discovery',
-            'Impact': 'metrics',
-            'Architecture': 'write_path',
-            'Scale': 'write_path',
-            'Leadership': 'discovery',
-            'System Design': 'system_design',
-            'AI Systems': 'ai_systems',
-            'Strategy': 'strategy',
-            'Campaign': 'campaign',
-            'Growth': 'growth',
-            'AI Marketing': 'ai_marketing',
-            'Program Management': 'program_management',
-            'Delivery': 'delivery',
-            'Stakeholder Management': 'stakeholder_management',
-            'Metrics & Accountability': 'metrics_accountability',
-            'Risk Management': 'risk_management',
-            'AI Delivery':          'ai_delivery',
-            'Brand':                'brand',
-            'Analytics':            'analytics',
-            'ML System Design':     'ml_design',
-            'Data Strategy':        'data_strategy',
-            'Product Design':       'product_design',
-            'AI Product':           'ai_product',
-            'Product Sense':        'product_sense',
-            'AI Execution':         'ai_execution',
-            'AI Technical':         'ai_technical',
-            'LLM Deep Dive':        'llm_deep_dive',
-            'Behavioral':           'behavioral',
-        }
-
-        const firstDimension = dimensionNames[0] || 'Strategy'
-        const entryProbe = dimensionToEntryProbe[firstDimension] || 'metrics'
-
-        console.log(`[ENTRY_DIMENSION_MAPPING]`, {
-            first_eval_dimension: firstDimension,
-            mapped_entry_probe: entryProbe,
-            all_dimensions: dimensionNames
-        })
-
-        const entryFamilyId = await selectEntryFamily(
-            roleForEntry,
-            levelForEntry,
-            entryProbe  // Pass explicit dimension
-        )
-
-        if (!entryFamilyId) {
-            console.warn('[ENTRY_FAMILY] No entry family found for role/level/dimension — session will proceed without entry family constraint')
-        } else {
-            familySelections['Entry'] = entryFamilyId
-            console.log(`✅ [ENTRY_GUARANTEED] Entry Family selected: ${entryFamilyId} (role: ${roleForEntry}, level: ${levelForEntry}, dimension: ${entryProbe})`)
-        }
-
-        console.log(`[SESSION_START] Selected families for user ${user.id} (${profile.package_tier}):`, familySelections)
-
-        // ===================================
-        // 7g. DIMENSION ORDER RANDOMIZATION
-        // ORDERING: AFTER AI injection so ai_fluency participates in shuffle
-        // ===================================
-        const { fisherYatesShuffle } = await import('@/lib/shuffle')
-
-        // Shuffle dimensions once per session for unpredictable question order
-        const dimensionOrder = fisherYatesShuffle(dimensionNames)
-
-        console.log(`✅ [DIMENSION_SHUFFLE] Fresh session dimension order: ${dimensionOrder.join(' → ')}`)
-
-        // 7c. Create Session with Family Selections and Dimension Order
-        const sessionPayload: any = {
+        // STEP 9 — INSERT SESSION
+        const sessionPayload = {
             user_id: user.id,
-            scenario_id: scenario_id,
-            custom_scenario_id: custom_scenario_id || null,
-            duration_seconds: duration_seconds,
+            scenario_id,
+            round: (scenario as any).round ?? null,
+            duration_seconds: duration_seconds || ((scenario as any).duration_minutes * 60) || 1800,
             status: 'created',
             transcript: '',
             session_type: 'interview',
-            family_selections: familySelections,  // Store selected families
-            dimension_order: dimensionOrder       // Store shuffled dimension sequence
         }
-
-        // DIAGNOSTIC A: Session Start - Log payload before insert
-        console.log(`🔍 [SESSION_CREATE_PAYLOAD]`, {
-            user_id: user.id,
-            scenario_id,
-            family_selections_payload: sessionPayload.family_selections,
-            has_entry: !!sessionPayload.family_selections['Entry'],
-            entry_value: sessionPayload.family_selections['Entry'],
-            dimension_order_payload: sessionPayload.dimension_order
-        })
 
         const { data: session, error: insertError } = await adminClient
             .from('sessions')
-            .insert(sessionPayload)
+            .insert(sessionPayload as any)
             .select()
-            .single<Database['public']['Tables']['sessions']['Row']>()
+            .single()
 
-        console.log('[session/start] insert result:', session, insertError)
+        if (insertError || !session) {
+            await adminClient
+                .from('users')
+                .update({ available_sessions: (profile.available_sessions ?? 1) })
+                .eq('id', user.id)
 
-        // DIAGNOSTIC A2: Session Start - Verify what was actually inserted
-        if (session) {
-            console.log(`🔍 [SESSION_CREATED]`, {
+            if (insertError) {
+                console.error('[SESSION_START] Insert failed:', insertError)
+                throw new Error(insertError.message)
+            }
+            console.error('[SESSION_START] Insert returned null data with no error')
+            throw new Error('[SESSION_START] Insert returned null data with no error')
+        }
+
+        // STEP 10 — INSERT TMAY (TURN 0)
+        const { error: tmayError } = await adminClient
+            .from('interview_turns')
+            .insert({
                 session_id: session.id,
-                family_selections_returned: (session as any).family_selections,
-                has_entry_returned: !!((session as any).family_selections?.['Entry'])
-            })
+                turn_index: 0,
+                turn_type: 'question',
+                content: 'Tell me about yourself.',
+                answered: false,
+            } as any)
+
+        if (tmayError) {
+            throw new Error('Invariant violation: TMAY must be auto-asked on session start. Turn creation failed.')
         }
 
-        if (insertError) {
-            // COMPENSATION: Refund credit
-            await adminClient
-                .from('users')
-                // @ts-ignore
-                .update({
-                    available_sessions: profile.available_sessions, // Reset
-                    total_sessions_used: profile.total_sessions_used
-                })
-                .eq('id', user.id)
-
-            throw new Error(`Failed to create session: ${insertError.message}`)
-        }
-
-        if (!session) {
-            // COMPENSATION: Refund credit
-            // This guards the data: null, error: null silent failure case —
-            // distinct from insertError (which is a PostgREST-level error).
-            // Possible causes: RLS blocking the RETURNING clause, a DB trigger
-            // suppressing the row, or a transient PostgREST issue.
-            console.error('[SESSION_START] Insert returned null data with no error — possible RLS or trigger issue', {
-                user_id: user.id,
-                session_payload_keys: Object.keys(sessionPayload)
-            })
-            await adminClient
-                .from('users')
-                // @ts-ignore
-                .update({
-                    available_sessions: profile.available_sessions,
-                    total_sessions_used: profile.total_sessions_used
-                })
-                .eq('id', user.id)
-
-            throw new Error('Session creation returned no data. Please try again.')
-        }
-
-        // 7d. Track Family Usage (Pro/Pro+ Only)
-        if (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') {
-            const usageRecords = Object.entries(familySelections)
-                .filter(([dimension]) => dimension !== 'Entry')
-                .map(([dimension, familyId]) => ({
-                    user_id: user.id,
-                    dimension,
-                    family_id: familyId
-                }))
-
-            console.log('[FAMILY_USAGE] Attempting to write usage records:', {
-                count: usageRecords.length,
-                records: usageRecords,
-                session_id: session.id
-            })
-
-            if (usageRecords.length > 0) {
-                const { error: usageError } = await adminClient
-                    .from('user_family_usage')
-                    .upsert(usageRecords as any, {
-                        onConflict: 'user_id,dimension,family_id',
-                        ignoreDuplicates: true
-                    })
-
-                if (usageError) {
-                    console.error('[FAMILY_USAGE] Write failed:', usageError.code, usageError.message, {
-                        user_id: user.id,
-                        records: usageRecords
-                    })
-                } else {
-                    for (const r of usageRecords) {
-                        console.log('[FAMILY_USAGE] Tracked:', { dimension: r.dimension, family_id: r.family_id, user_id: r.user_id })
-                    }
-                }
-            } else {
-                console.warn('[FAMILY_USAGE] No usage records to write — familySelections was empty')
+        // STEP 11 — RETURN
+        return NextResponse.json({
+            ...session,
+            initial_turn: {
+                turn_index: 0,
+                content: 'Tell me about yourself.',
+                role: 'assistant'
             }
-        }
-
-        // =========================================================
-        // AUTO-ASK TMAY (MANDATORY TURN 0)
-        // =========================================================
-        // We manually insert Turn 0 so the user is immediately prompted.
-        // This removes the need for a client-side "Start" click/trigger.
-        if (session.session_type === 'interview' && !session.replay_of_session_id) {
-            console.log(`[TMAY_TRIGGER] Auto-creating Turn 0 for session ${session.id}`)
-
-            const { error: tmayError } = await adminClient
-                .from('interview_turns')
-                .insert({
-                    session_id: session.id,
-                    turn_index: 0,
-                    turn_type: 'question',
-                    content: 'Tell me about yourself.', // Mandatory opening
-                    answered: false
-                } as any)
-
-            if (tmayError) {
-                console.error('❌ [TMAY_FAILURE] Failed to create opening turn:', tmayError)
-                throw new Error("Invariant violation: TMAY must be auto-asked on session start. Turn creation failed.")
-            }
-
-            console.log(`✅ [TMAY_SUCCESS] Turn 0 created.`)
-        }
-
-        // Include Turn 0 in response for interview sessions
-        if (session.session_type === 'interview' && !session.replay_of_session_id) {
-            return NextResponse.json({
-                ...session,
-                initial_turn: {
-                    turn_index: 0,
-                    content: 'Tell me about yourself.',
-                    role: 'assistant'
-                }
-            })
-        }
-
-        return NextResponse.json(session)
+        })
 
     } catch (error: any) {
-        console.error('Session Start Error:', error)
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 })
+        console.error('[SESSION_START] Error:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
