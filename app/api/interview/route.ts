@@ -91,11 +91,10 @@ export async function POST(request: NextRequest) {
 
         // FETCH SESSION DATA (CRITICAL for Entry Families AND Dimension Order)
         let familySelections: Record<string, string> = {}
-        let probeSelections: Record<string, string | null> = {}  // Probe selections for freshness
         let dimensionOrder: string[] = []
         let userId: string | null = null  // NEW: required for user-scoped anti-convergence
-        let entryProbeIntent: string | null = null  // NEW: probe intent for entry family freshness
         let dbFamilySelectionsCache: Record<string, string> | null = null
+        console.log('[PROBES] Probe intent injection removed — GPT generates follow-ups dynamically')
 
         // ===================================
         // REPLAY DETERMINISM: Detect Replay Mode
@@ -158,8 +157,6 @@ export async function POST(request: NextRequest) {
             // CRITICAL FIX: Hydrate familySelections from DB with strict validation
             const dbFamilySelections = (sessionData as any)?.family_selections
             dbFamilySelectionsCache = dbFamilySelections ?? null
-            const dbProbeSelections = (sessionData as any)?.probe_selections
-
             if (dbFamilySelections && typeof dbFamilySelections === 'object' && Object.keys(dbFamilySelections).length > 0) {
                 familySelections = dbFamilySelections as Record<string, string>
                 console.log(`✅ [FAMILY_SELECTIONS_LOADED] Keys: ${Object.keys(familySelections)}, Entry: ${familySelections['Entry'] || 'MISSING'}`)
@@ -168,23 +165,6 @@ export async function POST(request: NextRequest) {
                     dbValue: dbFamilySelections,
                     type: typeof dbFamilySelections
                 })
-            }
-
-            if (dbProbeSelections && typeof dbProbeSelections === 'object') {
-                probeSelections = dbProbeSelections as Record<string, string | null>
-                console.log(`✅ [PROBE_SELECTIONS_LOADED] Keys: ${Object.keys(probeSelections)}, Entry: ${probeSelections['Entry'] || 'MISSING'}`)
-            } else {
-                console.warn(`⚠️ [PROBE_SELECTIONS_NULL] No probe_selections in session ${session_id} (OK for old sessions)`)
-            }
-
-            // NEW: Load entry probe intent for prompt injection (skip for replay sessions)
-            // Replay sessions must reproduce the original probe intent verbatim via stored probe_selections.
-            const entryProbeId = probeSelections['Entry']
-            if (entryProbeId && !isReplaySession) {
-                const { PROBES } = await import('@/lib/probes')
-                const entryProbe = PROBES.find((p: any) => p.id === entryProbeId)
-                entryProbeIntent = entryProbe?.intent || null
-                console.log(`[PROBE_INTENT_LOADED] probe: ${entryProbeId}, intent: ${entryProbeIntent?.substring(0, 60)}...`)
             }
 
             if ((sessionData as any)?.dimension_order && Array.isArray((sessionData as any).dimension_order)) {
@@ -308,34 +288,15 @@ export async function POST(request: NextRequest) {
                 runtime_keys: Object.keys(familySelections)
             })
 
-            // CHECK 2: Entry Family MUST Exist  
-            // This checks RUNTIME state which should have been hydrated from DB
+            // CHECK 2: Entry Family presence (warn-only — non-fatal)
             if (!familySelections['Entry']) {
-                // Fetch DB state one more time for diagnostic purposes
-                const { data: dbSession } = await supabase
-                    .from('sessions')
-                    .select('family_selections')
-                    .eq('id', session_id)
-                    .single()
-
-                console.error('❌ [ENTRY_FAMILY_MISSING] No Entry Family for Turn 1', {
-                    session_id,
-                    runtime_familySelections: familySelections,
-                    runtime_keys: Object.keys(familySelections),
-                    db_family_selections: (dbSession as any)?.family_selections,
-                    db_has_entry: !!((dbSession as any)?.family_selections?.['Entry']),
-                    diagnosis: (dbSession as any)?.family_selections?.['Entry']
-                        ? 'DB has Entry but runtime lost it - HYDRATION BUG'
-                        : 'DB missing Entry - SESSION CREATION BUG'
-                })
-                throw new Error("ENTRY_FAMILY_MISSING_AFTER_TMAY: Entry Family required for first post-TMAY question")
+                console.warn('[ENTRY_FAMILY] Entry family missing — Turn 1 will use dimension prompt_guidance directly')
+            } else {
+                console.log(`✅ [ENTRY_ENFORCEMENT] Entry Family validated: ${familySelections['Entry']}`)
             }
 
-            console.log(`✅ [ENTRY_ENFORCEMENT] Entry Family validated: ${familySelections['Entry']}`)
-
-            // CHECK 3: Entry Family MUST Match Role + Level Pattern
-            // Validates that level-scoped resolution is working correctly
-            if (scenarioConfig?.role && scenarioConfig?.level) {
+            // CHECK 3: Entry Family pattern validation (warn-only, skipped if Entry family absent)
+            if (scenarioConfig?.role && scenarioConfig?.level && familySelections['Entry']) {
                 const { normalizeRole, normalizeLevel } = await import('@/lib/runtime-scenario')
                 const normalizedRole = normalizeRole(scenarioConfig.role)
                 const normalizedLevel = normalizeLevel(scenarioConfig.level)
@@ -343,20 +304,10 @@ export async function POST(request: NextRequest) {
                 const actualFamily = familySelections['Entry']
 
                 if (!actualFamily.startsWith(expectedPrefix)) {
-                    console.error(`❌ [ENTRY_FAMILY_MISMATCH]`, {
-                        session_id,
-                        role: scenarioConfig.role,
-                        level: scenarioConfig.level,
-                        normalized_role: normalizedRole,
-                        normalized_level: normalizedLevel,
-                        expected_prefix: expectedPrefix,
-                        actual_family: actualFamily,
-                        diagnosis: 'Entry family does not match role+level pattern - RESOLUTION BUG'
-                    })
-                    throw new Error(`ENTRY_FAMILY_MISMATCH: Expected family matching "${expectedPrefix}_*" but got "${actualFamily}"`)
+                    console.warn(`[ENTRY_FAMILY] Pattern mismatch — expected "${expectedPrefix}_*" but got "${actualFamily}" — proceeding anyway`)
+                } else {
+                    console.log(`✅ [ENTRY_PATTERN_VALID] Entry family matches pattern: ${expectedPrefix}_*`)
                 }
-
-                console.log(`✅ [ENTRY_PATTERN_VALID] Entry family matches pattern: ${expectedPrefix}_*`)
             }
         }
 
@@ -387,14 +338,12 @@ export async function POST(request: NextRequest) {
         }
 
         if (isPostTMAY) {
-            // HARD INVARIANT: Entry Family Required
             if (!familySelections['Entry']) {
-                console.error('❌ [ENTRY_FAMILY_VIOLATION] Post-TMAY without Entry Family', { session_id, familySelections })
-                throw new Error("ENTRY_FAMILY_VIOLATION: First post-TMAY question MUST come from Entry Family")
+                console.warn('[ENTRY_FAMILY] Post-TMAY without Entry Family — using dimension prompt_guidance for Turn 1')
+            } else {
+                questionSource = 'entry_family'
+                console.log(`✅ [POST_TMAY_VALIDATED] Turn 1 using Entry Family: ${familySelections['Entry']}`)
             }
-
-            questionSource = 'entry_family'
-            console.log(`✅ [POST_TMAY_VALIDATED] Turn 1 using Entry Family: ${familySelections['Entry']}`)
         }
 
         // ===================================
@@ -524,7 +473,6 @@ export async function POST(request: NextRequest) {
             session_history: sessionHistory,
             selected_families: familySelections, // Inject Entry Guidance
             recent_questions: recentQuestions,   // Anti-convergence blocklist
-            entry_probe_intent: entryProbeIntent ?? null, // Probe intent for freshness
             dimensionProgressBlock               // Dimension-aware pacing signal
         })
 

@@ -209,24 +209,15 @@ export async function POST(req: NextRequest) {
                 session_type: 'interview',
                 replay_of_session_id: replay_session_id,
                 questions_to_ask: questions,
-                family_selections: originalSession.family_selections, // Critical for Entry determinism
-                probe_selections: originalSession.probe_selections || {}  // Critical for probe determinism
+                family_selections: originalSession.family_selections // Critical for Entry determinism
             }
 
-            // PHASE 5 DIAGNOSTIC: Confirm Entry family + probe reuse for replay
+            // PHASE 5 DIAGNOSTIC: Confirm Entry family reuse for replay
             console.log(`🔁 [REPLAY_FAMILY_REUSE]`, {
                 replay_session_id,
                 original_entry_family: originalSession.family_selections?.['Entry'],
                 reusing_families: originalSession.family_selections,
                 will_skip_selection: true
-            })
-
-            console.log(`🔁 [REPLAY_PROBE_CONFIRMED]`, {
-                replay_session_id,
-                original_entry_probe: originalSession.probe_selections?.['Entry'],
-                reusing_probes: originalSession.probe_selections,
-                will_skip_probe_selection: true,
-                note: 'Probe intent injection is SKIPPED for replay sessions in interview/route.ts'
             })
 
             const { data: session, error: insertError } = await adminClient
@@ -468,46 +459,14 @@ export async function POST(req: NextRequest) {
             entryProbe  // Pass explicit dimension
         )
 
-        // HARD REQUIREMENT: Entry Family MUST exist
         if (!entryFamilyId) {
-            console.error(`❌ [SESSION_START_ERROR] No Entry Family found`, {
-                scenario_id,
-                custom_scenario_id,
-                role: roleForEntry,
-                level: levelForEntry,
-                dimension: entryProbe,
-                first_eval_dimension: firstDimension
-            })
-            throw new Error(`SESSION_START_ERROR: No Entry Family available for role "${roleForEntry}" at level "${levelForEntry}" with dimension "${entryProbe}". Cannot start session.`)
-        }
-
-        familySelections['Entry'] = entryFamilyId
-        console.log(`✅ [ENTRY_GUARANTEED] Entry Family selected: ${entryFamilyId} (role: ${roleForEntry}, level: ${levelForEntry}, dimension: ${entryProbe})`)
-
-        // ===================================
-        // 7f. PROBE SELECTION (Freshness Source)
-        // ===================================
-        const { selectProbe } = await import('@/lib/probes')
-
-        // Select probe for Entry dimension (Turn 1)
-        const probeSelections: Record<string, string | null> = {}
-        const entryProbeObj = selectProbe(entryFamilyId, entryProbe)
-
-        if (entryProbeObj) {
-            probeSelections['Entry'] = entryProbeObj.id
-            console.log(`✅ [PROBE_FOR_ENTRY]`, {
-                entry_family: entryFamilyId,
-                dimension: entryProbe,
-                probe_id: entryProbeObj.id,
-                intent_preview: entryProbeObj.intent.substring(0, 80) + '...'
-            })
+            console.warn('[ENTRY_FAMILY] No entry family found for role/level/dimension — session will proceed without entry family constraint')
         } else {
-            probeSelections['Entry'] = null
-            console.warn(`⚠️ [PROBE_MISSING_FOR_ENTRY] No probe available for entry_family: ${entryFamilyId}, dimension: ${entryProbe}`)
+            familySelections['Entry'] = entryFamilyId
+            console.log(`✅ [ENTRY_GUARANTEED] Entry Family selected: ${entryFamilyId} (role: ${roleForEntry}, level: ${levelForEntry}, dimension: ${entryProbe})`)
         }
 
         console.log(`[SESSION_START] Selected families for user ${user.id} (${profile.package_tier}):`, familySelections)
-        console.log(`[SESSION_START] Selected probes for session:`, probeSelections)
 
         // ===================================
         // 7g. DIMENSION ORDER RANDOMIZATION
@@ -520,7 +479,7 @@ export async function POST(req: NextRequest) {
 
         console.log(`✅ [DIMENSION_SHUFFLE] Fresh session dimension order: ${dimensionOrder.join(' → ')}`)
 
-        // 7c. Create Session with Family Selections, Dimension Order, AND Probe Selections
+        // 7c. Create Session with Family Selections and Dimension Order
         const sessionPayload: any = {
             user_id: user.id,
             scenario_id: scenario_id,
@@ -530,8 +489,7 @@ export async function POST(req: NextRequest) {
             transcript: '',
             session_type: 'interview',
             family_selections: familySelections,  // Store selected families
-            dimension_order: dimensionOrder,      // Store shuffled dimension sequence
-            probe_selections: probeSelections     // Store selected probes (FRESHNESS SOURCE)
+            dimension_order: dimensionOrder       // Store shuffled dimension sequence
         }
 
         // DIAGNOSTIC A: Session Start - Log payload before insert

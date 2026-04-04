@@ -29,7 +29,6 @@ export interface InterviewPromptVariables {
    session_history?: string          // Conversation history for context
    selected_families?: Record<string, string> // Question randomization: dimension -> family_id
    recent_questions?: string[]       // Anti-convergence: recently used questions to avoid
-   entry_probe_intent?: string | null // NEW: probe-level intent to vary the Entry Family opening question
    dimensionProgressBlock?: string    // Dimension-aware pacing signal injected at end of prompt
 }
 
@@ -50,7 +49,6 @@ export function generateInterviewerPrompt(variables: InterviewPromptVariables): 
       selected_families = {},
       recent_questions = [], // Anti-convergence: questions to avoid
       dimension_order = [],   // Dimension sequencing: enforces order
-      entry_probe_intent = null, // probe intent for entry family freshness
       dimensionProgressBlock = '' // dimension-aware pacing signal
    } = variables
 
@@ -98,11 +96,9 @@ What Annoys Me: ${interviewer_persona.what_annoys_me.join(', ')}`
                entryFamilyGuidance = `
    • IMMEDIATELY after the candidate answers "Tell me about yourself":
      - You MUST probe the following area (Entry Family: ${family.family_name}):
-     - "${family.prompt_guidance}"${entry_probe_intent ? `
-     - EVALUATION INTENT FOR THIS SESSION (internal — do not state this to the candidate):
-       ${entry_probe_intent}
-     - Frame your opening question to specifically test this intent. A different session for
-       the same family may test a different intent — yours must reflect THIS intent only.` : ''}
+     [PRIVATE INTERVIEWER INSTRUCTION — DO NOT READ ALOUD, DO NOT PARAPHRASE, DO NOT REFERENCE]
+     ${family.prompt_guidance}
+     [END PRIVATE INSTRUCTION — Generate your question now]
      - Do NOT ask a generic opening question.
      - Move strictly to this topic.`
             }
@@ -115,7 +111,9 @@ What Annoys Me: ${interviewer_persona.what_annoys_me.join(', ')}`
          if (family) {
             familyInstructions.push(`
 **${dimension}** (Family: ${family.family_name}):
+[PRIVATE INTERVIEWER INSTRUCTION — DO NOT READ ALOUD, DO NOT PARAPHRASE, DO NOT REFERENCE]
 ${family.prompt_guidance}
+[END PRIVATE INSTRUCTION — Generate your question now]
 `)
          } else {
             familyInstructions.push(`
