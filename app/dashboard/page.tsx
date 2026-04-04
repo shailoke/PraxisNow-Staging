@@ -145,12 +145,15 @@ export default function DashboardPage() {
 
             // 2. Fetch Profile and Scenarios in Parallel
             const [
-                { data: profile },
+                { data: profile, error: profileError },
                 { data: dbScenarios }
             ] = await Promise.all([
                 supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, avatar_url').eq('id', user.id).single(),
                 supabase.from('scenarios').select('id, role, round, round_title, evaluation_dimensions').eq('is_active', true).order('round', { ascending: true })
             ]);
+
+            console.log('[DASHBOARD] userProfile:', profile)
+            console.log('[DASHBOARD] profileError:', profileError)
 
             if (profile) {
                 setUserProfile(profile as any)
@@ -172,7 +175,7 @@ export default function DashboardPage() {
             // evaluation_depth and progression_comparison added for history tab rendering
             const { data: dbSessions } = await supabase
                 .from('sessions')
-                .select('id, created_at, session_type, custom_scenario_id, scenario_id, clarity, structure, signal_noise, replay_of_session_id, evaluation_depth, progression_comparison')
+                .select('id, created_at, session_type, scenario_id, evaluation_depth')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
 
@@ -183,7 +186,7 @@ export default function DashboardPage() {
             try {
                 const { data: recentEvalSession } = await supabase
                     .from('sessions')
-                    .select('id, created_at, evaluation_data, scenarios:scenario_id(role, level)')
+                    .select('id, created_at, evaluation_data, scenarios:scenario_id(role, round, round_title)')
                     .eq('user_id', user.id)
                     .not('evaluation_data', 'is', null)
                     .order('created_at', { ascending: false })
@@ -230,7 +233,7 @@ export default function DashboardPage() {
         return recentSessions.map((s, idx) => ({
             session: idx + 1,
             date: new Date(s.created_at ?? 0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            isReplay: !!s.replay_of_session_id
+            isReplay: false
         }))
     }, [sessions])
 
@@ -589,11 +592,6 @@ export default function DashboardPage() {
                                                                 <td className="px-6 py-4 align-middle">
                                                                     <div className="text-white font-medium">{title}</div>
                                                                     <div className="text-xs opacity-50">{subtitle}</div>
-                                                                    {(session as any).progression_comparison?.observed_changes?.[0] && (
-                                                                        <div className="text-xs text-green-400 mt-1">
-                                                                            ↑ {(session as any).progression_comparison.observed_changes[0]}
-                                                                        </div>
-                                                                    )}
                                                                 </td>
                                                                 <td className="px-6 py-4 align-middle">
                                                                     {session.session_type === 'negotiation_simulation' ? (
