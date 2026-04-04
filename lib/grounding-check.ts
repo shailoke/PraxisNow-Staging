@@ -56,8 +56,22 @@ export function validateAnswerUpgrades(
         const rewrite = upgrade.upgraded_answer || upgrade.what_to_change_next_time || '';
 
         if (!rewrite || isGrounded(longestAnswer, rewrite)) {
+            console.log('[GROUNDING_CHECK] Passed upgrade:', {
+                question_context: upgrade.question_context
+            });
             valid.push(upgrade);
         } else {
+            const originalTrigrams = new Set(extractTrigrams(longestAnswer));
+            const rewriteTrigrams = extractTrigrams(rewrite);
+            const matches = rewriteTrigrams.filter(t => originalTrigrams.has(t));
+            const flagReason = `trigram_match_count=${matches.length} (minimum=2)`;
+            const matchedText = matches.slice(0, 3).join(' | ') || '(none)';
+
+            console.log('[GROUNDING_CHECK] Rejected upgrade:', {
+                question_context: upgrade.question_context,
+                reason: flagReason,
+                transcript_match_attempted: matchedText
+            });
             console.warn('[GROUNDING_FAIL] Upgrade appears fabricated — no trigram overlap with candidate answers:', {
                 rewrite: rewrite.substring(0, 80),
                 original_preview: longestAnswer.substring(0, 80),
@@ -65,6 +79,12 @@ export function validateAnswerUpgrades(
             flagged.push({ ...upgrade, _grounding_failed: true });
         }
     }
+
+    console.log('[GROUNDING_CHECK] Results:', {
+        total: upgrades.length,
+        valid: valid.length,
+        flagged: flagged.length
+    });
 
     return { valid, flagged };
 }

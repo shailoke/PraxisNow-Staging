@@ -557,11 +557,13 @@ export async function POST(req: NextRequest) {
 
         // 7d. Track Family Usage (Pro/Pro+ Only)
         if (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') {
-            const usageRecords = Object.entries(familySelections).map(([dimension, familyId]) => ({
-                user_id: user.id,
-                dimension,
-                family_id: familyId
-            }))
+            const usageRecords = Object.entries(familySelections)
+                .filter(([dimension]) => dimension !== 'Entry')
+                .map(([dimension, familyId]) => ({
+                    user_id: user.id,
+                    dimension,
+                    family_id: familyId
+                }))
 
             console.log('[FAMILY_USAGE] Attempting to write usage records:', {
                 count: usageRecords.length,
@@ -572,8 +574,10 @@ export async function POST(req: NextRequest) {
             if (usageRecords.length > 0) {
                 const { error: usageError } = await adminClient
                     .from('user_family_usage')
-                    .insert(usageRecords as any)
-                    .select() // Must select to avoid error on upsert
+                    .upsert(usageRecords as any, {
+                        onConflict: 'user_id,dimension,family_id',
+                        ignoreDuplicates: true
+                    })
 
                 if (usageError) {
                     console.error('[FAMILY_USAGE] Write failed:', usageError.code, usageError.message, {
