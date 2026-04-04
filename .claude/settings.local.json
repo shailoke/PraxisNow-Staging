@@ -49,7 +49,9 @@
       "Bash(awk 'END{print NR\"\"\"\" lines\"\"\"\"}' app/api/interview/route.ts)",
       "Bash(grep -n \"interview-prompts\" app/api/session/route.ts app/simulator/[scenarioId]/page.tsx)",
       "Bash(grep -n \"generateInterviewerPrompt\" app/api/session/route.ts app/simulator/[scenarioId]/page.tsx)",
-      "Bash(grep -n \"DbCustomScenario\" app/simulator/[scenarioId]/page.tsx)"
+      "Bash(grep -n \"DbCustomScenario\" app/simulator/[scenarioId]/page.tsx)",
+      "Bash(cmdkey /list)",
+      "Bash(python3 -c \"import subprocess; r = subprocess.run\\([''''git'''', ''''credential'''', ''''fill''''], input=''''protocol=https\\\\nhost=github.com\\\\n'''', capture_output=True, text=True, cwd=''''C:\\\\Users\\\\okes\\\\Projects\\\\PraxisNow\\\\PraxisNow-Staging''''\\); print\\(r.stdout[:200]\\)\")"
     ]
   }
 }

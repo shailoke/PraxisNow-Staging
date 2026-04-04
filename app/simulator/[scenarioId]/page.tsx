@@ -705,7 +705,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                         </>
                     ) : (
                         <>
-                            <h2 className="text-gray-400 text-sm tracking-widest uppercase mb-2">{scenario.role} • {scenario.level}</h2>
+                            <h2 className="text-gray-400 text-sm tracking-widest uppercase mb-2">{scenario.role}</h2>
                             <h1 className="text-4xl font-bold mb-2">{scenario.title}</h1>
                             <p className="text-sm text-gray-400 mb-4">Realistic, interviewer-led simulation • Preparation, not coaching • One question at a time</p>
                             {scenario.dimensions?.length === 1 && scenario.dimensions[0] === 'ai_fluency' ? (

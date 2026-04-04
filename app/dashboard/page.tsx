@@ -19,22 +19,12 @@ import type { Database } from '@/lib/database.types'
 type User = Database['public']['Tables']['users']['Row']
 type Session = Database['public']['Tables']['sessions']['Row']
 
-// Adapter type for UI components
-interface UIScenario {
-    id: string
+interface ScenarioRow {
+    id: number
     role: string
-    level: string
-    title: string
-    description: string
-    dimensions: string[]
-    created_at?: string
-    isCustom?: boolean
-}
-
-function getLevelDisplay(role: string, level: string): string {
-    const aiRoles = ['AI Product Manager', 'AI Engineer', 'AI Marketer', 'AI Project Manager', 'AI Scientist']
-    if (aiRoles.includes(role)) return 'Experienced · 5-10 yrs'
-    return `${level} calibration`
+    round: number
+    round_title: string
+    evaluation_dimensions: string[]
 }
 
 const SCENARIO_DESCRIPTIONS: Record<number, string> = {
@@ -73,7 +63,7 @@ export default function DashboardPage() {
 
     const [user, setUser] = useState<any>(null)
     const [userProfile, setUserProfile] = useState<User | null>(null)
-    const [scenarios, setScenarios] = useState<UIScenario[]>([])
+    const [scenarios, setScenarios] = useState<ScenarioRow[]>([])
     const [sessions, setSessions] = useState<Session[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -87,6 +77,7 @@ export default function DashboardPage() {
 
     // New Dashboard State
     const [activeTab, setActiveTab] = useState<'practice' | 'history'>('practice')
+    const [selectedRole, setSelectedRole] = useState<string>('Product Manager')
     const [selectedSession, setSelectedSession] = useState<any | null>(null)
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null)
     const [isSupportOpen, setIsSupportOpen] = useState(false)
@@ -152,15 +143,13 @@ export default function DashboardPage() {
             }
             setUser(user)
 
-            // 2. Fetch Profile, Scenarios, Custom Scenarios in Parallel
+            // 2. Fetch Profile and Scenarios in Parallel
             const [
                 { data: profile },
-                { data: dbScenarios },
-                { data: customData }
+                { data: dbScenarios }
             ] = await Promise.all([
                 supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, display_pic_url, avatar_url, negotiation_credits').eq('id', user.id).single(),
-                supabase.from('scenarios').select('id, role, level, scenario_title, evaluation_dimensions, prompt').eq('is_active', true).order('created_at', { ascending: false }),
-                supabase.from('custom_scenarios').select('id, title, company_context, focus_dimensions, scenarios!inner(role, level, prompt)').eq('user_id', user.id).order('created_at', { ascending: false })
+                supabase.from('scenarios').select('id, role, round, round_title, evaluation_dimensions').eq('is_active', true).order('round', { ascending: true })
             ]);
 
             if (profile) {
@@ -177,97 +166,7 @@ export default function DashboardPage() {
                 setUserProfile(null)
             }
 
-            let allScenarios: UIScenario[] = []
-
-            if (dbScenarios) {
-                const adapted = dbScenarios.map(s => {
-                    // TITLE TRACE: Log RAW database record
-                    if (s.role === 'Product Manager' && s.evaluation_dimensions?.includes('Leadership')) {
-                        console.log('[TITLE_TRACE_RAW_DB]', {
-                            id: s.id,
-                            role: s.role,
-                            scenario_title: s.scenario_title,
-                            scenario_title_type: typeof s.scenario_title,
-                            evaluation_dimensions: s.evaluation_dimensions
-                        })
-                    }
-
-                    // DIMENSION-FIRST: Remove level from descriptions
-                    // Generate description based on dimensions, not level
-                    let desc = `${s.scenario_title} — difficulty calibrates to your responses in real-time.`
-
-                    // Primary: ID-keyed lookup — exact copy per scenario
-                    const scenarioId = typeof s.id === 'string' ? parseInt(s.id) : s.id
-                    if (SCENARIO_DESCRIPTIONS[scenarioId]) {
-                        desc = SCENARIO_DESCRIPTIONS[scenarioId]
-                    } else {
-                        // Role-specific copy refinements (NO level mentions)
-                        if (s.role === 'Software Engineer' && s.evaluation_dimensions?.includes('Architecture')) {
-                            desc = "Interview focused on system design, scalability, and trade-off discussions. Depth adjusts based on your answers."
-                        }
-                        if (s.role === 'Product Manager' && s.evaluation_dimensions?.includes('Product Sense')) {
-                            desc = "Product interview focused on user empathy, structured thinking, and prioritization. Rigor adapts dynamically."
-                        }
-                        if (s.role === 'AI Product Manager') {
-                            desc = 'Simulates a full AI PM interview loop — product sense, execution, technical depth, and strategy. Calibrated to the hiring bar at top-tier AI-first product companies.'
-                        }
-                        if (s.role === 'AI Engineer') {
-                            desc = 'Simulates a full AI Engineer interview loop — ML system design, LLM architecture, and AI infrastructure. Calibrated to the hiring bar at top-tier AI engineering teams.'
-                        }
-                        if (s.role === 'AI Marketer') {
-                            desc = 'Simulates a full AI Marketer interview loop — AI campaign strategy, growth analytics, and marketing strategy. Calibrated to the hiring bar at top-tier AI-driven marketing teams.'
-                        }
-                        if (s.role === 'AI Project Manager') {
-                            desc = 'Simulates a full AI Project Manager interview loop — AI delivery, program management, and stakeholder alignment. Calibrated to the hiring bar at top-tier AI product companies.'
-                        }
-                        if (s.role === 'AI Scientist') {
-                            desc = 'Simulates a full AI Scientist interview loop — ML system design, analytics rigour, and data strategy. Calibrated to the hiring bar at top-tier AI research and applied science teams.'
-                        }
-                    }
-
-                    const mappedScenario = {
-                        id: s.id.toString(),
-                        role: s.role,
-                        level: s.level, // Preserved for interviewer calibration
-                        title: s.scenario_title || `${s.role} — ${s.evaluation_dimensions?.slice(0, 2).join(' & ') || 'Interview'}`, // DIMENSION-FIRST
-                        description: desc,
-                        dimensions: s.evaluation_dimensions || [],
-                        isCustom: false
-                    }
-
-                    // TITLE TRACE: Log original database value
-                    if (s.scenario_title?.toLowerCase().includes('leader')) {
-                        console.log('[TITLE_TRACE_DB]', {
-                            dbValue: s.scenario_title,
-                            mappedValue: mappedScenario.title,
-                            match: s.scenario_title === mappedScenario.title
-                        })
-                    }
-
-                    return mappedScenario
-                })
-                allScenarios = [...allScenarios, ...adapted]
-            }
-
-            if (customData) {
-                const adaptedCustom = customData.map(s => {
-                    const baseRole = (s.scenarios as any)?.role || 'Custom';
-                    const baseLevel = (s.scenarios as any)?.level || 'Custom';
-
-                    return {
-                        id: s.id, // UUID
-                        role: baseRole,
-                        level: baseLevel,
-                        title: s.title,
-                        description: `Custom ${baseRole} scenario` + (s.company_context ? ` with context.` : ''),
-                        dimensions: s.focus_dimensions || [],
-                        isCustom: true
-                    }
-                })
-                allScenarios = [...allScenarios, ...adaptedCustom]
-            }
-
-            setScenarios(allScenarios)
+            setScenarios((dbScenarios as ScenarioRow[]) || [])
 
             // 5. Fetch Sessions (History) - Optimized Payload
             // evaluation_depth and progression_comparison added for history tab rendering
@@ -308,46 +207,6 @@ export default function DashboardPage() {
                 // Non-critical — CurrentBarCard simply won't render
             }
 
-            // 6. Pre-select filter based on User Role
-            if (profile && (profile as any).primary_role) {
-                const userRole = (profile as any).primary_role.trim()
-                const availableRoles = Array.from(new Set(allScenarios.map(s => s.role)))
-
-                // Approved role mappings (5 primary roles only)
-                const roleMap: Record<string, string> = {
-                    'PM': 'Product Manager',
-                    'Product Manager': 'Product Manager',
-                    'Product': 'Product Manager',
-                    'SDE': 'Software Development Engineer',
-                    'Software Engineer': 'Software Development Engineer',
-                    'Software Development Engineer': 'Software Development Engineer',
-                    'Swe': 'Software Development Engineer',
-                    'SWE': 'Software Development Engineer',
-                    'Developer': 'Software Development Engineer',
-                    'Engineer': 'Software Development Engineer',
-                    'Marketer': 'Marketer',
-                    'Marketing': 'Marketer',
-                    'Data Scientist': 'Data Scientist',
-                    'DS': 'Data Scientist',
-                    'Data Science': 'Data Scientist',
-                    'Project Manager': 'Project Manager',
-                    'PgM': 'Project Manager',
-                    'TPM': 'Project Manager',
-                    'AI Product Manager': 'AI Product Manager',
-                    'AI PM':              'AI Product Manager',
-                    'AI Engineer':        'AI Engineer',
-                    'AI Marketer':        'AI Marketer',
-                    'AI Project Manager': 'AI Project Manager',
-                    'AI Scientist':       'AI Scientist',
-                }
-
-                const targetRole = roleMap[userRole] || availableRoles.find(r => r.toLowerCase() === userRole.toLowerCase())
-
-                if (targetRole && availableRoles.includes(targetRole)) {
-                    setFilters(prev => ({ ...prev, role: targetRole }))
-                }
-            }
-
             setLoading(false)
         }
         loadData()
@@ -357,58 +216,6 @@ export default function DashboardPage() {
         await supabase.auth.signOut()
         router.push('/')
     }
-
-    // Filter Options based on currently visible scenarios
-    const roles = useMemo(() => Array.from(new Set(scenarios.map(s => s.role))), [scenarios])
-    // Levels removed from primary filters - dimension-first model
-    const allDimensions = useMemo(() => {
-        const set = new Set<string>()
-        scenarios.forEach(s => s.dimensions?.forEach(d => set.add(d)))
-        return Array.from(set).sort()
-    }, [scenarios])
-
-    // Filter Logic - DIMENSION-FIRST (level filter removed)
-    const filteredScenarios = useMemo(() => {
-        return scenarios.filter(s => {
-            const matchesRole = !filters.role || s.role === filters.role
-            const matchesDimension = !filters.dimension || s.dimensions.includes(filters.dimension)
-            const matchesSearch = !filters.search ||
-                s.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-                s.description.toLowerCase().includes(filters.search.toLowerCase())
-
-            return matchesRole && matchesDimension && matchesSearch
-        })
-    }, [filters, scenarios])
-
-    // Role-Based Scenario Ordering (UI-only)
-    const sortedScenarios = useMemo(() => {
-        const userRole = (userProfile as any)?.primary_role || ''
-
-        const sorted = [...filteredScenarios].sort((a, b) => {
-            // If user has a role, prioritize matching scenarios
-            if (userRole) {
-                const aMatches = a.role === userRole ? 0 : 1
-                const bMatches = b.role === userRole ? 0 : 1
-
-                if (aMatches !== bMatches) {
-                    return aMatches - bMatches
-                }
-            }
-
-            // Fallback: Alphabetical by role
-            return a.role.localeCompare(b.role, undefined, { sensitivity: 'base' })
-        })
-
-        // DEV-ONLY console log
-        console.log(
-            '[SCENARIO_ORDER]',
-            userRole ? `User Role: ${userRole}` : 'No user role - alphabetical by role',
-            sorted.map(s => `${s.role} – ${s.title}`)
-        )
-
-
-        return sorted
-    }, [filteredScenarios, userProfile])
 
     // Progress Over Time Data Calculation
     const progressData = useMemo(() => {
@@ -626,237 +433,109 @@ export default function DashboardPage() {
                                 {/* Current Bar — shown after first evaluated session */}
                                 {currentBar && <CurrentBarCard {...currentBar} />}
 
-                                <DashboardFilters
-                                    onFilterChange={setFilters}
-                                    roles={roles}
-                                    dimensions={allDimensions}
-                                />
+                                {/* BONUS NEGOTIATION CARD (Pro+ Exclusive OR Credit Holders) */}
+                                {(((userProfile as any)?.package_tier === 'Pro+' && !sessions.find(s => s.session_type === 'negotiation_simulation')) || ((userProfile as any)?.negotiation_credits > 0)) && (
+                                    <div
+                                        onClick={() => router.push('/simulator/negotiation')}
+                                        className="mb-8 h-full p-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent hover:border-yellow-500/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg uppercase tracking-wider">
+                                            Bonus
+                                        </div>
+                                        <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
+                                            <Trophy className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-bold text-yellow-200">Salary Negotiation Simulation</h4>
+                                            <p className="text-sm text-yellow-200/60 mt-1">Practice negotiating your offer with realistic pushback</p>
+                                        </div>
+                                        <div className="mt-2 px-4 py-1.5 rounded-full bg-yellow-500/10 text-xs font-semibold text-yellow-400 border border-yellow-500/20 group-hover:bg-yellow-500 group-hover:text-black transition-colors">
+                                            Start Simulation (30 min)
+                                        </div>
+                                    </div>
+                                )}
 
-                                <div className="mb-4 text-sm text-gray-500" id="tour-scenarios">
-                                    Showing {sortedScenarios.length} scenarios
+                                {/* Role Selector */}
+                                <div className="flex items-center gap-2 mb-8">
+                                    {(['Product Manager', 'Software Development Engineer', 'Data Scientist'] as const).map(role => (
+                                        <button
+                                            key={role}
+                                            onClick={() => setSelectedRole(role)}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                                                selectedRole === role
+                                                    ? 'bg-purple-600 border-purple-500 text-white'
+                                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {role}
+                                        </button>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
-                                    {/* BONUS NEGOTIATION CARD (Pro+ Exclusive OR Credit Holders) */}
-                                    {(((userProfile as any)?.package_tier === 'Pro+' && !sessions.find(s => s.session_type === 'negotiation_simulation')) || ((userProfile as any)?.negotiation_credits > 0)) && (
-                                        <div
-                                            onClick={() => router.push('/simulator/negotiation')}
-                                            className="h-full p-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent hover:border-yellow-500/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden"
-                                        >
-                                            <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg uppercase tracking-wider">
-                                                Bonus
-                                            </div>
-                                            <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
-                                                <Trophy className="w-8 h-8" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-lg font-bold text-yellow-200">Salary Negotiation Simulation</h4>
-                                                <p className="text-sm text-yellow-200/60 mt-1">Practice negotiating your offer with realistic pushback</p>
-                                            </div>
-                                            <div className="mt-2 px-4 py-1.5 rounded-full bg-yellow-500/10 text-xs font-semibold text-yellow-400 border border-yellow-500/20 group-hover:bg-yellow-500 group-hover:text-black transition-colors">
-                                                Start Simulation (30 min)
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* CREATE SCENARIO CARD (Always Second or First) */}
-                                    {/* Custom Interview CTA - TIER GATED */}
-                                    {userProfile?.package_tier === 'Starter' ? (
-                                        /* Starter: Disabled with upgrade tooltip */
-                                        <div className="relative group h-full">
-                                            <div className="h-full p-6 rounded-2xl border border-dashed border-gray-700/30 bg-white/[0.02] opacity-50 cursor-not-allowed flex flex-col items-center justify-center text-center gap-4">
-                                                <div className="w-16 h-16 rounded-full bg-gray-500/10 flex items-center justify-center text-gray-600">
-                                                    <Plus className="w-8 h-8" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-lg font-bold text-gray-500">Build a Custom Interview</h4>
-                                                    <p className="text-sm text-gray-600/60 mt-1">Define role, focus dimensions, and context</p>
-                                                </div>
-                                                <div className="mt-2 px-4 py-1.5 rounded-full bg-gray-500/10 text-xs font-semibold text-gray-600 border border-gray-700/20">
-                                                    Pro Feature
-                                                </div>
-                                            </div>
-                                            {/* Upgrade tooltip */}
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                                <div className="bg-black/95 text-white px-4 py-3 rounded-lg text-sm shadow-xl border border-purple-500/20 max-w-[280px]">
-                                                    <p className="font-semibold mb-1">Upgrade to Pro</p>
-                                                    <p className="text-gray-400 text-xs">Build focused custom interviews for your specific role and skills</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : userProfile?.package_tier === 'Pro+' ? (
-                                        /* Pro+: Advanced with gold accent */
-                                        <Link href="/scenarios/builder" className="block h-full cursor-pointer" id="tour-custom-builder">
-                                            <div className="h-full p-6 rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50 transition-all flex flex-col items-center justify-center text-center gap-4 group">
-                                                <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform shadow-lg shadow-amber-500/20">
-                                                    <Plus className="w-8 h-8" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-lg font-bold text-amber-200">Advanced Custom Interviews & Tracking</h4>
-                                                    <p className="text-sm text-amber-400/60 mt-1">Build, save, and re-run interviews to measure improvement</p>
-                                                </div>
-                                                <div className="mt-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-xs font-semibold text-amber-300 border border-amber-500/20">
-                                                    Create & Track
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ) : (
-                                        /* Pro: Basic custom interview */
-                                        <Link href="/scenarios/builder" className="block h-full cursor-pointer" id="tour-custom-builder">
-                                            <div className="h-full p-6 rounded-2xl border border-dashed border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/50 transition-all flex flex-col items-center justify-center text-center gap-4 group">
-                                                <div className="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/20">
-                                                    <Plus className="w-8 h-8" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-lg font-bold text-purple-200">Build a Custom Interview</h4>
-                                                    <p className="text-sm text-purple-400/60 mt-1">Define role, focus dimensions, and context for your practice</p>
-                                                </div>
-                                                <div className="mt-2 px-4 py-1.5 rounded-full bg-purple-500/10 text-xs font-semibold text-purple-300 border border-purple-500/20">
-                                                    Create Interview
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    )}
-
-
-                                    {sortedScenarios
-                                        .filter(s => s.role !== 'Negotiation Coach')
-                                        .map((scenario) => {
+                                {/* 2×2 Scenario Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {scenarios
+                                        .filter(s => s.role === selectedRole)
+                                        .map(scenario => {
                                             const hasSessions = (userProfile?.available_sessions || 0) > 0
-                                            const duration = '30 min'
-
-                                            // App-level visibility logic for AI-Only Rounds
-                                            const isAIOnly = scenario.dimensions?.length === 1 && scenario.dimensions[0] === 'ai_fluency'
-
-                                            if (isAIOnly && userProfile?.package_tier !== 'Pro') {
-                                                return null
-                                            }
-
-                                            if (isAIOnly) {
-                                                return (
-                                                    <div
-                                                        key={scenario.id}
-                                                        onClick={(e) => {
-                                                            if (!hasActivePack) { e.preventDefault(); e.stopPropagation(); router.push('/pricing'); return; }
-                                                            if (hasSessions) router.push(`/simulator/${scenario.id}`)
-                                                            else router.push('/pricing')
-                                                        }}
-                                                        className={`block h-full cursor-pointer min-w-0 relative group`}
-                                                    >
-                                                        {!hasActivePack && (
-                                                            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[3px] rounded-2xl border border-white/10 transition-colors group-hover:bg-black/50">
-                                                                <div className="bg-purple-600/80 rounded-full p-3 mb-2 shadow-lg backdrop-blur-md border border-purple-400/30">
-                                                                    <Lock className="w-6 h-6 text-white" />
-                                                                </div>
-                                                                <span className="font-semibold text-white tracking-wide">Unlock with a plan</span>
-                                                            </div>
-                                                        )}
-                                                        <div className={`h-full rounded-2xl border border-cyan-500/30 bg-[#081824] hover:bg-cyan-900/20 hover:border-cyan-500/50 transition-all flex flex-col overflow-hidden ${!hasActivePack ? 'opacity-40' : ''}`}>
-                                                            <div className="p-6 flex flex-col h-full relative">
-                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-cyan-500/10 transition-colors pointer-events-none"></div>
-
-                                                                <div className="flex justify-between items-start mb-4 relative z-10">
-                                                                    <span className="px-2.5 py-1 rounded-[4px] text-[10px] font-bold tracking-wider uppercase border text-cyan-400 border-cyan-500/30 bg-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
-                                                                        PRO ONLY
-                                                                    </span>
-                                                                    <div className="text-right shadow-sm">
-                                                                        <div className="text-white font-bold text-sm tracking-wide">{scenario.role}</div>
-                                                                        <div className="text-gray-500 text-xs mt-0.5">{scenario.level}</div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="mb-4 relative z-10 flex-grow">
-                                                                    <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
-                                                                        {scenario.title}
-                                                                    </h3>
-                                                                    <p className="text-gray-400 text-sm line-clamp-3">
-                                                                        {scenario.description}
-                                                                    </p>
-                                                                </div>
-
-                                                                {/* Dimensions Tags */}
-                                                                <div className="flex flex-wrap gap-2 mb-4 relative z-10">
-                                                                    <span className="px-2.5 py-1 rounded bg-white/5 border border-cyan-500/30 text-[10px] font-bold text-cyan-300 uppercase tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.1)] flex items-center gap-1.5">
-                                                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 relative">
-                                                                            <span className="absolute inset-0 rounded-full bg-cyan-500 animate-ping opacity-50"></span>
-                                                                        </span>
-                                                                        AI Fluency
-                                                                    </span>
-                                                                </div>
-
-                                                                {/* Footer identical to ScenarioCard.tsx structure but with cyan accents */}
-                                                                <div className="mt-auto flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
-                                                                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <Clock className="w-3 h-3" />
-                                                                            {duration}
-                                                                        </div>
-                                                                        {scenario.level && (
-                                                                            <div className="text-[10px] opacity-40">
-                                                                                {scenario.level} calibration
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <Button
-                                                                        variant="glass"
-                                                                        disabled={(!hasSessions) && hasActivePack}
-                                                                        className={`${(!hasSessions && hasActivePack) ? 'opacity-50' : 'group-hover:bg-cyan-600 group-hover:border-cyan-500'} transition-colors text-xs h-8`}
-                                                                    >
-                                                                        {!hasActivePack ? (
-                                                                            <>
-                                                                                <Lock className="w-3 h-3 mr-2" />
-                                                                                Locked
-                                                                            </>
-                                                                        ) : !hasSessions ? (
-                                                                            <>Out of Sessions</>
-                                                                        ) : (
-                                                                            <>
-                                                                                <Play className="w-3 h-3 mr-2" />
-                                                                                Practice
-                                                                            </>
-                                                                        )}
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            }
-
                                             return (
                                                 <div
                                                     key={scenario.id}
-                                                    className="block h-full min-w-0"
+                                                    className="relative group h-full"
                                                 >
-                                                    <ScenarioCard
-                                                        scenario={scenario}
-                                                        disabled={!hasSessions}
-                                                        duration={duration}
-                                                        locked={!hasActivePack}
-                                                        onClick={() => {
-                                                            if (hasSessions) {
-                                                                router.push(`/simulator/${scenario.id}`)
-                                                            } else {
-                                                                router.push('/pricing')
-                                                            }
-                                                        }}
-                                                    />
-                                                    {scenario.isCustom && (
-                                                        <div className="mt-2 text-center text-xs text-purple-400 uppercase tracking-widest font-bold">Custom Build</div>
+                                                    {!hasActivePack && (
+                                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[3px] rounded-2xl border border-white/10 transition-colors group-hover:bg-black/50">
+                                                            <div className="bg-purple-600/80 rounded-full p-3 mb-2 shadow-lg backdrop-blur-md border border-purple-400/30">
+                                                                <Lock className="w-6 h-6 text-white" />
+                                                            </div>
+                                                            <span className="font-semibold text-white tracking-wide">Unlock with a plan</span>
+                                                        </div>
                                                     )}
+                                                    <div
+                                                        onClick={() => {
+                                                            if (!hasActivePack) { router.push('/pricing'); return; }
+                                                            if (hasSessions) router.push(`/simulator/${scenario.id}`)
+                                                            else router.push('/pricing')
+                                                        }}
+                                                        className={`h-full p-6 rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-purple-500/30 transition-all cursor-pointer flex flex-col ${!hasActivePack ? 'opacity-40' : ''}`}
+                                                    >
+                                                        <div className="flex-grow">
+                                                            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
+                                                                {scenario.round_title}
+                                                            </h3>
+                                                            <p className="text-sm text-gray-400">
+                                                                {(scenario.evaluation_dimensions || []).join(' · ')}
+                                                            </p>
+                                                        </div>
+                                                        <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                                                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                                <Clock className="w-3 h-3" />
+                                                                30 min
+                                                            </div>
+                                                            <Button
+                                                                variant="glass"
+                                                                disabled={!hasSessions && hasActivePack}
+                                                                className={`text-xs h-8 ${(!hasSessions && hasActivePack) ? 'opacity-50' : 'group-hover:bg-purple-600 group-hover:border-purple-500'} transition-colors`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    if (!hasActivePack) { router.push('/pricing'); return; }
+                                                                    if (hasSessions) router.push(`/simulator/${scenario.id}`)
+                                                                    else router.push('/pricing')
+                                                                }}
+                                                            >
+                                                                {!hasActivePack ? (
+                                                                    <><Lock className="w-3 h-3 mr-2" />Locked</>
+                                                                ) : !hasSessions ? (
+                                                                    <>Out of Sessions</>
+                                                                ) : (
+                                                                    <><Play className="w-3 h-3 mr-2" />Start Interview</>
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )
                                         })}
-
-                                    {filteredScenarios.length === 0 && (
-                                        <div className="col-span-full py-20 text-center text-gray-500">
-                                            No scenarios found matching your filters.
-                                            <Button variant="ghost" onClick={() => setFilters({ role: '', dimension: '', search: '' })} className="text-purple-400 hover:text-purple-300">
-                                                Clear all filters
-                                            </Button>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -887,13 +566,11 @@ export default function DashboardPage() {
                                                             subtitle = 'Bonus • Negotiation';
                                                         } else {
                                                             const scenario = scenarios.find(s =>
-                                                                s.id == (session.custom_scenario_id || session.scenario_id?.toString())
+                                                                s.id === session.scenario_id
                                                             );
                                                             if (scenario) {
-                                                                title = scenario.title;
-                                                                subtitle = `${scenario.role} • ${scenario.level}`;
-                                                            } else if (session.custom_scenario_id) {
-                                                                title = 'Custom Scenario';
+                                                                title = scenario.round_title;
+                                                                subtitle = scenario.role;
                                                             }
                                                         }
 
