@@ -123,10 +123,24 @@ ${JSON.stringify(stage1, null, 2)}`
             }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 3500,
+        max_tokens: 4000,
     });
 
-    const raw = JSON.parse(response.choices[0].message.content || '{}') as Stage2Output;
+    const rawContent = response.choices[0].message.content || ''
+    let raw: Stage2Output
+    try {
+        raw = JSON.parse(rawContent) as Stage2Output
+    } catch (parseErr: any) {
+        console.error('[STAGE2] JSON parse failed:', {
+            rawLength: rawContent?.length,
+            preview: rawContent?.slice(-200),
+            error: parseErr.message
+        })
+        throw new Error(
+            `STAGE2_PARSE_FAILED: Response truncated at ${rawContent?.length} chars. ` +
+            `Increase max_tokens if this persists.`
+        )
+    }
 
     // Normalize: alias turn_diagnostics to answer_level_diagnostics for Stage 3 compatibility
     if (!raw.turn_diagnostics && raw.answer_level_diagnostics) {

@@ -58,10 +58,24 @@ ${JSON.stringify(stage1.turns.map(t => ({
             }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 1500,
+        max_tokens: 1000,
     });
 
-    const parsed = JSON.parse(response.choices[0].message.content || '{}');
+    const rawContent = response.choices[0].message.content || ''
+    let parsed: any
+    try {
+        parsed = JSON.parse(rawContent)
+    } catch (parseErr: any) {
+        console.error('[STAGE4] JSON parse failed:', {
+            rawLength: rawContent?.length,
+            preview: rawContent?.slice(-200),
+            error: parseErr.message
+        })
+        throw new Error(
+            `STAGE4_PARSE_FAILED: Response truncated at ${rawContent?.length} chars. ` +
+            `Increase max_tokens if this persists.`
+        )
+    }
     const rules: PersonalRule[] = parsed.rules || [];
 
     // Validate — reject rules without turn references or quotes
