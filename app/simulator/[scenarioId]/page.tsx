@@ -213,7 +213,7 @@ export default function SimulatorPage() {
                         let checkpointMessage = `[TIME CHECKPOINT - ${elapsedMinutes} min elapsed, ${remainingMinutes} min remaining]\n\n`
 
                         if (remainingMinutes > 30) {
-                            checkpointMessage += `CRITICAL: You have ${remainingMinutes} minutes remaining. This interview MUST last 40+ minutes. Continue asking deep core questions with 2+ follow-ups each. Demand real-world examples. NEVER attempt to conclude.`
+                            checkpointMessage += `CRITICAL: You have ${remainingMinutes} minutes remaining. This interview MUST last ${targetDuration}+ minutes. Continue asking deep core questions with 2+ follow-ups each. Demand real-world examples. NEVER attempt to conclude.`
                         } else if (remainingMinutes > 20) {
                             checkpointMessage += `CONTINUE PHASE: You have ${remainingMinutes} minutes remaining. The interview is NOT close to ending. Continue asking deep core questions with 2+ follow-ups. Do NOT attempt to conclude.`
                         } else if (remainingMinutes > 10) {
@@ -322,7 +322,7 @@ export default function SimulatorPage() {
         if (isConnected && sessionStarted && sessionStartTime) {
             const initialMessage = `[SESSION START - Target duration: ${targetDuration} minutes]
 
-CRITICAL INSTRUCTION: This interview MUST last at least 40 minutes. You have ${targetDuration} minutes total.
+CRITICAL INSTRUCTION: This interview MUST last at least ${targetDuration} minutes. You have ${targetDuration} minutes total.
 
 - Ask deep core questions with 2+ follow-ups each
 - Demand real-world examples for every answer

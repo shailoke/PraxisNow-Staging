@@ -14,7 +14,7 @@ and fresh graduates applying for these roles.
 ## Stack
 - **Frontend/Backend:** Next.js App Router (TypeScript)
 - **Database:** Supabase (PostgreSQL + Row Level Security)
-- **AI:** OpenAI GPT-4o (interviewer + evaluator)
+- **AI:** OpenAI GPT-4o (interviewer + evaluator), Whisper (STT), TTS-1 (voice synthesis)
 - **Payments:** Razorpay (INR, session credit packs)
 - **File Storage:** Supabase Storage (signed URLs for PDF reports)
 - **Deployment:** Vercel
@@ -35,6 +35,54 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
 
 ---
 
+## Voice Architecture (Current — Batch Pipeline)
+
+The voice layer uses `hooks/useBatchVoice.ts` — a drop-in replacement for the legacy `useRealtimeVoice.ts`.
+**No WebRTC, no DataChannel, no OpenAI Realtime API.**
+
+### Turn flow
+```
+User speaks → MediaRecorder (250ms chunks) → blob collected on stop
+  → POST blob → /api/voice/stt (Whisper)        → TRANSCRIBING state
+  → POST transcript → /api/turns/answer          (write user_answer before answered=true)
+  → POST → /api/interview (GPT-4o, non-streaming) → THINKING state
+  → POST text → /api/voice/tts (TTS-1, 'onyx')   → ASSISTANT_SPEAKING state
+  → AudioContext.decodeAudioData → source.start() → onended callback
+  → reset state → startRecording()               → WAITING_FOR_USER state
+```
+
+### Voice API routes
+| Route | Purpose |
+|-------|---------|
+| `POST /api/voice/stt` | Whisper-1 transcription. Accepts `multipart/form-data` with `audio` (Blob) + `session_id`. Returns `{ transcript }`. |
+| `POST /api/voice/tts` | TTS-1 synthesis. Accepts `{ text, voice? }`. Returns `audio/mpeg` stream. Runs on Edge runtime to avoid Vercel 30s timeout. Voice defaults to `'onyx'`. |
+| `POST /api/voice/opening` | Fetches Turn 0 content from `interview_turns` for initial TMAY playback. Returns `{ content }`. |
+
+### InterviewState machine
+`'ASSISTANT_SPEAKING' | 'WAITING_FOR_USER' | 'READY_FOR_NEXT' | 'SESSION_ENDING' | 'TRANSCRIBING' | 'THINKING'`
+
+- `ASSISTANT_SPEAKING` → set before `speakText()` call
+- `WAITING_FOR_USER` → set in `source.onended` callback after TTS finishes; mic recording starts here
+- `TRANSCRIBING` → set after blob collected, before STT call
+- `THINKING` → set after STT, before `/api/interview` call
+
+### Critical voice invariants
+- `isStartingRef` guard prevents double `startSession()` calls
+- 5KB blob guard in `askNextQuestion()` rejects near-empty recordings
+- All post-turn side effects (`assistantTurnCount++`, `startRecording()`) live in `source.onended` — never before
+- **Do NOT call `setEvalResult` before `router.push`** in `handleEnd()` for standard interviews
+- "Ask Next Question" button gated on `interviewState === 'WAITING_FOR_USER'`, NOT `!isInterviewerSpeaking`
+
+### Known latency issue
+14–16 second gap between user finishing answer and interviewer speaking. Breakdown:
+1. STT (Whisper): ~2s
+2. `/api/turns/answer` write: ~1s
+3. `/api/interview` (GPT-4o): ~8–10s
+4. TTS-1: ~2s
+Primary bottleneck is GPT-4o response time; reducing system prompt size is the correct fix.
+
+---
+
 ## Critical Invariants — Never Break These
 
 ### 1. TMAY is Always Turn 0, Pre-Seeded
@@ -42,12 +90,11 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
 - The interview API (`app/api/interview/route.ts`) **must never generate TMAY**
 - A hard kill-switch actively strips any legacy `seeded_questions` from scenario config at runtime
 
-### 2. Entry Family Required for First Post-TMAY Question
-- The very first behavioral question after TMAY **must** come from the Entry Family
-- Entry Family is resolved at session creation and stored in `sessions.family_selections['Entry']`
-- The Entry Family key must match the pattern: `entry_{normalizedRole}_{normalizedLevel}_*`
-- If Entry Family is missing at Turn 1, the API throws a hard error: `ENTRY_FAMILY_MISSING_AFTER_TMAY`
-- Three sequential checks enforce this: family exists in runtime state → matches role+level pattern → scenario seeded questions are dead
+### 2. Entry Family — Warn-Only (No Longer Hard)
+- Entry Family is selected at session creation and stored in `sessions.family_selections['Entry']`
+- If Entry Family is missing, the system logs a warning and continues — the session proceeds using dimension `prompt_guidance` for Turn 1
+- **The hard throws `ENTRY_FAMILY_MISSING_AFTER_TMAY` and `ENTRY_FAMILY_VIOLATION` have been replaced with `console.warn`**
+- Pattern validation (CHECK 3) is also warn-only and skipped entirely if Entry family is absent
 
 ### 3. Turn Authority — AI Never Speaks Without User Input
 - The interview API validates that GPT-4o did not hallucinate a candidate response
@@ -56,6 +103,7 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
 
 ### 4. Anti-Convergence Blocklist
 - Recent questions from past sessions are passed to GPT-4o as a blocklist to prevent repetition
+- Also includes SCENARIO FRESHNESS REQUIREMENT: GPT must avoid the same scenario *type*, not just exact questions
 - Replay sessions **bypass** the blocklist intentionally to reproduce original questions exactly
 
 ### 5. RLS Must Never Be Bypassed Casually
@@ -84,25 +132,33 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
 
 | File | Purpose |
 |------|---------|
-| `app/api/interview/route.ts` | Core interview loop — ~400 lines |
+| `app/api/interview/route.ts` | Core interview loop — GPT-4o question generation, dimension tracking, anti-convergence |
 | `app/api/evaluate/route.ts` | 4-stage evaluation pipeline → momentum card → PDF generation |
 | `app/api/session/start/route.ts` | Session creation, TMAY pre-seeding, Entry Family resolution, credit deduction, null guard |
+| `app/api/voice/stt/route.ts` | Whisper-1 STT endpoint — accepts audio blob, returns transcript |
+| `app/api/voice/tts/route.ts` | TTS-1 synthesis endpoint — returns audio/mpeg stream (Edge runtime) |
+| `app/api/voice/opening/route.ts` | Fetches Turn 0 content for initial TMAY playback |
 | `app/api/razorpay/route.ts` | Razorpay order creation |
 | `app/api/razorpay/verify/route.ts` | Payment verification + tier upgrade logic |
-| `app/results/[session_id]/page.tsx` | **Results Screen** — primary post-session experience. 4 sections: Verdict, Strongest Moment, The One Thing, What's Next. Replaces in-simulator eval rendering for standard interviews. |
-| `app/dashboard/page.tsx` | Main user dashboard — Practice tab shows `CurrentBarCard`, History tab shows `↑ [change]` progression notes |
+| `app/results/[session_id]/page.tsx` | **Results Screen** — primary post-session experience. 4 sections: Verdict, Strongest Moment, The One Thing, What's Next. |
+| `app/dashboard/page.tsx` | Main user dashboard — Practice tab shows `CurrentBarCard`, History tab shows progression notes |
 | `app/scenarios/builder/page.tsx` | Custom scenario builder (Pro only, 3–4 dimensions) |
 | `app/simulator/[scenarioId]/page.tsx` | Interview simulator — reads duration from scenario row, redirects to Results Screen on eval complete |
-| `components/CurrentBarCard.tsx` | Persistent dashboard card showing `hireable_level` + gap to next level from most recent evaluated session |
-| `lib/entry-families.ts` | Entry Family definitions per role + level |
-| `lib/runtime-scenario.ts` | Scenario resolution, persona derivation, `normalizeRole`, `normalizeLevel`, `session_duration_minutes` |
-| `lib/probes.ts` | Probe question logic |
+| `hooks/useBatchVoice.ts` | **Primary voice hook** — STT→LLM→TTS batch pipeline. Drop-in replacement for useRealtimeVoice. |
+| `hooks/useRealtimeVoice.ts` | Legacy voice hook — WebRTC/Realtime API. No longer used in production. |
+| `components/CurrentBarCard.tsx` | Persistent dashboard card showing `hireable_level` + gap to next level |
+| `lib/entry-families.ts` | Entry Family definitions per role + level (to be dropped in rebuild) |
+| `lib/question-families.ts` | Question family pool per dimension (to be dropped in rebuild) |
+| `lib/runtime-scenario.ts` | Scenario resolution, persona derivation, `normalizeRole`, `normalizeLevel`, `selectQuestionFamilies`, `selectEntryFamily` |
+| `lib/probes.ts` | Probe question logic — **deprecated, probe_selections removed from session flow** |
 | `lib/eval-logic.ts` | Evaluator prompt generation (tier-gated) |
 | `lib/signalSynthesis.ts` | Post-evaluation signal processing before PDF |
 | `lib/pdfGenerator.ts` | PDF generation — areas_for_improvement rendered with level-unlock header |
+| `lib/grounding-check.ts` | Validates answer upgrades contain phrases from original — currently rejecting all upgrades |
 | `lib/negotiation-pdf.ts` | Separate PDF generator for negotiation simulation |
 | `lib/database.types.ts` | Supabase-generated TypeScript types — **do not edit manually** |
 | `lib/replay-comparison.ts` | `compareReplayAttempts` — used by both replay block and progression comparison |
+| `app/config/interview-prompts.ts` | Master GPT system prompt builder — all prompt_guidance wrapped with suppression markers |
 
 ---
 
@@ -115,15 +171,21 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
   - `momentum_card` — 3-field structured summary (`strongest_signal`, `one_fix`, `progress_note`). Derived deterministically after stage2. `DEFAULT NULL`
   - `progression_comparison` — delta vs prior session in same role/level. Shape: `{ observed_changes: string[], unchanged_areas: string[] }`. `DEFAULT NULL`
   - `replay_of_session_id` — links to original session for replay sessions
+  - `probe_selections` — **deprecated. Column still exists in DB but always null in new sessions. probe_selections logic removed from codebase.**
 - `interview_turns` — canonical source of truth for all turns:
   - `turn_index`, `turn_type`, `content`, `answered`
   - `user_answer` — verbatim candidate voice answer. **Canonical field for evaluation.** Written by `/api/turns/answer` before `answered = true`
   - `user_answer_word_count`, `user_answer_captured_at`
 - `scenarios` — pre-defined roles + levels with `evaluation_dimensions`, `prompt`, and `duration_minutes INTEGER DEFAULT 30`
 - `custom_scenarios` — user-created overrides with `focus_dimensions` and `company_context`
-- `question_families` — question families mapped to dimensions
-- `user_family_usage` — tracks used families per user (Pro/Pro+ only) for freshness
+- `question_families` — question families mapped to dimensions (to be dropped in rebuild)
+- `user_family_usage` — tracks used families per user for Pro freshness. **FK constraint dropped. Uses upsert with ignoreDuplicates to handle duplicate Entry family entries.** (to be dropped in rebuild)
 - `purchases` — payment records; insert triggers session credit addition
+
+### Recent DB constraint changes
+- `sessions_status_check` — now includes `'evaluating'` as a valid status
+- `user_family_usage` FK constraint — dropped to unblock bulk inserts
+- `probe_selections` column — exists but always null in new sessions
 
 **After any migration, regenerate types:**
 ```
@@ -136,119 +198,128 @@ Do NOT edit `lib/database.types.ts` manually.
 ## Evaluation Pipeline (`app/api/evaluate/route.ts`)
 
 ### Stage flow (do not modify without explicit approval)
-1. **Stage 1 — Extract** (`lib/evaluation/stage1-extract.ts`): Parses `interview_turns` into structured turn objects
-2. **Stage 2 — Evaluate** (`lib/evaluation/stage2-evaluate.ts`): Produces `hiring_signal`, `hireable_level`, `top_strengths`, `gaps`, `distance_to_strong_hire`, `turn_diagnostics`
-3. **Stage 3 — Rewrite** (`lib/evaluation/stage3-rewrite.ts`): Generates grounded answer upgrades (Pro/Pro+, full depth only). Validated by `lib/grounding-check.ts`
-4. **Stage 4 — Rules** (`lib/evaluation/stage4-rules.ts`): Generates session-specific personal answer rules (Pro/Pro+, full depth only)
+1. **Stage 1 — Extract** (`lib/evaluation/stage1-extract.ts`): Parses `interview_turns` into structured turn objects. `max_tokens: 8000` (supports 25-turn sessions).
+2. **Stage 2 — Evaluate** (`lib/evaluation/stage2-evaluate.ts`): Produces `hiring_signal`, `hireable_level`, `top_strengths`, `gaps`, `distance_to_strong_hire`, `turn_diagnostics`. `max_tokens: 4000`.
+3. **Stage 3 — Rewrite** (`lib/evaluation/stage3-rewrite.ts`): Generates grounded answer upgrades (Pro/Pro+, full depth only). Validated by `lib/grounding-check.ts`. `max_tokens: 3000`. **Currently broken — grounding check rejects all upgrades.**
+4. **Stage 4 — Rules** (`lib/evaluation/stage4-rules.ts`): Generates session-specific personal answer rules (Pro/Pro+, full depth only). `max_tokens: 1000`.
+
+All stages have JSON parse safety wrappers — on parse failure, logs `rawLength`, last 200 chars, and throws `STAGE{N}_PARSE_FAILED` with char count.
 
 ### Post-stage derived fields (no new AI calls)
 - **`momentum_card`** — derived after stage2, before PDF. Three fields:
   - `strongest_signal`: `stage2.top_strengths[0].skill` truncated to 6 words, fallback to `dimensionNames[0]`
   - `one_fix`: `stage2.gaps[0].fix_in_one_sentence` → first sentence of `primary_blocker` → hardcoded fallback
   - `progress_note`: hiring signal delta vs prior session in same role/level (see `signalRank`). `null` if no prior session.
-- **`progression_comparison`** — runs `compareReplayAttempts` for non-replay full-depth sessions only. Guard: `!session.replay_of_session_id && evaluationDepth === 'full'`. Reuses `priorSessionData` from shared helper.
-- **`getPriorSessionForRoleLevel(adminClient, userId, role, level, excludeSessionId)`** — shared async helper defined above the POST handler. Fetches up to 10 prior completed sessions with `evaluation_data`, filters in JS for matching role+level to avoid PostgREST join-column filtering issues. Returns single row or `null`. Used by both `momentum_card` and `progression_comparison` — one DB round-trip for both.
+- **`progression_comparison`** — runs `compareReplayAttempts` for non-replay full-depth sessions only.
+- **`getPriorSessionForRoleLevel`** — shared async helper. Fetches up to 10 prior completed sessions with `evaluation_data`, filters in JS for matching role+level. Used by both `momentum_card` and `progression_comparison`.
 
-### Idempotency path (line ~97)
-If `session.status === 'completed'` and `session.evaluation_data` exists, the route returns immediately with existing data + fresh signed URL + `momentum_card` from the persisted session record. **No re-evaluation.** This is the X4 fix — the idempotency path must always return `momentum_card`.
-
-### Evaluation depth abort rules
-- `insufficient` → returns `noDataEval` immediately, no AI calls
-- Data quality guard: aborts if < 50% of answered turns have `user_answer` content
-- `shallow` → skips stage3 (answer upgrades) and stage4 (personal rules)
-- `progression_comparison` only runs on `full` depth
+### Idempotency path
+If `session.status === 'completed'` and `session.evaluation_data` exists, the route returns immediately with existing data + fresh signed URL + `momentum_card`. **No re-evaluation.**
 
 ---
 
 ## Simulator & Session Flow
 
 ### Session duration
-- Duration is read from `scenario.session_duration_minutes`, which flows from `scenarios.duration_minutes` DB column (added in `20260322_add_scenario_duration.sql`)
+- Duration is read from `scenario.session_duration_minutes`, which flows from `scenarios.duration_minutes` DB column
 - Default: `30` minutes for all scenarios
-- In `lib/runtime-scenario.ts`: `session_duration_minutes: base.duration_minutes ?? 30`
-- In simulator: `const mins = uiScenario.session_duration_minutes ?? 30`, then `setDuration(mins * 60)` and `setTargetDuration(mins)`
 - **Do NOT hardcode `45` or any other duration value anywhere in the simulator**
 
 ### Post-evaluation redirect
 - `handleEnd()` in `app/simulator/[scenarioId]/page.tsx` calls `/api/evaluate` then:
   - If `result.summary` exists → **negotiation simulation** → `setEvalResult(result.summary)` and stay in-page
-  - Otherwise → **standard interview** → `router.push('/results/[session_id]')` immediately. **Do NOT call `setEvalResult` before the push** — the in-page results view will attempt to `.map()` undefined fields on the new evaluation shape and crash.
-- Any other special session types with their own post-eval flows must be guarded before the default `router.push` branch.
+  - Otherwise → **standard interview** → `router.push('/results/[session_id]')` immediately
+- **Do NOT call `setEvalResult` before `router.push`** — the in-page results view will crash
 
 ### Session start null guard
-- After `insert().select().single()` in `app/api/session/start/route.ts`, check **both** `insertError` AND `!session`
-- The `data: null, error: null` silent failure (caused by RLS blocking the RETURNING clause or a DB trigger) is distinct from a PostgREST error
-- Both failure cases must run credit compensation (refund `available_sessions` and `total_sessions_used`)
-- The null case logs `[SESSION_START] Insert returned null data with no error` with `user_id` and `session_payload_keys` for Vercel visibility
+- After `insert().select().single()`, check **both** `insertError` AND `!session`
+- Both failure cases must run credit compensation
+- The null case logs `[SESSION_START] Insert returned null data with no error`
+
+---
+
+## Question Family System (Current — Partially Deprecated)
+
+### How it works today
+- `QUESTION_FAMILIES` constant in `lib/question-families.ts` — in-memory pool of families per dimension
+- `ENTRY_FAMILIES` constant in `lib/entry-families.ts` — level-scoped entry point families
+- At session creation: `selectQuestionFamilies()` picks one family per dimension (Starter: deterministic first; Pro: randomized from unused)
+- `user_family_usage` table tracks used families per user to drive rotation for Pro
+- `family_selections` JSONB stored in session — passed to `generateInterviewerPrompt()` which wraps each `prompt_guidance` with `[PRIVATE INTERVIEWER INSTRUCTION]` suppression markers
+- Entry family key format: `entry_{normalizedRole}_{normalizedLevel}_{dimension}`
+
+### What changed (Phase 1 simplification)
+- `probe_selections` fully removed from session creation and interview route
+- Entry family failure is now non-fatal (warn and continue)
+- `prompt_guidance` injections wrapped with suppression markers to prevent verbatim reading
+- `user_family_usage` now uses upsert + Entry dimension filtered out from tracking
+- SCENARIO FRESHNESS REQUIREMENT added after each prompt_guidance block — forces GPT to vary scenario types, not just rephrase
+
+### What is broken
+- Answer Upgrades (Stage 3) always rejected by grounding check. Root cause: `validateAnswerUpgrades` checks against `longestAnswer` (longest answer across all turns) rather than the specific turn's own answer. Trigram overlap fails because it's comparing the wrong source text.
 
 ---
 
 ## PDF Generation (`lib/pdfGenerator.ts`)
 
 ### Level-unlock reframe in `areas_for_improvement`
-- Before the improvements loop, derive `nextLevelLabel` from `evaluation.hireable_level`:
-  ```
-  const levelProgression = { Junior→Mid-level, Mid-level→Senior, Senior→Principal, Principal→Staff, Staff→Director }
-  ```
-  Split `hireable_level` on `" "`, match each token against `levelProgression` keys.
-  - Match → `"To perform at [nextLevel] [metadata.role] bar:"`
-  - No match → `"To strengthen your bar:"`
-  - Parse failure → `console.warn` with raw `hireable_level`, use fallback
-- `nextLevelLabel` is rendered **once** in gray italic (font size 9, color `#7a6991`) above the **first** improvement item only
+- Before the improvements loop, derive `nextLevelLabel` from `evaluation.hireable_level`
+- `nextLevelLabel` is rendered **once** in gray italic above the **first** improvement item only
 - For each improvement item, `"To reach the next level: "` is prepended to `imp.why_it_matters` in rendered text only — **the data object is never mutated**
 
 ---
 
 ## Results Screen (`app/results/[session_id]/page.tsx`)
 
-### Data contract — what the page depends on
-| Field | Source | Required |
-|-------|--------|----------|
-| `session.evaluation_data.hiring_signal` | `sessions.evaluation_data` | Yes — gates `hasFullEval` |
-| `session.evaluation_data.hireable_level` | `sessions.evaluation_data` | Yes |
-| `session.evaluation_data.distance_to_strong_hire.primary_blocker` | `sessions.evaluation_data` | Preferred for Section 3 |
-| `session.evaluation_data.high_level_assessment.barriers_to_next_level` | `sessions.evaluation_data` | Fallback for Section 3 |
-| `session.evaluation_data.transcript_extracts` | `sessions.evaluation_data` | Primary for Section 2 (Strongest Moment) |
-| `session.evaluation_data.turn_diagnostics` | `sessions.evaluation_data` | Legacy fallback for Section 2 |
-| `session.evaluation_data.answer_upgrades` | `sessions.evaluation_data` | Section 3 upgrade block (Pro/Pro+ only) |
-| `session.momentum_card` | `sessions.momentum_card` | `progress_note` for Section 1 |
-| `interview_turns` (turn_type === 'question') | `interview_turns` table | Section 2 question text |
-
-### Graceful states (none of these redirect)
-- **Loading** — pulse skeleton (4 dark bars)
-- **Polling** — `session.status !== 'completed'` — spinner + "Your evaluation is being prepared..." — auto-refreshes every 3s, interval cleared on unmount
-- **Not found / unauthorized** — `notFound` state — plain message + dashboard link
-- **Insufficient eval** — `hasFullEval === false` — in-page message + "Go to Dashboard" CTA. **Do NOT redirect** — user may have bookmarked the URL.
-
 ### Section structure
 1. **Verdict** — hiring signal as human sentence, `hireable_level`, coloured top border, `progress_note` from `momentum_card`
-2. **Strongest Moment** — best `signal_strength === 'strong'` diagnostic (fallback to `'mixed'`), matched to `turn_type === 'question'` turn. Hidden entirely if no diagnostics exist.
-3. **The One Thing** — `primary_blocker`, `nextLevelLabel` (same derivation as PDF), first `answer_upgrades[0]` or Starter upsell
-4. **What's Next** — next-session nudge (weakest gap), PDF download card, back-to-dashboard link
+2. **Strongest Moment** — best `signal_strength === 'strong'` diagnostic, matched to `turn_type === 'question'` turn
+3. **The One Thing** — `primary_blocker`, `nextLevelLabel`, first `answer_upgrades[0]` or Starter upsell
+4. **What's Next** — next-session nudge, PDF download card, back-to-dashboard link
+
+### Graceful states
+- **Loading** — pulse skeleton
+- **Polling** — `session.status !== 'completed'` — auto-refreshes every 3s
+- **Not found / unauthorized** — plain message + dashboard link
+- **Insufficient eval** — in-page message + "Go to Dashboard" CTA. **Do NOT redirect.**
 
 ---
 
-## Interviewer Personas (Derived in runtime-scenario.ts)
-Personas are statically mapped by Role + Level:
-- Entry/Junior → Neutral/Concise (values correctness)
-- Mid/Senior → Structured/Direct (probes for specifics)
-- Principal → Skeptical/Analytical (probes for tradeoffs and failure modes)
-- Executive → Strategic/Challenging (probes for systems thinking)
+## Known Issues (Open)
+
+1. **Answer Upgrades empty in PDF** — `validateAnswerUpgrades` compares rewrite against `longestAnswer` (wrong reference). All upgrades fail the trigram grounding check. Fix: match each upgrade against its own turn's `user_answer`, not the longest answer in the session.
+
+2. **Question freshness limited** — small `QUESTION_FAMILIES` pool means rotation exhausts quickly; same families repeat after ~5 sessions per dimension. Addressed by SCENARIO FRESHNESS REQUIREMENT in prompt but root cause is pool size.
+
+3. **14–16 second latency** — between user finishing answer and interviewer speaking. Bottleneck is GPT-4o (~8–10s). Reducing system prompt size is the primary lever.
+
+4. **`Pro+` enum still present** — TypeScript types still reference Pro+. Cleanup pending after stability period.
+
+5. **Negotiation tier check references `'Pro+'` string** — must be updated when Pro+ is fully retired.
 
 ---
 
-## Evaluator Tiers
-- **Starter:** Awareness + truth. Evaluates TMAY, 3 strengths, 3 areas for improvement (no gap typing), NO answer upgrades
-- **Pro:** Skill repair. Re-writes TMAY, gap-types improvements (Fundamental vs Polish), 3 rewritten Answer Upgrades, replay comparison block if applicable, pressure failure mode analysis, interruption-resistant variants, custom personal answer rules
+## Architecture Simplification — In Progress
+
+**Planned rebuild:** 3 roles × 4 rounds, no question family system, level fixed at Senior/Staff bar.
+
+Changes in scope:
+- `question_families` and `user_family_usage` tables to be dropped
+- `ENTRY_FAMILIES`, `QUESTION_FAMILIES` constants deleted
+- `lib/probes.ts` deleted (already deprecated)
+- `lib/entry-families.ts` deleted
+- `user_family_usage` tracking removed entirely
+- Level no longer a user-facing dimension — fixed bar per role
+- `selectQuestionFamilies`, `selectEntryFamily`, `dimensionToEntryProbe` logic removed
+- `family_selections` and `probe_selections` columns to be dropped from `sessions`
 
 ---
 
 ## Known Technical Debt
 - Multiple `@ts-ignore` and `as any` casts throughout the session and evaluation flow
 - SQL migrations are scattered across `sql/`, `supabase/migrations/`, and root-level `.sql` files with no unified ordering
-- `Pro+` enum still present in TypeScript types — pending cleanup after 7–14 days of stability
+- `Pro+` enum still present in TypeScript types — pending cleanup
 - Dimension order falls back softly if `dimension_order` is missing from session — should become a hard error
-- Negotiation tier check in `session/start` still references `Pro+` string directly — must be updated when Pro+ is fully retired
 
 ---
 

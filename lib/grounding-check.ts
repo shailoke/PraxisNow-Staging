@@ -41,50 +41,37 @@ export function isGrounded(
 
 export function validateAnswerUpgrades(
     upgrades: any[],
-    transcriptTurns: { user_answer?: string }[]
+    transcriptTurns: { user_answer?: string; question_label?: string; content?: string }[]
 ): { valid: any[]; flagged: any[] } {
     const valid: any[] = [];
     const flagged: any[] = [];
 
-    // Use the longest answer as the grounding reference — the most likely source text
-    const longestAnswer = transcriptTurns
-        .map(t => t.user_answer || '')
-        .sort((a, b) => b.length - a.length)[0] || '';
-
     for (const upgrade of upgrades) {
-        // Stage 3 format uses upgraded_answer; legacy format uses what_to_change_next_time
         const rewrite = upgrade.upgraded_answer || upgrade.what_to_change_next_time || '';
 
-        if (!rewrite || isGrounded(longestAnswer, rewrite)) {
-            console.log('[GROUNDING_CHECK] Passed upgrade:', {
-                question_context: upgrade.question_context
-            });
+        const matchedTurn = transcriptTurns.find(t => {
+            const label = t.question_label || t.content || '';
+            return upgrade.question_context &&
+                label.toLowerCase().includes(upgrade.question_context.toLowerCase().slice(0, 30));
+        });
+
+        const sourceAnswer = matchedTurn?.user_answer ||
+            transcriptTurns
+                .map(t => t.user_answer || '')
+                .sort((a, b) => b.length - a.length)[0] || '';
+
+        if (!rewrite || isGrounded(sourceAnswer, rewrite)) {
             valid.push(upgrade);
         } else {
-            const originalTrigrams = new Set(extractTrigrams(longestAnswer));
-            const rewriteTrigrams = extractTrigrams(rewrite);
-            const matches = rewriteTrigrams.filter(t => originalTrigrams.has(t));
-            const flagReason = `trigram_match_count=${matches.length} (minimum=2)`;
-            const matchedText = matches.slice(0, 3).join(' | ') || '(none)';
-
-            console.log('[GROUNDING_CHECK] Rejected upgrade:', {
+            console.warn('[GROUNDING_FAIL] Upgrade failed trigram check:', {
                 question_context: upgrade.question_context,
-                reason: flagReason,
-                transcript_match_attempted: matchedText
-            });
-            console.warn('[GROUNDING_FAIL] Upgrade appears fabricated — no trigram overlap with candidate answers:', {
+                matched_turn: !!matchedTurn,
                 rewrite: rewrite.substring(0, 80),
-                original_preview: longestAnswer.substring(0, 80),
+                source_preview: sourceAnswer.substring(0, 80),
             });
             flagged.push({ ...upgrade, _grounding_failed: true });
         }
     }
-
-    console.log('[GROUNDING_CHECK] Results:', {
-        total: upgrades.length,
-        valid: valid.length,
-        flagged: flagged.length
-    });
 
     return { valid, flagged };
 }

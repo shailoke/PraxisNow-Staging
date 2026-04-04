@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
                 .eq('id', user.id)
                 .single<Database['public']['Tables']['users']['Row']>()
 
-            if (!profile || profile.package_tier !== 'Pro+') {
-                return NextResponse.json({ error: 'Salary Negotiation is exclusive to Pro+ members.' }, { status: 403 })
+            if (!profile || (profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+')) {
+                return NextResponse.json({ error: 'Salary Negotiation is available on Pro and above.' }, { status: 403 })
             }
 
             // Check if already used (One-time only - COMPLETED)
