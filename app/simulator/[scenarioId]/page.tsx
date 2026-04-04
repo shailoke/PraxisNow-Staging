@@ -8,7 +8,6 @@ import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Mic, PhoneOff, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { generateInterviewerPrompt } from '@/app/config/interview-prompts'
 import { EvalResult } from '@/lib/eval-logic'
 
 // ... imports
