@@ -339,9 +339,15 @@ export async function selectQuestionFamilies(
         if (availableFamilies.length === 0) {
             // All families exhausted - reset and pick from all
             console.log(`[FAMILY_RESET] All families used for "${dimension}", resetting`)
-            const selected = allFamilies[Math.floor(Math.random() * allFamilies.length)]
-            selections[dimension] = selected.id
-            console.log(`[FAMILY_SELECT] Pro (reset): ${dimension} -> ${selected.id}`)
+            const familyAfterReset = allFamilies[Math.floor(Math.random() * allFamilies.length)]
+            console.log('[FAMILY_RESET_RESULT]', JSON.stringify(familyAfterReset))
+            if (!familyAfterReset) {
+                throw new Error(
+                    `FAMILY_RESET_FAILED: No family available for dimension "${dimension}" after reset — QUESTION_FAMILIES has no entries matching this dimension`
+                )
+            }
+            selections[dimension] = familyAfterReset.id
+            console.log(`[FAMILY_SELECT] Pro (reset): ${dimension} -> ${familyAfterReset.id}`)
         } else {
             // Pick randomly from unused
             const selected = availableFamilies[Math.floor(Math.random() * availableFamilies.length)]
