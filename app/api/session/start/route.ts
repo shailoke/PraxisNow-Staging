@@ -419,7 +419,6 @@ export async function POST(req: NextRequest) {
         // Map first evaluation dimension to Entry family probe type
         // Entry dimension determines the evaluation bar for Turn 1
         const dimensionToEntryProbe: Record<string, string> = {
-            'Strategic Thinking': 'metrics',
             'Execution': 'discovery',
             'Communication': 'risks',
             'Technical Depth': 'write_path',
@@ -454,7 +453,7 @@ export async function POST(req: NextRequest) {
             'Behavioral':           'behavioral',
         }
 
-        const firstDimension = dimensionNames[0] || 'Strategic Thinking'
+        const firstDimension = dimensionNames[0] || 'Strategy'
         const entryProbe = dimensionToEntryProbe[firstDimension] || 'metrics'
 
         console.log(`[ENTRY_DIMENSION_MAPPING]`, {
