@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
         console.log('[session/start] handler called')
         console.log("DEBUG: Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
         const { scenario_id, custom_scenario_id, duration_seconds, session_type, replay_session_id } = await req.json()
+        console.log('[SESSION_SCENARIO_ID]', scenario_id, 'custom:', custom_scenario_id)
         const cookieStore = await cookies()
 
         const supabase = createServerClient<Database>(
@@ -383,6 +384,9 @@ export async function POST(req: NextRequest) {
         // ORDERING: After role resolution, BEFORE family selection and shuffle
         // ===================================
         const normalizedRoleForAI = normalizeRole(roleForEntry)
+
+        const dimensionsBeforeInjection = [...dimensionNames]
+        console.log('[DIMENSIONS_PRE_AI_INJECTION]', dimensionsBeforeInjection)
 
         if (
             (profile.package_tier === 'Pro' || profile.package_tier === 'Pro+') &&
