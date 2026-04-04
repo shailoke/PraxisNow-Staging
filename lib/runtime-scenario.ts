@@ -271,6 +271,7 @@ export async function selectQuestionFamilies(
     userId: string,
     userTier: 'Starter' | 'Pro' | 'Pro+'
 ): Promise<Record<string, string>> {
+    console.log('[FAMILY_SELECT_ENTRY]', { user_id: userId, tier: userTier, dimensions })
     const { QUESTION_FAMILIES } = await import('./question-families')
     const selections: Record<string, string> = {}
 

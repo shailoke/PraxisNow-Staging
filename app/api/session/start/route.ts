@@ -563,6 +563,12 @@ export async function POST(req: NextRequest) {
                 family_id: familyId
             }))
 
+            console.log('[FAMILY_USAGE] Attempting to write usage records:', {
+                count: usageRecords.length,
+                records: usageRecords,
+                session_id: session.id
+            })
+
             if (usageRecords.length > 0) {
                 const { error: usageError } = await adminClient
                     .from('user_family_usage')
@@ -570,9 +576,17 @@ export async function POST(req: NextRequest) {
                     .select() // Must select to avoid error on upsert
 
                 if (usageError) {
-                    console.error('[SESSION_START] Failed to track family usage:', usageError)
-                    // Non-blocking - session creation succeeded
+                    console.error('[FAMILY_USAGE] Write failed:', usageError.code, usageError.message, {
+                        user_id: user.id,
+                        records: usageRecords
+                    })
+                } else {
+                    for (const r of usageRecords) {
+                        console.log('[FAMILY_USAGE] Tracked:', { dimension: r.dimension, family_id: r.family_id, user_id: r.user_id })
+                    }
                 }
+            } else {
+                console.warn('[FAMILY_USAGE] No usage records to write — familySelections was empty')
             }
         }
 
