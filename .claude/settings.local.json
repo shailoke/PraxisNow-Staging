@@ -38,7 +38,14 @@
       "Bash(SUPABASE_ACCESS_TOKEN=13f813a0 npx supabase gen types typescript --project-id wlfseesoezrtviexpawn --schema public)",
       "Bash(powershell -Command \"\\(Get-Content lib/database.types.ts | Select-Object -First 670\\) | Set-Content lib/database.types.ts -Encoding UTF8\")",
       "Bash(grep -n \"lib/scenarios\\\\|from.*scenarios\" app/simulator/[scenarioId]/page.tsx)",
-      "Bash(grep -n \"SCENARIOS\" app/simulator/[scenarioId]/page.tsx)"
+      "Bash(grep -n \"SCENARIOS\" app/simulator/[scenarioId]/page.tsx)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(Get-Content app/api/session/start/route.ts)",
+      "Bash(Measure-Object -Line)",
+      "Bash(Select-Object -ExpandProperty Lines)",
+      "Bash(awk 'END{print NR\"\"\"\" lines\"\"\"\"}' app/api/session/start/route.ts)",
+      "Bash(tee /tmp/tsc_out.txt)",
+      "Bash(awk 'END{print NR}' app/api/session/start/route.ts)"
     ]
   }
 }
