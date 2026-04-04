@@ -99,6 +99,8 @@ What Annoys Me: ${interviewer_persona.what_annoys_me.join(', ')}`
      [PRIVATE INTERVIEWER INSTRUCTION — DO NOT READ ALOUD, DO NOT PARAPHRASE, DO NOT REFERENCE]
      ${family.prompt_guidance}
      [END PRIVATE INSTRUCTION — Generate your question now]
+     SCENARIO FRESHNESS REQUIREMENT:
+     The anti-convergence blocklist above contains questions already asked to this user. You must not only avoid those exact questions — you must also avoid the same SCENARIO TYPE. If the blocklist contains a marketplace question, do not ask about marketplaces. If it contains a competitive response question, choose a different strategic scenario entirely. The competency being tested stays the same — the scenario must be genuinely different.
      - Do NOT ask a generic opening question.
      - Move strictly to this topic.`
             }
@@ -114,6 +116,8 @@ What Annoys Me: ${interviewer_persona.what_annoys_me.join(', ')}`
 [PRIVATE INTERVIEWER INSTRUCTION — DO NOT READ ALOUD, DO NOT PARAPHRASE, DO NOT REFERENCE]
 ${family.prompt_guidance}
 [END PRIVATE INSTRUCTION — Generate your question now]
+SCENARIO FRESHNESS REQUIREMENT:
+The anti-convergence blocklist above contains questions already asked to this user. You must not only avoid those exact questions — you must also avoid the same SCENARIO TYPE. If the blocklist contains a marketplace question, do not ask about marketplaces. If it contains a competitive response question, choose a different strategic scenario entirely. The competency being tested stays the same — the scenario must be genuinely different.
 `)
          } else {
             familyInstructions.push(`
