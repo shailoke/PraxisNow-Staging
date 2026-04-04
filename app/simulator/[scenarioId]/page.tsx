@@ -2,18 +2,16 @@
 
 import { useRealtimeVoice } from '@/hooks/useBatchVoice'
 import { useWakeLock } from '@/hooks/useWakeLock'
-import { SCENARIOS } from '@/lib/scenarios'
 import { createClient } from '@/lib/supabase'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Mic, PhoneOff, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { generateInterviewerPrompt } from '@/app/config/interview-prompts'
 import { EvalResult } from '@/lib/eval-logic'
 
 // ... imports
-import { resolveRuntimeScenario, RuntimeScenario, DbScenario, DbCustomScenario } from '@/lib/runtime-scenario'
+import { resolveRuntimeScenario, RuntimeScenario, DbScenario } from '@/lib/runtime-scenario'
 
 // Adapter type for efficient UI rendering
 type SimulatorScenario = RuntimeScenario & {
@@ -94,8 +92,7 @@ export default function SimulatorPage() {
 
                     // @ts-ignore
                     const base = customData.scenarios as DbScenario
-                    // @ts-ignore
-                    const custom = customData as DbCustomScenario
+                    const custom = customData as any
 
                     runtime = resolveRuntimeScenario(base, custom)
 

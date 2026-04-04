@@ -3,8 +3,6 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/database.types'
-import { resolveRuntimeScenario, DbScenario, DbCustomScenario } from '@/lib/runtime-scenario'
-import { generateInterviewerPrompt } from '@/app/config/interview-prompts'
 
 import { NEGOTIATION_COACH_PROMPT } from '@/lib/negotiation-coach'
 
@@ -92,30 +90,7 @@ export async function POST(req: NextRequest) {
         if (session.session_type === 'negotiation_simulation') {
             systemInstruction = NEGOTIATION_COACH_PROMPT
         } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('package_tier')
-                .eq('id', session.user_id)
-                .single()
-            const userTier = ((userData as any)?.package_tier) || 'Starter'
-
-            const baseScenario = session.scenarios as DbScenario
-            const customScenario = session.custom_scenarios as DbCustomScenario | null
-
-            const runtime = resolveRuntimeScenario(baseScenario, customScenario, userTier)
-
-            systemInstruction = generateInterviewerPrompt({
-                role: runtime.role,
-                level: runtime.level,
-                interview_type: runtime.interview_type,
-                interviewer_persona: runtime.interviewer_persona,
-                scenario_title: runtime.scenario_title,
-                base_system_prompt: runtime.base_system_prompt,
-                evaluation_dimensions: runtime.evaluation_dimensions.map(d => d.name),
-                seeded_questions: runtime.seeded_questions,
-                session_history: '',
-                selected_families: (session as any).family_selections || {},
-            })
+            systemInstruction = ''
         }
 
         // Replay injection (preserved for completeness)
