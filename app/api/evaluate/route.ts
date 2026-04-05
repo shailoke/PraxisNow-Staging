@@ -651,10 +651,7 @@ export async function POST(req: NextRequest) {
             pdf_url: pdfPath, // Store PATH
             status: 'completed',
             evaluation_depth: evaluationDepth,
-            answer_upgrades: answerUpgrades,
-            replay_comparison: replayComparison,
             momentum_card: momentumCard,
-            progression_comparison: progressionComparison,
         };
 
         // DEBUG: Log what we're about to persist to DB
