@@ -16,6 +16,16 @@ interface TurnDiagnostic {
   impact_on_interviewer?: string
 }
 
+interface DimensionScore {
+  dimension: string
+  score: number
+  band: string
+  weight: number
+  weighted_score: number
+  evidence: string
+  gap: string | null
+}
+
 interface AnswerUpgrade {
   issue: string
   what_to_change_next_time: string
@@ -45,6 +55,10 @@ interface EvaluationData {
   gaps?: Gap[]
   areas_for_improvement?: ImprovementArea[]
   primary_failure_mode?: { label?: string }
+  // MAANG dimension scoring — present on sessions evaluated after Phase C
+  dimension_scores?: DimensionScore[]
+  weighted_composite?: number
+  hire_band?: string
 }
 
 interface MomentumCard {
@@ -139,6 +153,25 @@ const DIMENSION_DESCRIPTOR: Record<string, string> = {
 const getDimensionDescriptor = (dimension: string | null): string | null => {
   if (!dimension) return null
   return DIMENSION_DESCRIPTOR[dimension] ?? 'strong thinking'
+}
+
+// ── Scorecard colour helpers ──────────────────────────────────────────────────
+
+function bandColour(band: string): { bg: string; text: string; border: string } {
+  switch (band) {
+    case 'Strong Hire':    return { bg: 'bg-green-100',  text: 'text-green-800',  border: 'border-green-400' }
+    case 'Lean Hire':      return { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-400' }
+    case 'Lean No Hire':   return { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-400' }
+    case 'Strong No Hire': return { bg: 'bg-red-100',    text: 'text-red-800',    border: 'border-red-400' }
+    default:               return { bg: 'bg-gray-100',   text: 'text-gray-700',   border: 'border-gray-300' }
+  }
+}
+
+function scoreColour(score: number): string {
+  if (score >= 4) return 'bg-green-500'
+  if (score >= 3) return 'bg-yellow-400'
+  if (score >= 2) return 'bg-orange-400'
+  return 'bg-red-500'
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -383,6 +416,86 @@ export default function ResultsPage() {
             <p className="text-sm text-purple-300 mt-2">↑ {momentumCard.progress_note}</p>
           )}
         </div>
+
+        {/* ── SECTION 1b: Performance Scorecard ───────────────────────────── */}
+        {evaluation?.dimension_scores && evaluation.dimension_scores.length > 0 && (() => {
+          const composite  = evaluation.weighted_composite
+          const hireBand   = evaluation.hire_band ?? ''
+          const bandCls    = bandColour(hireBand)
+          return (
+            <div className="bg-black/30 border border-white/10 rounded-2xl p-6 space-y-5">
+
+              {/* Header row */}
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Performance Scorecard</p>
+                <div className="flex items-center gap-3">
+                  {composite !== undefined && (
+                    <span className="text-lg font-bold text-white tabular-nums">
+                      {composite.toFixed(1)}<span className="text-gray-500 font-normal text-sm"> / 4.0</span>
+                    </span>
+                  )}
+                  {hireBand && (
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${bandCls.bg} ${bandCls.text} ${bandCls.border}`}>
+                      {hireBand}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Dimension rows */}
+              <div className="space-y-4">
+                {evaluation.dimension_scores.map((ds) => {
+                  const fillCls = scoreColour(ds.score)
+                  const pct     = Math.round((ds.score / 4) * 100)
+                  const bCls    = bandColour(ds.band)
+                  return (
+                    <div key={ds.dimension} className="space-y-1.5">
+
+                      {/* Name + bar + score + badge */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-200 w-48 shrink-0 leading-snug">{ds.dimension}</span>
+
+                        {/* Bar */}
+                        <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${fillCls} transition-all`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        {/* Numeric */}
+                        <span className="text-sm font-mono text-gray-300 tabular-nums shrink-0">
+                          {ds.score} / 4
+                        </span>
+
+                        {/* Band pill */}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border shrink-0 ${bCls.bg} ${bCls.text} ${bCls.border}`}>
+                          {ds.band}
+                        </span>
+                      </div>
+
+                      {/* Gap note */}
+                      {ds.gap && (
+                        <p className="text-xs text-gray-400 pl-1 leading-relaxed">
+                          ↳ {ds.gap}
+                        </p>
+                      )}
+
+                      {/* Evidence */}
+                      {ds.evidence && (
+                        <p className="text-xs text-gray-500 italic pl-1 leading-relaxed">
+                          &ldquo;{ds.evidence}&rdquo;
+                        </p>
+                      )}
+
+                    </div>
+                  )
+                })}
+              </div>
+
+            </div>
+          )
+        })()}
 
         {/* ── SECTION 2: Your Strongest Moment ────────────────────────────── */}
         {showStrongestMoment && (
