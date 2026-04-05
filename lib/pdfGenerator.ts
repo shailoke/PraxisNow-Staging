@@ -232,6 +232,95 @@ export async function generateSessionPDF(
         drawHeader();
         y = 80;
 
+        // --- PERFORMANCE SCORECARD ---
+        {
+            type DimensionScore = {
+                dimension: string
+                score: number
+                band: string
+                weight: number
+                weighted_score: number
+                evidence: string
+                gap: string | null
+            }
+
+            const dimensionScores = evaluation.dimension_scores as DimensionScore[] | undefined
+            const weightedComposite = evaluation.weighted_composite as number | undefined
+            const hireBand = evaluation.hire_band as string | undefined
+
+            if (dimensionScores && dimensionScores.length > 0) {
+                y = checkPageBreak(y, 80)
+                y = addSectionTitle('Performance Scorecard', y)
+
+                const scorecardBandColor: Record<string, string> = {
+                    'Strong Hire':    '#16a34a',
+                    'Lean Hire':      '#ca8a04',
+                    'Lean No Hire':   '#ea580c',
+                    'Strong No Hire': '#dc2626',
+                }
+
+                // Overall composite line
+                if (weightedComposite !== undefined) {
+                    const bandHex = hireBand ? (scorecardBandColor[hireBand] || COLORS.textSecondary) : COLORS.textSecondary
+                    const compositeText = hireBand
+                        ? `Overall: ${weightedComposite.toFixed(1)} / 4.0 — ${hireBand}`
+                        : `Overall: ${weightedComposite.toFixed(1)} / 4.0`
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(bandHex)
+                        .text(compositeText, SPACING.pageMargin, y)
+                    y += 22
+                }
+
+                const contentWidth = width - (2 * SPACING.pageMargin)
+
+                const scoreBarColor = (score: number): string => {
+                    if (score >= 4) return '#16a34a'
+                    if (score >= 3) return '#ca8a04'
+                    if (score >= 2) return '#ea580c'
+                    return '#dc2626'
+                }
+
+                dimensionScores.forEach((ds: DimensionScore, idx: number) => {
+                    y = checkPageBreak(y, 120)
+
+                    // Dimension name + score + band on one line
+                    const dimBandHex = scorecardBandColor[ds.band] || COLORS.textSecondary
+                    const dimLabel = `${ds.dimension}  ${ds.score} / 4  (${ds.band})`
+                    doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(dimBandHex)
+                        .text(dimLabel, SPACING.pageMargin, y, { width: contentWidth })
+                    y += 20
+
+                    // Score bar — background then fill
+                    doc.rect(SPACING.pageMargin, y, contentWidth, 6).fill('#E5E5E5')
+                    const filledWidth = Math.round(contentWidth * (ds.score / 4))
+                    if (filledWidth > 0) {
+                        doc.rect(SPACING.pageMargin, y, filledWidth, 6).fill(scoreBarColor(ds.score))
+                    }
+                    y += 10
+
+                    // Evidence
+                    if (ds.evidence) {
+                        y = checkPageBreak(y, 40)
+                        const evidenceText = `Evidence: ${ds.evidence}`
+                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                            .text(evidenceText, SPACING.pageMargin, y, { width: contentWidth })
+                        y += doc.heightOfString(evidenceText, { width: contentWidth }) + 4
+                    }
+
+                    // Gap note
+                    if (ds.gap) {
+                        y = checkPageBreak(y, 40)
+                        const gapText = `Gap: ${ds.gap}`
+                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.regular).fillColor(COLORS.textMuted)
+                            .text(gapText, SPACING.pageMargin, y, { width: contentWidth })
+                        y += doc.heightOfString(gapText, { width: contentWidth }) + 4
+                    }
+
+                    // Row gap (between dimensions)
+                    y += idx < dimensionScores.length - 1 ? 10 : 20
+                })
+            }
+        }
+
         // --- DIMENSIONS ASSESSED ---
         if (metadata.dimension_order && metadata.dimension_order.length > 0) {
             y = checkPageBreak(y, 60)

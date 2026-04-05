@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -262,6 +262,7 @@ export type Database = {
         Row: {
           created_at: string | null
           custom_scenario_id: string | null
+          dimension_scores: Json | null
           duration_seconds: number | null
           evaluation_data: Json | null
           evaluation_depth: string | null
@@ -279,6 +280,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           custom_scenario_id?: string | null
+          dimension_scores?: Json | null
           duration_seconds?: number | null
           evaluation_data?: Json | null
           evaluation_depth?: string | null
@@ -296,6 +298,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           custom_scenario_id?: string | null
+          dimension_scores?: Json | null
           duration_seconds?: number | null
           evaluation_data?: Json | null
           evaluation_depth?: string | null
@@ -424,9 +427,9 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          level: string
           question_text: string
           role: string
+          round: number | null
           session_id: string
           turn_index: number
           user_id: string
@@ -434,9 +437,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
-          level: string
           question_text: string
           role: string
+          round?: number | null
           session_id: string
           turn_index: number
           user_id: string
@@ -444,9 +447,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
-          level?: string
           question_text?: string
           role?: string
+          round?: number | null
           session_id?: string
           turn_index?: number
           user_id?: string
@@ -485,6 +488,7 @@ export type Database = {
           package_tier: string | null
           phone: string | null
           primary_role: string | null
+          star_interviewer: boolean
           total_sessions_used: number | null
         }
         Insert: {
@@ -503,6 +507,7 @@ export type Database = {
           package_tier?: string | null
           phone?: string | null
           primary_role?: string | null
+          star_interviewer?: boolean
           total_sessions_used?: number | null
         }
         Update: {
@@ -521,6 +526,7 @@ export type Database = {
           package_tier?: string | null
           phone?: string | null
           primary_role?: string | null
+          star_interviewer?: boolean
           total_sessions_used?: number | null
         }
         Relationships: []
