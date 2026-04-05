@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         // 2. Fetch session (Verify Ownership)
         const { data: sessionData, error: sessionError } = await supabase
             .from('sessions')
-            .select('*, scenarios:scenario_id(*), custom_scenarios:custom_scenario_id(*)')
+            .select('*, scenarios:scenario_id(*)')
             .eq('id', session_id)
             .eq('user_id', authUser.id) // Strict Ownership Check
             .single();
@@ -108,11 +108,9 @@ export async function POST(req: NextRequest) {
 
         // 5. PDF Metadata
         const baseScenario = session.scenarios;
-        const customScenario = session.custom_scenarios;
         const role = baseScenario?.role || 'User';
         const level = baseScenario?.level || 'Standard';
-        const scenario_title = customScenario?.title
-            || (baseScenario?.prompt ? `${role} ${level}` : 'Interview Session');
+        const scenario_title = baseScenario?.prompt ? `${role} ${level}` : 'Interview Session';
 
         // 6. Generate PDF
         const pdfBuffer = await generateSessionPDF(
@@ -126,7 +124,7 @@ export async function POST(req: NextRequest) {
                     ? `${Math.floor(session.duration_seconds / 60)}m ${session.duration_seconds % 60}s`
                     : 'N/A',
                 session_id: session_id,
-                session_type: customScenario ? 'Custom Scenario' : 'Standard Interview'
+                session_type: 'Standard Interview'
             },
             user.package_tier
         );
