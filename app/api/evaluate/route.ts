@@ -36,7 +36,7 @@ async function getPriorSessionForRoleLevel(
 ): Promise<any | null> {
     const { data, error } = await (adminClient
         .from('sessions')
-        .select('id, created_at, evaluation_data, scenarios:scenario_id(role, level)')
+        .select('id, created_at, evaluation_data, scenarios:scenario_id(role, round, round_title)')
         .eq('user_id', userId)
         .eq('status', 'completed')
         .not('evaluation_data', 'is', null)
@@ -48,7 +48,7 @@ async function getPriorSessionForRoleLevel(
 
     // Filter in JS — PostgREST join-column filtering is unreliable across client versions
     const prior = (data as any[]).find((s: any) =>
-        s.scenarios?.role === role && s.scenarios?.level === level
+        s.scenarios?.role === role
     );
     return prior ?? null;
 }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
         // 1. Fetch session
         const { data: sessionData, error: sessionError } = await supabase
             .from('sessions')
-            .select('*, scenarios:scenario_id(*), custom_scenarios:custom_scenario_id(*)')
+            .select('*, scenarios:scenario_id(*)')
             .eq('id', session_id)
             .single();
 
@@ -132,21 +132,15 @@ export async function POST(req: NextRequest) {
 
         // ... existing derived fields logic ...
         const baseScenario = session.scenarios;
-        const customScenario = session.custom_scenarios;
         const role = baseScenario?.role || 'User';
         const level = baseScenario?.level || 'Standard';
         const interview_type = 'Behavioral Interview';
-        const scenario_title = customScenario?.title || `${role} ${level} - ${baseScenario?.prompt?.substring(0, 30)}...`;
+        const scenario_title = `${role} ${level} - ${baseScenario?.prompt?.substring(0, 30)}...`;
 
-        let dimensions = (customScenario?.focus_dimensions && customScenario.focus_dimensions.length > 0)
-            ? customScenario.focus_dimensions
-            : baseScenario?.evaluation_dimensions;
+        let dimensions = baseScenario?.evaluation_dimensions;
         const role_specific_dimensions = Array.isArray(dimensions) ? dimensions.join('\n') : '';
 
-        let context = baseScenario?.prompt || '';
-        if (customScenario?.company_context) {
-            context += `\n\nSpecific Company Context:\n${customScenario.company_context}`;
-        }
+        const context = baseScenario?.prompt || '';
         const full_scenario_description = `${scenario_title}\n\n${context}`;
         const prior_session_summaries = '';
 
@@ -616,7 +610,7 @@ export async function POST(req: NextRequest) {
                     date: new Date().toLocaleDateString(),
                     duration: session.duration_seconds ? `${Math.floor(session.duration_seconds / 60)}m` : 'N/A',
                     session_id: session_id,
-                    session_type: customScenario ? 'Custom Scenario' : 'Standard Interview',
+                    session_type: 'Standard Interview',
                     dimension_order: session.dimension_order ?? []
                 },
                 user.package_tier
