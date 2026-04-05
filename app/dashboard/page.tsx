@@ -27,6 +27,23 @@ interface ScenarioRow {
     evaluation_dimensions: string[]
 }
 
+type ScoreHistoryRow = {
+    id: string
+    role: string
+    round: number
+    round_title: string
+    dimension_scores: unknown
+    weighted_composite: number | null
+    created_at: string
+}
+
+function compositeColour(score: number): string {
+    if (score >= 3.5) return 'text-green-500'
+    if (score >= 3.0) return 'text-yellow-500'
+    if (score >= 2.0) return 'text-orange-500'
+    return 'text-red-500'
+}
+
 const SCENARIO_DESCRIPTIONS: Record<number, string> = {
     50: 'Practice structured thinking, metrics framing, and execution under pressure. Entry level.',
     29: 'Practice user empathy, product discovery, and problem framing. Junior level.',
@@ -82,6 +99,7 @@ export default function DashboardPage() {
     const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null)
     const [isSupportOpen, setIsSupportOpen] = useState(false)
     const [currentBar, setCurrentBar] = useState<CurrentBarCardProps | null>(null)
+    const [scoreHistory, setScoreHistory] = useState<ScoreHistoryRow[]>([])
 
     const handleGeneratePDF = async (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation(); // Prevent row click
@@ -208,6 +226,30 @@ export default function DashboardPage() {
                 }
             } catch {
                 // Non-critical — CurrentBarCard simply won't render
+            }
+
+            // 5c. Score history — dimension_scores per completed session for trend view
+            try {
+                const { data: scoreRows } = await supabase
+                    .from('sessions')
+                    .select('id, round, dimension_scores, evaluation_data, created_at, scenarios:scenario_id(role, round_title)')
+                    .eq('user_id', user.id)
+                    .eq('status', 'completed')
+                    .not('dimension_scores', 'is', null)
+                    .order('created_at', { ascending: true })
+
+                const mapped: ScoreHistoryRow[] = (scoreRows || []).map((r: any) => ({
+                    id: r.id,
+                    role: r.scenarios?.role || '',
+                    round: r.round || 0,
+                    round_title: r.scenarios?.round_title || '',
+                    dimension_scores: r.dimension_scores,
+                    weighted_composite: (r.evaluation_data as any)?.weighted_composite ?? null,
+                    created_at: r.created_at || '',
+                }))
+                setScoreHistory(mapped)
+            } catch {
+                // Non-critical — score history section simply won't render
             }
 
             setLoading(false)
@@ -540,6 +582,84 @@ export default function DashboardPage() {
                                             )
                                         })}
                                 </div>
+
+                                {/* ── Score History ───────────────────────────────────────── */}
+                                {(() => {
+                                    const roleHistory = scoreHistory
+                                        .filter(r => r.role === selectedRole)
+                                        .filter(r => r.weighted_composite !== null)
+
+                                    if (roleHistory.length === 0) return null
+
+                                    // Group by round, ascending
+                                    const byRound = new Map<number, ScoreHistoryRow[]>()
+                                    for (const row of roleHistory) {
+                                        if (!byRound.has(row.round)) byRound.set(row.round, [])
+                                        byRound.get(row.round)!.push(row)
+                                    }
+                                    const sortedRounds = [...byRound.keys()].sort((a, b) => a - b)
+
+                                    // Star interviewer: all 4 rounds present, each latest >= 3.5
+                                    const allRoundsPresent = [1, 2, 3, 4].every(r => byRound.has(r))
+                                    const allAboveBar = allRoundsPresent && [1, 2, 3, 4].every(r => {
+                                        const rows = byRound.get(r)!
+                                        const latest = rows[rows.length - 1].weighted_composite!
+                                        return latest >= 3.5
+                                    })
+
+                                    return (
+                                        <div className="mt-10 space-y-6">
+                                            <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold">Score History</p>
+
+                                            {sortedRounds.map(round => {
+                                                const rows = byRound.get(round)!
+                                                const roundTitle = rows[0].round_title
+                                                const n = rows.length
+
+                                                return (
+                                                    <div key={round} className="bg-black/30 border border-white/10 rounded-xl p-5 space-y-3">
+                                                        {/* Round label */}
+                                                        <p className="text-sm font-semibold text-white">{roundTitle}</p>
+
+                                                        {/* Score trend */}
+                                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                                            {rows.map((row, idx) => {
+                                                                const isLatest = idx === rows.length - 1
+                                                                const score = row.weighted_composite!
+                                                                return (
+                                                                    <span key={row.id} className="flex items-baseline gap-2">
+                                                                        <span className={`font-mono tabular-nums ${isLatest ? `text-xl font-bold ${compositeColour(score)}` : 'text-base text-gray-400'}`}>
+                                                                            {score.toFixed(1)}
+                                                                        </span>
+                                                                        {idx < rows.length - 1 && (
+                                                                            <span className="text-gray-600 text-sm">→</span>
+                                                                        )}
+                                                                    </span>
+                                                                )
+                                                            })}
+                                                        </div>
+
+                                                        {/* Session count */}
+                                                        <p className="text-xs text-gray-500">
+                                                            {n} session{n !== 1 ? 's' : ''}
+                                                        </p>
+                                                    </div>
+                                                )
+                                            })}
+
+                                            {/* Star interviewer callout */}
+                                            {allAboveBar && (
+                                                <div className="flex items-center gap-3 px-5 py-4 rounded-xl border border-green-500/40 bg-green-500/10">
+                                                    <span className="text-lg">⭐</span>
+                                                    <p className="text-sm font-semibold text-green-400">
+                                                        Star Interviewer threshold reached for {selectedRole}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
+
                             </div>
                         ) : (
                             // HISTORY TAB
