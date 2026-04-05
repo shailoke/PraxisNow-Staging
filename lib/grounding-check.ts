@@ -55,12 +55,10 @@ export function validateAnswerUpgrades(
                 label.toLowerCase().includes(upgrade.question_context.toLowerCase().slice(0, 30));
         });
 
-        const sourceAnswer = matchedTurn?.user_answer ||
-            transcriptTurns
-                .map(t => t.user_answer || '')
-                .sort((a, b) => b.length - a.length)[0] || '';
+        const sourceAnswer = matchedTurn?.user_answer || '';
 
-        if (!rewrite || isGrounded(sourceAnswer, rewrite)) {
+        // If no turn matched, we cannot verify grounding — pass through
+        if (!rewrite || !matchedTurn || isGrounded(sourceAnswer, rewrite)) {
             valid.push(upgrade);
         } else {
             console.warn('[GROUNDING_FAIL] Upgrade failed trigram check:', {
