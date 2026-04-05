@@ -134,6 +134,8 @@ export async function POST(req: NextRequest) {
         const baseScenario = session.scenarios;
         const role = baseScenario?.role || 'User';
         const level = baseScenario?.level || 'Standard';
+        const round: number = baseScenario?.round || 1;
+        const roundTitle: string = baseScenario?.round_title || 'Behavioral Interview';
         const interview_type = 'Behavioral Interview';
         const scenario_title = `${role} ${level} - ${baseScenario?.prompt?.substring(0, 30)}...`;
 
@@ -328,9 +330,8 @@ export async function POST(req: NextRequest) {
         const stage2 = await runStage2(
             stage1,
             role,
-            level,
-            user.package_tier,
-            dimensionNames
+            round,
+            roundTitle
         );
         console.log(`[EVAL_STAGE2] Signal: ${stage2.hiring_signal}, Confidence: ${stage2.hiring_confidence}`);
 
@@ -375,7 +376,7 @@ export async function POST(req: NextRequest) {
                 : (stage2.hiring_confidence ?? 0) >= 0.65 ? 'at_bar' : 'below_bar',
 
             tmay_analysis: stage2.tmay_diagnostic ? {
-                critique: stage2.tmay_diagnostic.key_risk,
+                critique: stage2.tmay_diagnostic.improvement,
                 rewrite: null,  // Stage 3 handles rewrites
             } : null,
 
@@ -401,7 +402,7 @@ export async function POST(req: NextRequest) {
 
             // For signalSynthesis.ts
             answer_level_diagnostics: stage2.answer_level_diagnostics,
-            tell_me_about_yourself_diagnostic: stage2.tell_me_about_yourself_diagnostic,
+            tell_me_about_yourself_diagnostic: stage2.tmay_diagnostic,
 
             // Verbatim transcript for PDF Turn-by-Turn section
             transcript_extracts: stage1.turns.map(t => ({
@@ -431,14 +432,14 @@ export async function POST(req: NextRequest) {
                         illustrative_variant: null,
                     })),
                     communication_diagnostics: {
-                        structure: stage2.tmay_diagnostic?.structure || null,
+                        structure: stage2.tmay_diagnostic?.structure_score?.toString() || null,
                         evidence_grounding: (stage2.turn_diagnostics ?? []).some(d => d.signal_strength === 'weak')
                             ? 'Partial' : 'Strong',
                         verbal_noise: { detected: null, patterns: null },
                     },
                     evaluation_depth: evaluationDepth,
-                    answer_level_diagnostics: stage2.answer_level_diagnostics,
-                    tell_me_about_yourself_diagnostic: stage2.tell_me_about_yourself_diagnostic,
+                    answer_level_diagnostics: stage2.answer_level_diagnostics as any,
+                    tell_me_about_yourself_diagnostic: stage2.tmay_diagnostic as any,
                 },
                 role,
                 level,

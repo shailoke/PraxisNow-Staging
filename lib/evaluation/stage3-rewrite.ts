@@ -47,8 +47,8 @@ export async function runStage3(
     const weakestTurns = stage2.turn_diagnostics
         .filter(d => d.signal_strength !== 'strong' && stage1.turns.find(t => t.turn_index === d.turn_index)?.candidate_answer_verbatim)
         .sort((a, b) => {
-            const order = { weak: 0, mixed: 1, strong: 2 };
-            return order[a.signal_strength] - order[b.signal_strength];
+            const order: Record<string, number> = { weak: 0, moderate: 1, strong: 2 };
+            return (order[a.signal_strength] ?? 1) - (order[b.signal_strength] ?? 1);
         })
         .slice(0, 3);
 
@@ -56,11 +56,11 @@ export async function runStage3(
 
     const rewriteInputs = weakestTurns.map(d => {
         const turn = stage1.turns.find(t => t.turn_index === d.turn_index);
-        // Use issues_detected[0] as the structural gap (matches AnswerLevelDiagnostic schema)
-        const structuralGap = d.issues_detected[0] || d.interviewer_consequence || 'Missing structural element';
+        // Use what_missed as the structural gap (matches TurnDiagnostic schema)
+        const structuralGap = d.what_missed || d.fix_in_one_sentence || 'Missing structural element';
         return {
             turn_index: d.turn_index,
-            question_context: d.question_label,
+            question_context: d.question_context,
             original_verbatim: turn?.candidate_answer_verbatim || '',
             structural_gap: structuralGap,
         };
