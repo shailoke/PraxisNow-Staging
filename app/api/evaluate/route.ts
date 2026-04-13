@@ -14,7 +14,7 @@ import { validateAnswerUpgrades } from '@/lib/grounding-check'
 import { synthesizePreparationSignals } from '@/lib/signalSynthesis'
 import type { ReplayComparison } from '@/lib/replay-comparison'
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // ── Progression Architecture — Interfaces ────────────────────────────────────
 

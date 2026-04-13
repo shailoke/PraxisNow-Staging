@@ -261,7 +261,7 @@ export default function SimulatorPage() {
         if (isEvaluating && scenario) {
             const steps = getEvaluationSteps(toEvalRole(scenario.role), scenario.round ?? 1)
             setEvalStepIndex(0)
-            const intervalMs = Math.floor(45000 / steps.length)
+            const intervalMs = Math.floor(75000 / steps.length)
             evalStepIntervalRef.current = setInterval(() => {
                 setEvalStepIndex(prev => Math.min(prev + 1, steps.length - 1))
             }, intervalMs)
