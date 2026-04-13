@@ -59,6 +59,16 @@ interface EvaluationData {
   dimension_scores?: DimensionScore[]
   weighted_composite?: number
   hire_band?: string
+  // New evaluation output fields (o4-mini pipeline)
+  competencies?: Array<{
+    name: string
+    score: number        // 1-5
+    evidence: string
+    gap: string | null
+  }>
+  overall_score?: number
+  recommendation?: string
+  narrative?: string
 }
 
 interface MomentumCard {
@@ -171,6 +181,14 @@ function scoreColour(score: number): string {
   if (score >= 4) return 'bg-green-500'
   if (score >= 3) return 'bg-yellow-400'
   if (score >= 2) return 'bg-orange-400'
+  return 'bg-red-500'
+}
+
+// Colour helper for the new 1-5 competency scale
+function scoreColour5(score: number): string {
+  if (score >= 4.5) return 'bg-green-500'
+  if (score >= 3.5) return 'bg-yellow-400'
+  if (score >= 2.5) return 'bg-orange-400'
   return 'bg-red-500'
 }
 
@@ -415,13 +433,96 @@ export default function ResultsPage() {
           {momentumCard?.progress_note && (
             <p className="text-sm text-purple-300 mt-2">↑ {momentumCard.progress_note}</p>
           )}
+          {evaluation?.narrative && (
+            <p className="text-sm text-gray-400 leading-relaxed mt-3">{evaluation.narrative}</p>
+          )}
         </div>
 
         {/* ── SECTION 1b: Performance Scorecard ───────────────────────────── */}
-        {evaluation?.dimension_scores && evaluation.dimension_scores.length > 0 && (() => {
-          const composite  = evaluation.weighted_composite
-          const hireBand   = evaluation.hire_band ?? ''
-          const bandCls    = bandColour(hireBand)
+        {(() => {
+          const hasCompetencies = evaluation?.competencies && evaluation.competencies.length > 0
+          const hasDimensionScores = evaluation?.dimension_scores && evaluation.dimension_scores.length > 0
+
+          if (!hasCompetencies && !hasDimensionScores) return null
+
+          // ── New pipeline: competencies (1-5 scale) ───────────────────────
+          if (hasCompetencies) {
+            const overallScore = evaluation!.overall_score
+            const rec          = evaluation!.recommendation ?? ''
+            const recCls       = bandColour(rec)
+            return (
+              <div className="bg-black/30 border border-white/10 rounded-2xl p-6 space-y-5">
+
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-xs uppercase tracking-widest text-gray-400">Performance Scorecard</p>
+                  <div className="flex items-center gap-3">
+                    {overallScore !== undefined && (
+                      <span className="text-lg font-bold text-white tabular-nums">
+                        {overallScore.toFixed(1)}<span className="text-gray-500 font-normal text-sm"> / 5.0</span>
+                      </span>
+                    )}
+                    {rec && (
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${recCls.bg} ${recCls.text} ${recCls.border}`}>
+                        {rec}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Competency rows */}
+                <div className="space-y-4">
+                  {evaluation!.competencies!.map((c) => {
+                    const pct     = Math.round((c.score / 5) * 100)
+                    const fillCls = scoreColour5(c.score)
+                    return (
+                      <div key={c.name} className="space-y-1.5">
+
+                        {/* Name + bar + score */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-200 w-48 shrink-0 leading-snug">{c.name}</span>
+
+                          {/* Bar */}
+                          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${fillCls} transition-all`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+
+                          {/* Numeric */}
+                          <span className="text-sm font-mono text-gray-300 tabular-nums shrink-0">
+                            {c.score.toFixed(1)} / 5
+                          </span>
+                        </div>
+
+                        {/* Gap note */}
+                        {c.gap && (
+                          <p className="text-xs text-gray-400 pl-1 leading-relaxed">
+                            ↳ {c.gap}
+                          </p>
+                        )}
+
+                        {/* Evidence */}
+                        {c.evidence && (
+                          <p className="text-xs text-gray-500 italic pl-1 leading-relaxed">
+                            &ldquo;{c.evidence}&rdquo;
+                          </p>
+                        )}
+
+                      </div>
+                    )
+                  })}
+                </div>
+
+              </div>
+            )
+          }
+
+          // ── Legacy fallback: dimension_scores (1-4 scale) ────────────────
+          const composite = evaluation!.weighted_composite
+          const hireBand  = evaluation!.hire_band ?? ''
+          const bandCls   = bandColour(hireBand)
           return (
             <div className="bg-black/30 border border-white/10 rounded-2xl p-6 space-y-5">
 
@@ -444,7 +545,7 @@ export default function ResultsPage() {
 
               {/* Dimension rows */}
               <div className="space-y-4">
-                {evaluation.dimension_scores.map((ds) => {
+                {evaluation!.dimension_scores!.map((ds) => {
                   const fillCls = scoreColour(ds.score)
                   const pct     = Math.round((ds.score / 4) * 100)
                   const bCls    = bandColour(ds.band)

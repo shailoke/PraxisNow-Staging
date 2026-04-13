@@ -191,10 +191,10 @@ export async function generateSessionPDF(
             // Hiring Signal Badge
             if (evaluation.hiring_signal) {
                 const signalMap: any = {
-                    'STRONG_HIRE': { label: '⭐ STRONG HIRE', color: '#2e7d32' },
-                    'HIRE': { label: '✅ HIRE', color: '#2e7d32' },
-                    'BORDERLINE': { label: '⚠️ BORDERLINE', color: '#d32f2f' },
-                    'NO_HIRE': { label: '❌ NO HIRE', color: '#d32f2f' }
+                    'STRONG_HIRE': { label: 'STRONG HIRE', color: '#2e7d32' },
+                    'HIRE': { label: 'HIRE', color: '#2e7d32' },
+                    'BORDERLINE': { label: 'BORDERLINE', color: '#d32f2f' },
+                    'NO_HIRE': { label: 'NO HIRE', color: '#d32f2f' }
                 };
                 const signal = signalMap[evaluation.hiring_signal] || signalMap['BORDERLINE'];
 
@@ -243,23 +243,95 @@ export async function generateSessionPDF(
                 evidence: string
                 gap: string | null
             }
+            type Competency = {
+                name: string
+                score: number   // 1-5
+                evidence: string
+                gap: string | null
+            }
 
+            const competencies = evaluation.competencies as Competency[] | undefined
             const dimensionScores = evaluation.dimension_scores as DimensionScore[] | undefined
-            const weightedComposite = evaluation.weighted_composite as number | undefined
-            const hireBand = evaluation.hire_band as string | undefined
+            const contentWidth = width - (2 * SPACING.pageMargin)
 
-            if (dimensionScores && dimensionScores.length > 0) {
+            const scorecardBandColor: Record<string, string> = {
+                'Strong Hire':    '#16a34a',
+                'Lean Hire':      '#ca8a04',
+                'Lean No Hire':   '#ea580c',
+                'Strong No Hire': '#dc2626',
+            }
+
+            // ── New pipeline: competencies (1-5 scale) ─────────────────────────
+            if (competencies && competencies.length > 0) {
                 y = checkPageBreak(y, 80)
                 y = addSectionTitle('Performance Scorecard', y)
 
-                const scorecardBandColor: Record<string, string> = {
-                    'Strong Hire':    '#16a34a',
-                    'Lean Hire':      '#ca8a04',
-                    'Lean No Hire':   '#ea580c',
-                    'Strong No Hire': '#dc2626',
+                const overallScore = evaluation.overall_score as number | undefined
+                const recommendation = evaluation.recommendation as string | undefined
+
+                if (overallScore !== undefined) {
+                    const recHex = recommendation ? (scorecardBandColor[recommendation] || COLORS.textSecondary) : COLORS.textSecondary
+                    const compositeText = recommendation
+                        ? `Overall: ${overallScore.toFixed(1)} / 5.0 — ${recommendation}`
+                        : `Overall: ${overallScore.toFixed(1)} / 5.0`
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(recHex)
+                        .text(compositeText, SPACING.pageMargin, y)
+                    y += 22
                 }
 
-                // Overall composite line
+                const scoreBarColor5 = (score: number): string => {
+                    if (score >= 4.5) return '#16a34a'
+                    if (score >= 3.5) return '#ca8a04'
+                    if (score >= 2.5) return '#ea580c'
+                    return '#dc2626'
+                }
+
+                competencies.forEach((c: Competency, idx: number) => {
+                    y = checkPageBreak(y, 120)
+
+                    // Competency name + score on one line
+                    const dimLabel = `${c.name}  ${c.score.toFixed(1)} / 5`
+                    doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                        .text(dimLabel, SPACING.pageMargin, y, { width: contentWidth })
+                    y += 20
+
+                    // Score bar — background then fill (score / 5)
+                    doc.rect(SPACING.pageMargin, y, contentWidth, 6).fill('#E5E5E5')
+                    const filledWidth = Math.round(contentWidth * (c.score / 5))
+                    if (filledWidth > 0) {
+                        doc.rect(SPACING.pageMargin, y, filledWidth, 6).fill(scoreBarColor5(c.score))
+                    }
+                    y += 10
+
+                    // Evidence
+                    if (c.evidence) {
+                        y = checkPageBreak(y, 40)
+                        const evidenceText = `Evidence: ${c.evidence}`
+                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                            .text(evidenceText, SPACING.pageMargin, y, { width: contentWidth })
+                        y += doc.heightOfString(evidenceText, { width: contentWidth }) + 4
+                    }
+
+                    // Gap note
+                    if (c.gap) {
+                        y = checkPageBreak(y, 40)
+                        const gapText = `Gap: ${c.gap}`
+                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.regular).fillColor(COLORS.textMuted)
+                            .text(gapText, SPACING.pageMargin, y, { width: contentWidth })
+                        y += doc.heightOfString(gapText, { width: contentWidth }) + 4
+                    }
+
+                    y += idx < competencies.length - 1 ? 10 : 20
+                })
+
+            // ── Legacy fallback: dimension_scores (1-4 scale) ──────────────────
+            } else if (dimensionScores && dimensionScores.length > 0) {
+                y = checkPageBreak(y, 80)
+                y = addSectionTitle('Performance Scorecard', y)
+
+                const weightedComposite = evaluation.weighted_composite as number | undefined
+                const hireBand = evaluation.hire_band as string | undefined
+
                 if (weightedComposite !== undefined) {
                     const bandHex = hireBand ? (scorecardBandColor[hireBand] || COLORS.textSecondary) : COLORS.textSecondary
                     const compositeText = hireBand
@@ -269,8 +341,6 @@ export async function generateSessionPDF(
                         .text(compositeText, SPACING.pageMargin, y)
                     y += 22
                 }
-
-                const contentWidth = width - (2 * SPACING.pageMargin)
 
                 const scoreBarColor = (score: number): string => {
                     if (score >= 4) return '#16a34a'
@@ -282,14 +352,12 @@ export async function generateSessionPDF(
                 dimensionScores.forEach((ds: DimensionScore, idx: number) => {
                     y = checkPageBreak(y, 120)
 
-                    // Dimension name + score + band on one line
                     const dimBandHex = scorecardBandColor[ds.band] || COLORS.textSecondary
                     const dimLabel = `${ds.dimension}  ${ds.score} / 4  (${ds.band})`
                     doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(dimBandHex)
                         .text(dimLabel, SPACING.pageMargin, y, { width: contentWidth })
                     y += 20
 
-                    // Score bar — background then fill
                     doc.rect(SPACING.pageMargin, y, contentWidth, 6).fill('#E5E5E5')
                     const filledWidth = Math.round(contentWidth * (ds.score / 4))
                     if (filledWidth > 0) {
@@ -297,7 +365,6 @@ export async function generateSessionPDF(
                     }
                     y += 10
 
-                    // Evidence
                     if (ds.evidence) {
                         y = checkPageBreak(y, 40)
                         const evidenceText = `Evidence: ${ds.evidence}`
@@ -306,7 +373,6 @@ export async function generateSessionPDF(
                         y += doc.heightOfString(evidenceText, { width: contentWidth }) + 4
                     }
 
-                    // Gap note
                     if (ds.gap) {
                         y = checkPageBreak(y, 40)
                         const gapText = `Gap: ${ds.gap}`
@@ -315,7 +381,6 @@ export async function generateSessionPDF(
                         y += doc.heightOfString(gapText, { width: contentWidth }) + 4
                     }
 
-                    // Row gap (between dimensions)
                     y += idx < dimensionScores.length - 1 ? 10 : 20
                 })
             }
@@ -335,7 +400,7 @@ export async function generateSessionPDF(
             // Left column
             leftCol.forEach((dim: string) => {
                 doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(`• ${dim}`, SPACING.pageMargin, y, { width: colWidth })
+                    .text(`- ${dim}`, SPACING.pageMargin, y, { width: colWidth })
                 y += 18
             })
 
@@ -343,7 +408,7 @@ export async function generateSessionPDF(
             y = startY
             rightCol.forEach((dim: string) => {
                 doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(`• ${dim}`, SPACING.pageMargin + colWidth, y, { width: colWidth })
+                    .text(`- ${dim}`, SPACING.pageMargin + colWidth, y, { width: colWidth })
                 y += 18
             })
 
@@ -356,19 +421,23 @@ export async function generateSessionPDF(
             y = addSectionTitle('Core Strengths', y);
 
             evaluation.strengths.forEach((s: any) => {
-                y = checkPageBreak(y, 100);
+                y = checkPageBreak(y, 80);
 
+                // Heading: skill name only. ASCII "PASS" prefix instead of unicode checkmark.
                 doc.fontSize(12).font(FONTS.bold).fillColor(COLORS.success)
-                    .text(`✓ ${s.skill}`, SPACING.pageMargin, y);
+                    .text(`PASS  ${s.skill}`, SPACING.pageMargin, y);
                 y += 20;
 
-                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(s.observation, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-                y += doc.heightOfString(s.observation, { width: width - (2 * SPACING.pageMargin) }) + 5;
-
-                doc.fontSize(10).font(FONTS.italic).fillColor(COLORS.textSecondary)
-                    .text(`Why checks out: ${s.why_it_matters}`, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-                y += doc.heightOfString(`Why checks out: ${s.why_it_matters}`, { width: width - (2 * SPACING.pageMargin) }) + 20;
+                // Supporting text: use evidence (new sessions) falling back to observation (old sessions).
+                const supportText: string = s.evidence ?? s.observation ?? '';
+                if (supportText) {
+                    const supportWidth = width - (2 * SPACING.pageMargin);
+                    doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                        .text(supportText, SPACING.pageMargin, y, { width: supportWidth });
+                    y += doc.heightOfString(supportText, { width: supportWidth }) + 20;
+                } else {
+                    y += 20;
+                }
             });
             y += 10;
         }
@@ -433,7 +502,7 @@ export async function generateSessionPDF(
                 }
 
                 doc.fontSize(12).font(FONTS.bold).fillColor(gapColor)
-                    .text(`⚠ ${gapBadge}${imp.limit}`, SPACING.pageMargin, y);
+                    .text(`${gapBadge}${imp.limit}`, SPACING.pageMargin, y);
                 y += 20;
 
                 // Impact Scope (if present) - psychological clarity

@@ -327,11 +327,13 @@ export async function POST(req: NextRequest) {
 
         // ── Stage 2: Evaluate ─────────────────────────────────────────────────────────
         console.log('[EVAL_STAGE2] Starting evaluation...');
+        const evaluationGuidance: string = baseScenario?.evaluation_guidance ?? ''
         const stage2 = await runStage2(
             stage1,
             role,
             round,
-            roundTitle
+            roundTitle,
+            evaluationGuidance
         );
         console.log(`[EVAL_STAGE2] Signal: ${stage2.hiring_signal}, Confidence: ${stage2.hiring_confidence}`);
 
@@ -375,10 +377,7 @@ export async function POST(req: NextRequest) {
             confidence_calibration: (stage2.hiring_confidence ?? 0) >= 0.85 ? 'above_bar'
                 : (stage2.hiring_confidence ?? 0) >= 0.65 ? 'at_bar' : 'below_bar',
 
-            tmay_analysis: stage2.tmay_diagnostic ? {
-                critique: stage2.tmay_diagnostic.improvement,
-                rewrite: null,  // Stage 3 handles rewrites
-            } : null,
+            tmay_analysis: null,
 
             high_level_assessment: {
                 seniority_observation: `${stage2.hireable_level ?? ''}. ${primaryBlocker}`.trim(),
@@ -401,8 +400,26 @@ export async function POST(req: NextRequest) {
             personal_answer_rules_detailed: personalRules,
 
             // For signalSynthesis.ts
+            turn_diagnostics: stage2.turn_diagnostics,
             answer_level_diagnostics: stage2.answer_level_diagnostics,
             tell_me_about_yourself_diagnostic: stage2.tmay_diagnostic,
+
+            // Competency scores + backward-compat dimension_scores
+            competencies: stage2.competencies,
+            dimension_scores: stage2.competencies.map(c => ({
+                dimension: c.name,
+                score: Math.min(4, Math.round(c.score * 0.8)),
+                band: c.score >= 4.5 ? 'Strong Hire'
+                    : c.score >= 3.5 ? 'Lean Hire'
+                    : c.score >= 2.5 ? 'Lean No Hire'
+                    : 'Strong No Hire',
+                weight: 1 / stage2.competencies.length,
+                weighted_score: 1 / stage2.competencies.length,
+                evidence: c.evidence,
+                gap: c.gap
+            })),
+            weighted_composite: stage2.overall_score,
+            hire_band: stage2.recommendation,
 
             // Verbatim transcript for PDF Turn-by-Turn section
             transcript_extracts: stage1.turns.map(t => ({
@@ -432,7 +449,7 @@ export async function POST(req: NextRequest) {
                         illustrative_variant: null,
                     })),
                     communication_diagnostics: {
-                        structure: stage2.tmay_diagnostic?.structure_score?.toString() || null,
+                        structure: null,
                         evidence_grounding: (stage2.turn_diagnostics ?? []).some(d => d.signal_strength === 'weak')
                             ? 'Partial' : 'Strong',
                         verbal_noise: { detected: null, patterns: null },
@@ -526,7 +543,7 @@ export async function POST(req: NextRequest) {
 
         // one_fix: gaps[0].fix_in_one_sentence → first sentence of primary_blocker → fallback
         let one_fix = 'Focus on adding measurable outcomes to your answers.';
-        const rawFix: string | null = (stage2.gaps ?? [])[0]?.fix_in_one_sentence ?? null;
+        const rawFix: string | null = (stage2.gaps_structured ?? [])[0]?.fix_in_one_sentence ?? null;
         const rawBlocker: string | null = stage2.distance_to_strong_hire?.primary_blocker ?? null;
         if (rawFix) {
             one_fix = rawFix;
@@ -653,6 +670,7 @@ export async function POST(req: NextRequest) {
             status: 'completed',
             evaluation_depth: evaluationDepth,
             momentum_card: momentumCard,
+            overall_score: stage2.overall_score ?? null,
         };
 
         // DEBUG: Log what we're about to persist to DB
@@ -676,6 +694,41 @@ export async function POST(req: NextRequest) {
                 session_id
             });
             throw new Error(updateError.message);
+        }
+
+        // Star interviewer: overall_score >= 3.5 across all 4 rounds for this role
+        try {
+            const { data: allSessions } = await adminClient
+                .from('sessions')
+                .select('round, overall_score')
+                .eq('user_id', session.user_id)
+                .eq('status', 'completed')
+                .not('overall_score', 'is', null)
+                .order('created_at', { ascending: false })
+
+            if (allSessions) {
+                // For each round 1-4, find the most recent session with overall_score
+                const latestByRound: Record<number, number> = {}
+                for (const s of allSessions) {
+                    const r = s.round as number
+                    const score = s.overall_score as number
+                    if (r >= 1 && r <= 4 && !(r in latestByRound)) {
+                        latestByRound[r] = score
+                    }
+                }
+                const roundsCompleted = Object.keys(latestByRound).length
+                const allAboveThreshold = roundsCompleted === 4 &&
+                    Object.values(latestByRound).every(score => score >= 3.5)
+
+                if (allAboveThreshold) {
+                    await adminClient
+                        .from('users')
+                        .update({ star_interviewer: true })
+                        .eq('id', session.user_id)
+                }
+            }
+        } catch (starErr) {
+            console.error('[EVALUATE] Star interviewer check failed (non-critical):', starErr)
         }
 
         return NextResponse.json({ ...evaluation, pdf_url: signedUrl, momentum_card: momentumCard });
