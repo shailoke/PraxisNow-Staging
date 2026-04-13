@@ -1,6 +1,7 @@
 'use client'
 
 import { useRealtimeVoice } from '@/hooks/useBatchVoice'
+import { getEvaluationSteps } from '@/lib/evaluation-progress'
 import { useWakeLock } from '@/hooks/useWakeLock'
 import { createClient } from '@/lib/supabase'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
@@ -19,6 +20,7 @@ type SimulatorScenario = RuntimeScenario & {
     isCustom: boolean
     baseId: number // Needed for DB linkage
     customId?: string // Needed for DB linkage
+    round?: number // DB round number — used for evaluation progress steps
     // UI helpers
     title: string
     description: string
@@ -77,6 +79,7 @@ export default function SimulatorPage() {
                         id: negData.id,
                         baseId: negData.id,
                         isCustom: false,
+                        round: negData.round ?? 1,
                         title: "Salary Negotiation Simulation",
                         description: "A guided role-play with an expert negotiation coach to help you maximize your offer.",
                         dimensions: runtime.evaluation_dimensions.map((d: any) => d.name)
@@ -102,6 +105,7 @@ export default function SimulatorPage() {
                         baseId: base.id,
                         customId: custom.id,
                         isCustom: true,
+                        round: base.round ?? 1,
                         title: runtime.scenario_title,
                         description: runtime.scenario_description,
                         dimensions: runtime.evaluation_dimensions.map((d: any) => d.name)
@@ -124,6 +128,7 @@ export default function SimulatorPage() {
                         id: baseData.id,
                         baseId: baseData.id,
                         isCustom: false,
+                        round: baseData.round ?? 1,
                         title: runtime.scenario_title,
                         description: runtime.scenario_description,
                         dimensions: runtime.evaluation_dimensions.map(d => d.name)
@@ -182,6 +187,10 @@ export default function SimulatorPage() {
     const [waitingForNextQuestion, setWaitingForNextQuestion] = useState(false)
     const isFirstQuestion = useRef(true)
 
+    // Evaluation progress step state
+    const [evalStepIndex, setEvalStepIndex] = useState(0)
+    const evalStepIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
     // Time Controller: Coverage Tracking
     const [questionCount, setQuestionCount] = useState(0)
     const lastCheckpointRef = useRef<number>(0)
@@ -237,6 +246,38 @@ export default function SimulatorPage() {
         const secs = seconds % 60
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
     }
+
+    // Normalise DB role string to evaluation-progress key (pm / sde / ds)
+    const toEvalRole = (role: string): string => {
+        const r = role.toLowerCase()
+        if (r.includes('engineer') || r.includes('developer') || r.includes('sde')) return 'sde'
+        if (r.includes('data')) return 'ds'
+        if (r.includes('product') || r.includes(' pm') || r === 'pm') return 'pm'
+        return r
+    }
+
+    // Advance evaluation progress steps while /api/evaluate is in flight
+    useEffect(() => {
+        if (isEvaluating && scenario) {
+            const steps = getEvaluationSteps(toEvalRole(scenario.role), scenario.round ?? 1)
+            setEvalStepIndex(0)
+            const intervalMs = Math.floor(45000 / steps.length)
+            evalStepIntervalRef.current = setInterval(() => {
+                setEvalStepIndex(prev => Math.min(prev + 1, steps.length - 1))
+            }, intervalMs)
+        } else {
+            if (evalStepIntervalRef.current) {
+                clearInterval(evalStepIntervalRef.current)
+                evalStepIntervalRef.current = null
+            }
+        }
+        return () => {
+            if (evalStepIntervalRef.current) {
+                clearInterval(evalStepIntervalRef.current)
+                evalStepIntervalRef.current = null
+            }
+        }
+    }, [isEvaluating, scenario])
 
     // Track question coverage from messages
     useEffect(() => {
@@ -509,6 +550,9 @@ You will receive time updates every 3 minutes. Follow them strictly.`
     if (!scenario) return <div className="min-h-screen bg-[#0a0a0f] text-white flex items-center justify-center">Scenario not found</div>
 
     if (showResults) {
+        const evalSteps = getEvaluationSteps(toEvalRole(scenario.role), scenario.round ?? 1)
+        const currentEvalStep = evalSteps[Math.min(evalStepIndex, evalSteps.length - 1)]
+
         return (
             <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center justify-center p-6">
                 <div className="max-w-4xl w-full glass-panel p-8 rounded-2xl border border-white/10 animate-in fade-in zoom-in duration-500 max-h-[90vh] overflow-y-auto">
@@ -518,7 +562,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                     {isEvaluating ? (
                         <div className="flex flex-col items-center justify-center py-12">
                             <div className="h-10 w-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-purple-300 animate-pulse">Analyzing transcript with AI...</p>
+                            <p className="text-purple-300 animate-pulse">Evaluating {currentEvalStep}...</p>
                         </div>
                     ) : evalResult ? (
                         <>

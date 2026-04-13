@@ -1,0 +1,2 @@
+ALTER TABLE sessions
+  ADD COLUMN IF NOT EXISTS overall_score NUMERIC(3,1);

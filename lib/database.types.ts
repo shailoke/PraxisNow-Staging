@@ -191,6 +191,7 @@ export type Database = {
           difficulty: string | null
           duration_minutes: number | null
           evaluation_dimensions: string[] | null
+          evaluation_guidance: string | null
           id: number
           interviewer_persona: Json | null
           is_active: boolean | null
@@ -213,6 +214,7 @@ export type Database = {
           difficulty?: string | null
           duration_minutes?: number | null
           evaluation_dimensions?: string[] | null
+          evaluation_guidance?: string | null
           id?: number
           interviewer_persona?: Json | null
           is_active?: boolean | null
@@ -235,6 +237,7 @@ export type Database = {
           difficulty?: string | null
           duration_minutes?: number | null
           evaluation_dimensions?: string[] | null
+          evaluation_guidance?: string | null
           id?: number
           interviewer_persona?: Json | null
           is_active?: boolean | null
@@ -268,6 +271,7 @@ export type Database = {
           evaluation_depth: string | null
           id: string
           momentum_card: Json | null
+          overall_score: number | null
           pdf_url: string | null
           replay_of_session_id: string | null
           round: number | null
@@ -286,6 +290,7 @@ export type Database = {
           evaluation_depth?: string | null
           id?: string
           momentum_card?: Json | null
+          overall_score?: number | null
           pdf_url?: string | null
           replay_of_session_id?: string | null
           round?: number | null
@@ -304,6 +309,7 @@ export type Database = {
           evaluation_depth?: string | null
           id?: string
           momentum_card?: Json | null
+          overall_score?: number | null
           pdf_url?: string | null
           replay_of_session_id?: string | null
           round?: number | null

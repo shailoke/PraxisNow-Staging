@@ -5,21 +5,11 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
-export interface DimensionScore {
-  dimension: string
-  score: 1 | 2 | 3 | 4
-  band: 'Strong No Hire' | 'Lean No Hire' | 'Lean Hire' | 'Strong Hire'
-  weight: number
-  weighted_score: number
-  evidence: string       // specific quote or behaviour from transcript, never generic
-  gap: string | null     // what was missing if score < 4, null if score === 4
-}
-
-export interface TellMeAboutYourselfDiagnostic {
-  structure_score: number
-  hook_present: boolean
-  relevance_to_role: string
-  improvement: string
+export interface CompetencyScore {
+  name: string
+  score: number        // 1-5
+  evidence: string     // specific moment or quote from transcript
+  gap: string | null   // what was missing, null if score >= 4
 }
 
 export interface TurnDiagnostic {
@@ -43,157 +33,26 @@ export interface Gap {
 }
 
 export interface Stage2Output {
-  dimension_scores: DimensionScore[]
-  weighted_composite: number
-  hire_band: 'Strong No Hire' | 'Lean No Hire' | 'Lean Hire' | 'Strong Hire'
-  hiring_signal: string          // keep — backward compat
-  hiring_confidence: number      // keep — backward compat
-  hireable_level: string         // keep — backward compat
+  competencies: CompetencyScore[]
+  overall_score: number
+  recommendation: 'Strong Hire' | 'Lean Hire' | 'Lean No Hire' | 'Strong No Hire'
+  narrative: string
+  strengths: string[]
+  gaps: string[]
+  // backward compat fields — derived deterministically after parsing
+  hiring_signal: string
+  hiring_confidence: number
+  hireable_level: string
   distance_to_strong_hire: {
     gaps_blocking: number
     primary_blocker: string
   }
-  tmay_diagnostic: TellMeAboutYourselfDiagnostic | null
+  tmay_diagnostic: null
   answer_level_diagnostics: TurnDiagnostic[]
   turn_diagnostics: TurnDiagnostic[]
   dominant_failure_pattern: string | null
   top_strengths: Strength[]
-  gaps: Gap[]
-}
-
-// ── Dimension definitions ─────────────────────────────────────────────────────
-
-interface DimensionDef {
-  dimension: string
-  weight: number
-}
-
-const PM_DIMENSIONS: DimensionDef[] = [
-  { dimension: 'Problem Framing & Structure',       weight: 0.25 },
-  { dimension: 'Product Intuition & User Empathy',  weight: 0.25 },
-  { dimension: 'Analytical & Metrics Thinking',     weight: 0.20 },
-  { dimension: 'Execution & Prioritization',        weight: 0.15 },
-  { dimension: 'Communication & Leadership',        weight: 0.15 },
-]
-
-const SDE_DIMENSIONS: DimensionDef[] = [
-  { dimension: 'Problem Solving & Coding',          weight: 0.35 },
-  { dimension: 'System Design',                     weight: 0.30 },
-  { dimension: 'Technical Communication',           weight: 0.15 },
-  { dimension: 'Code Quality & Engineering Craft',  weight: 0.10 },
-  { dimension: 'Behavioral & Ownership',            weight: 0.10 },
-]
-
-const DS_DIMENSIONS: DimensionDef[] = [
-  { dimension: 'Statistical & ML Foundations',      weight: 0.25 },
-  { dimension: 'Modeling Judgment',                 weight: 0.25 },
-  { dimension: 'ML System Design',                  weight: 0.25 },
-  { dimension: 'Coding & Data Manipulation',        weight: 0.15 },
-  { dimension: 'Business & Product Sense',          weight: 0.10 },
-]
-
-const AI_ENGINEER_DIMENSIONS: DimensionDef[] = [
-  { dimension: 'LLM & Model Architecture Depth',    weight: 0.30 },
-  { dimension: 'ML Systems & Production Thinking',  weight: 0.25 },
-  { dimension: 'Implementation & Coding',           weight: 0.20 },
-  { dimension: 'Research Awareness & Judgment',     weight: 0.15 },
-  { dimension: 'AI Safety & Ethics Awareness',      weight: 0.10 },
-]
-
-// ── Round-to-dimension mapping ────────────────────────────────────────────────
-
-function getDimensionsForRound(role: string, round: number): DimensionDef[] {
-  const r = role.toLowerCase().trim()
-
-  // Round 4 for all roles uses AI Engineer dimensions
-  if (round === 4) {
-    return AI_ENGINEER_DIMENSIONS
-  }
-
-  if (r === 'product manager' || r === 'pm') {
-    if (round === 1) return PM_DIMENSIONS.filter(d =>
-      d.dimension === 'Problem Framing & Structure' ||
-      d.dimension === 'Product Intuition & User Empathy'
-    )
-    if (round === 2) return PM_DIMENSIONS.filter(d =>
-      d.dimension === 'Analytical & Metrics Thinking'
-    )
-    if (round === 3) return PM_DIMENSIONS.filter(d =>
-      d.dimension === 'Execution & Prioritization' ||
-      d.dimension === 'Communication & Leadership'
-    )
-  }
-
-  if (r === 'software development engineer' || r === 'sde' || r === 'software engineer') {
-    if (round === 1) return SDE_DIMENSIONS.filter(d =>
-      d.dimension === 'System Design' ||
-      d.dimension === 'Technical Communication'
-    )
-    if (round === 2) return SDE_DIMENSIONS.filter(d =>
-      d.dimension === 'Problem Solving & Coding' ||
-      d.dimension === 'Code Quality & Engineering Craft' ||
-      d.dimension === 'Technical Communication'
-    )
-    if (round === 3) return SDE_DIMENSIONS.filter(d =>
-      d.dimension === 'Behavioral & Ownership' ||
-      d.dimension === 'Technical Communication'
-    )
-  }
-
-  if (r === 'data scientist' || r === 'ds') {
-    if (round === 1) return DS_DIMENSIONS.filter(d =>
-      d.dimension === 'Statistical & ML Foundations' ||
-      d.dimension === 'Coding & Data Manipulation'
-    )
-    if (round === 2) return DS_DIMENSIONS.filter(d =>
-      d.dimension === 'ML System Design' ||
-      d.dimension === 'Modeling Judgment' ||
-      d.dimension === 'Business & Product Sense'
-    )
-    if (round === 3) return DS_DIMENSIONS.filter(d =>
-      d.dimension === 'Modeling Judgment'
-    )
-  }
-
-  // Fallback: return all dimensions for the role
-  if (r === 'product manager' || r === 'pm') return PM_DIMENSIONS
-  if (r === 'software development engineer' || r === 'sde' || r === 'software engineer') return SDE_DIMENSIONS
-  if (r === 'data scientist' || r === 'ds') return DS_DIMENSIONS
-  return PM_DIMENSIONS
-}
-
-// Renormalize weights of a subset so they sum to 1.0
-function renormalize(dims: DimensionDef[]): DimensionDef[] {
-  const total = dims.reduce((sum, d) => sum + d.weight, 0)
-  if (total === 0) return dims
-  return dims.map(d => ({ ...d, weight: Math.round((d.weight / total) * 10000) / 10000 }))
-}
-
-// ── Round type classification ─────────────────────────────────────────────────
-
-function isHypotheticalRound(role: string, round: number): boolean {
-  const r = role.toLowerCase().trim()
-  if (round === 4) return true // All R4 are AI/hypothetical
-  if (r === 'product manager' || r === 'pm') return round === 1 || round === 2
-  if (r === 'software development engineer' || r === 'sde' || r === 'software engineer') return round === 1 || round === 2
-  if (r === 'data scientist' || r === 'ds') return round === 1 || round === 2
-  return false
-}
-
-// ── Band helpers ──────────────────────────────────────────────────────────────
-
-function scoreToBand(score: number): 'Strong No Hire' | 'Lean No Hire' | 'Lean Hire' | 'Strong Hire' {
-  if (score >= 4) return 'Strong Hire'
-  if (score >= 3) return 'Lean Hire'
-  if (score >= 2) return 'Lean No Hire'
-  return 'Strong No Hire'
-}
-
-function compositeToBand(composite: number): 'Strong No Hire' | 'Lean No Hire' | 'Lean Hire' | 'Strong Hire' {
-  if (composite >= 3.5) return 'Strong Hire'
-  if (composite >= 3.0) return 'Lean Hire'
-  if (composite >= 2.0) return 'Lean No Hire'
-  return 'Strong No Hire'
+  gaps_structured: Gap[]
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
@@ -202,156 +61,171 @@ export async function runStage2(
   stage1Output: Stage1Output,
   role: string,
   round: number,
-  roundTitle: string
+  roundTitle: string,
+  evaluationGuidance: string
 ): Promise<Stage2Output> {
 
-  const rawDims = getDimensionsForRound(role, round)
-  const activeDims = renormalize(rawDims)
-  const roundType = isHypotheticalRound(role, round) ? 'HYPOTHETICAL' : 'BEHAVIORAL'
-
-  const dimensionListJson = JSON.stringify(
-    activeDims.map(d => ({ dimension: d.dimension, weight: d.weight })),
-    null, 2
+  // Round type classification
+  const behavioralRounds = [
+    { role: 'pm',  round: 3 },
+    { role: 'sde', round: 3 },
+    { role: 'ds',  round: 3 },
+  ]
+  const isBehavioral = behavioralRounds.some(
+    r => role.toLowerCase().includes(r.role) && round === r.round
   )
+  const roundType = isBehavioral ? 'BEHAVIORAL' : 'HYPOTHETICAL'
 
-  const evaluationCriteria = roundType === 'HYPOTHETICAL'
-    ? `Evaluate problem framing (did they clarify before solving), solution breadth (multiple approaches considered), tradeoff reasoning (named unprompted), user or system thinking (edge cases). Do NOT penalize for lack of personal examples. DO penalize for jumping to solution without framing.`
-    : `Evaluate ownership (stories use 'I' not 'we'), specificity (outcomes measurable), structure (clear situation/action/result), intellectual honesty (acknowledges failure). DO penalize for vague stories without personal impact. DO penalize for sanitized answers that avoid real failure.`
+  // System prompt
+  const systemPrompt = `You are a MAANG interviewer writing a debrief after a ${role} interview, ${roundTitle} round.
 
-  const systemPrompt = `You are a MAANG-calibrated interview evaluator for a ${role} candidate, Round ${round}: ${roundTitle}.
+Round type: ${roundType}
 
-ROUND TYPE: ${roundType}
+About this round:
+${evaluationGuidance}
 
-EVALUATION CRITERIA:
-${evaluationCriteria}
+Scoring philosophy: Score only the competencies for which you observed clear evidence in the transcript — either positive or negative. If a competency was not tested or not reached, omit it entirely. Do not score a competency 1 simply because it was absent. A candidate who demonstrated strong thinking on the competencies that came up should score well overall even if they did not cover every possible dimension.
 
-DIMENSIONS TO SCORE:
-You must score EXACTLY these dimensions and no others:
-${dimensionListJson}
+Score each competency 1-5:
+5 — Exceptional, unprompted depth, no gaps
+4 — Strong, minor gaps only
+3 — Solid, clear gaps present
+2 — Present but shallow or incomplete
+1 — Absent or fundamentally wrong
 
-EVIDENCE REQUIREMENT:
-For each dimension, evidence MUST be a specific quote or described behaviour from the transcript.
-"Candidate showed good thinking" is rejected. Quote their words or describe the exact moment.
+Evidence must be a specific moment, behaviour, or quote from the transcript. "Candidate showed good thinking" is not acceptable evidence — quote what they actually said or describe the exact moment.
 
-SCORING RUBRIC:
-Score 1 (Strong No Hire): Absent or fundamentally wrong
-Score 2 (Lean No Hire): Present but shallow, vague, or incomplete
-Score 3 (Lean Hire): Solid with minor gaps
-Score 4 (Strong Hire): Exceptional, unprompted depth, no gaps
+Return ONLY valid JSON with no preamble, no explanation, and no markdown code fences. The response must be parseable by JSON.parse() with no preprocessing.
 
-Return ONLY valid JSON. No preamble. No markdown fences. Exactly this schema:
 {
-  "dimension_scores": [
+  "competencies": [
     {
-      "dimension": "<exact name from the list above>",
-      "score": <1|2|3|4>,
-      "evidence": "<specific quote or behaviour>",
-      "gap": "<what was missing, or null if score is 4>"
+      "name": "<competency name>",
+      "score": <1-5>,
+      "evidence": "<specific moment or quote from transcript>",
+      "gap": "<what was missing, or null if score >= 4>"
     }
   ],
-  "hiring_signal": "<one sentence verdict>",
-  "hiring_confidence": <0.0 to 1.0>,
-  "hireable_level": "<Junior|Mid|Senior|Staff|Principal>",
-  "distance_to_strong_hire": {
-    "gaps_blocking": <integer count of dimensions scored 1 or 2>,
-    "primary_blocker": "<the single most important gap>"
-  },
-  "tmay_diagnostic": <object or null>,
+  "overall_score": <1.0-5.0, one decimal place>,
+  "recommendation": "<Strong Hire|Lean Hire|Lean No Hire|Strong No Hire>",
+  "narrative": "<3-4 sentences: what cleared the bar, what the primary gap is, what the recommendation means in practice>",
+  "strengths": ["<specific strength observed>"],
+  "gaps": ["<specific gap observed>"],
   "turn_diagnostics": [
     {
       "turn_index": <number>,
-      "question_context": "<question label>",
+      "question_context": "<brief question summary>",
       "signal_strength": "<strong|moderate|weak>",
-      "what_worked": "<string>",
-      "what_missed": "<string>",
-      "fix_in_one_sentence": "<string>"
+      "what_worked": "<what the candidate did well on this turn>",
+      "what_missed": "<what was missing or weak on this turn>",
+      "fix_in_one_sentence": "<one actionable fix for this specific answer>"
     }
   ],
-  "dominant_failure_pattern": "<string or null>",
-  "top_strengths": [{"skill": "<string>", "evidence": "<string>"}],
-  "gaps": [{"area": "<string>", "severity": "<blocking|significant|minor>", "fix_in_one_sentence": "<string>"}]
+  "dominant_failure_pattern": "<the single most repeated weakness across the session, or null if none>"
 }`
 
-  const transcriptText = stage1Output.turns
-    .map(t => `[Turn ${t.turn_index}] Q: ${t.question}\nA: ${t.candidate_answer_verbatim}`)
+  // Transcript assembly
+  const transcript = stage1Output.turns
+    .map(t => `Interviewer: ${t.question}\n\nCandidate: ${t.candidate_answer_verbatim}`)
     .join('\n\n')
 
-  const userMessage = `Here is the interview transcript to evaluate:\n\n${transcriptText}`
+  const userMessage = `Here is the interview transcript:\n\n${transcript}`
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.2,
-    max_tokens: 4000,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ],
-    response_format: { type: 'json_object' },
-  })
-
-  const rawContent = response.choices[0].message.content || ''
-  let raw: any
-
+  // OpenAI call
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>
   try {
-    raw = JSON.parse(rawContent)
-  } catch (parseErr: any) {
-    console.error('[STAGE2] JSON parse failed:', {
-      rawLength: rawContent?.length,
-      preview: rawContent?.slice(-200),
-      error: parseErr.message,
+    response = await openai.chat.completions.create({
+      model: 'o4-mini',
+      max_completion_tokens: 8000,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
     })
-    throw new Error(
-      `STAGE2_PARSE_FAILED: Response truncated at ${rawContent?.length} chars. ` +
-      `Increase max_tokens if this persists.`
-    )
+  } catch (err: any) {
+    throw new Error(`STAGE2_API_ERROR: ${err.message}`)
   }
 
-  // ── Post-GPT TypeScript computation ──────────────────────────────────────────
+  const raw = response.choices[0]?.message?.content ?? ''
 
-  const weightMap = new Map(activeDims.map(d => [d.dimension, d.weight]))
+  let parsed: any
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    console.error('[STAGE2] Parse failed. rawLength:', raw.length)
+    console.error('[STAGE2] Last 200 chars:', raw.slice(-200))
+    throw new Error(`STAGE2_PARSE_FAILED: ${raw.length} chars`)
+  }
 
-  const dimensionScores: DimensionScore[] = (raw.dimension_scores ?? []).map((ds: any) => {
-    const score = ds.score as 1 | 2 | 3 | 4
-    const weight = weightMap.get(ds.dimension) ?? 0
+  // ── Post-parse TypeScript computation ────────────────────────────────────────
+
+  // hiring_signal
+  const signalMap: Record<string, string> = {
+    'Strong Hire':    'Strong hire signal.',
+    'Lean Hire':      'Lean hire signal.',
+    'Lean No Hire':   'Lean no hire signal.',
+    'Strong No Hire': 'Strong no hire signal.',
+  }
+  const hiring_signal = signalMap[parsed.recommendation] ?? parsed.recommendation
+
+  // hiring_confidence
+  const hiring_confidence =
+    parsed.overall_score >= 4.5 ? 0.95
+    : parsed.overall_score >= 3.5 ? 0.80
+    : parsed.overall_score >= 2.5 ? 0.65
+    : 0.50
+
+  // hireable_level
+  const hireable_level =
+    parsed.recommendation === 'Strong Hire' ? 'Senior'
+    : parsed.recommendation === 'Lean Hire' ? 'Mid'
+    : 'Junior'
+
+  // distance_to_strong_hire
+  const gaps_blocking = (parsed.competencies as CompetencyScore[]).filter(c => c.score <= 2).length
+  const primary_blocker: string = parsed.gaps[0] ?? parsed.dominant_failure_pattern ?? 'No major blockers identified'
+
+  // top_strengths — map strengths array to Strength[] using competency evidence where available
+  const top_strengths: Strength[] = (parsed.strengths as string[]).map(s => {
+    const match = (parsed.competencies as CompetencyScore[]).find(c =>
+      s.toLowerCase().includes(c.name.toLowerCase())
+    )
     return {
-      dimension: ds.dimension,
-      score,
-      band: scoreToBand(score),
-      weight,
-      weighted_score: Math.round(score * weight * 10000) / 10000,
-      evidence: ds.evidence ?? '',
-      gap: score === 4 ? null : (ds.gap ?? null),
+      skill: s,
+      evidence: match?.evidence ?? s,
     }
   })
 
-  const weightedComposite = Math.round(
-    dimensionScores.reduce((sum, d) => sum + d.weighted_score, 0) * 100
-  ) / 100
+  // gaps_structured
+  const gaps_structured: Gap[] = (parsed.gaps as string[]).map(g => ({
+    area: g,
+    severity: 'significant' as const,
+    fix_in_one_sentence: g,
+  }))
 
-  const hireBand = compositeToBand(weightedComposite)
-
-  // Normalize turn_diagnostics / answer_level_diagnostics for backward compat
-  const turnDiagnostics: TurnDiagnostic[] = raw.turn_diagnostics ?? []
-
-  // Map hiring_signal from hire_band for backward compat if GPT doesn't return it
-  const hiringSignal: string = raw.hiring_signal ?? hireBand
+  // turn_diagnostics and answer_level_diagnostics are the same array
+  const turn_diagnostics: TurnDiagnostic[] = parsed.turn_diagnostics ?? []
+  const answer_level_diagnostics = turn_diagnostics
 
   return {
-    dimension_scores: dimensionScores,
-    weighted_composite: weightedComposite,
-    hire_band: hireBand,
-    hiring_signal: hiringSignal,
-    hiring_confidence: raw.hiring_confidence ?? 0.5,
-    hireable_level: raw.hireable_level ?? 'Mid',
-    distance_to_strong_hire: raw.distance_to_strong_hire ?? {
-      gaps_blocking: dimensionScores.filter(d => d.score <= 2).length,
-      primary_blocker: '',
+    competencies:    parsed.competencies    ?? [],
+    overall_score:   parsed.overall_score   ?? 0,
+    recommendation:  parsed.recommendation  ?? 'Lean No Hire',
+    narrative:       parsed.narrative       ?? '',
+    strengths:       parsed.strengths       ?? [],
+    gaps:            parsed.gaps            ?? [],
+    hiring_signal,
+    hiring_confidence,
+    hireable_level,
+    distance_to_strong_hire: {
+      gaps_blocking,
+      primary_blocker,
     },
-    tmay_diagnostic: raw.tmay_diagnostic ?? null,
-    answer_level_diagnostics: turnDiagnostics,
-    turn_diagnostics: turnDiagnostics,
-    dominant_failure_pattern: raw.dominant_failure_pattern ?? null,
-    top_strengths: raw.top_strengths ?? [],
-    gaps: raw.gaps ?? [],
+    tmay_diagnostic:         null,
+    answer_level_diagnostics,
+    turn_diagnostics,
+    dominant_failure_pattern: parsed.dominant_failure_pattern ?? null,
+    top_strengths,
+    gaps_structured,
   }
 }

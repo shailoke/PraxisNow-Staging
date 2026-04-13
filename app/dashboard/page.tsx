@@ -38,10 +38,10 @@ type ScoreHistoryRow = {
 }
 
 function compositeColour(score: number): string {
-    if (score >= 3.5) return 'text-green-500'
-    if (score >= 3.0) return 'text-yellow-500'
+    if (score >= 4.0) return 'text-green-600'
+    if (score >= 3.0) return 'text-yellow-600'
     if (score >= 2.0) return 'text-orange-500'
-    return 'text-red-500'
+    return 'text-red-600'
 }
 
 const SCENARIO_DESCRIPTIONS: Record<number, string> = {
@@ -232,10 +232,10 @@ export default function DashboardPage() {
             try {
                 const { data: scoreRows } = await supabase
                     .from('sessions')
-                    .select('id, round, dimension_scores, evaluation_data, created_at, scenarios:scenario_id(role, round_title)')
+                    .select('id, round, dimension_scores, evaluation_data, overall_score, created_at, scenarios:scenario_id(role, round_title)')
                     .eq('user_id', user.id)
                     .eq('status', 'completed')
-                    .not('dimension_scores', 'is', null)
+                    .or('dimension_scores.not.is.null,overall_score.not.is.null')
                     .order('created_at', { ascending: true })
 
                 const mapped: ScoreHistoryRow[] = (scoreRows || []).map((r: any) => ({
@@ -244,7 +244,8 @@ export default function DashboardPage() {
                     round: r.round || 0,
                     round_title: r.scenarios?.round_title || '',
                     dimension_scores: r.dimension_scores,
-                    weighted_composite: (r.evaluation_data as any)?.weighted_composite ?? null,
+                    // Prefer overall_score column; fall back to JSONB for older sessions
+                    weighted_composite: r.overall_score ?? (r.evaluation_data as any)?.weighted_composite ?? null,
                     created_at: r.created_at || '',
                 }))
                 setScoreHistory(mapped)
@@ -599,12 +600,12 @@ export default function DashboardPage() {
                                     }
                                     const sortedRounds = [...byRound.keys()].sort((a, b) => a - b)
 
-                                    // Star interviewer: all 4 rounds present, each latest >= 3.5
+                                    // Star interviewer: all 4 rounds present, each latest >= 4.0
                                     const allRoundsPresent = [1, 2, 3, 4].every(r => byRound.has(r))
                                     const allAboveBar = allRoundsPresent && [1, 2, 3, 4].every(r => {
                                         const rows = byRound.get(r)!
                                         const latest = rows[rows.length - 1].weighted_composite!
-                                        return latest >= 3.5
+                                        return latest >= 4.0
                                     })
 
                                     return (
