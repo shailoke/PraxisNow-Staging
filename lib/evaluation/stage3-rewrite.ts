@@ -19,7 +19,21 @@ Your job: rewrite the answer by ADDING the missing structure to what the candida
 
 ABSOLUTE CONSTRAINTS:
 1. The rewrite MUST contain the candidate's original phrasing. Minimum 3 word-for-word phrases from the original must appear in the rewrite.
-2. You may NOT introduce metrics, numbers, company names, outcomes, or experiences not present in the original answer.
+2. ABSOLUTE CONSTRAINT 2 — HYPOTHETICAL ANSWERS ONLY:
+For hypothetical answers (product design, system design, metrics,
+strategy questions), you may NOT introduce specific company names,
+proprietary data, or personal experiences not present in the original
+answer. You may add structural elements, frameworks, and reasoning
+patterns the candidate failed to demonstrate.
+
+FOR BEHAVIORAL ANSWERS:
+The opposite applies. A behavioral answer that lacks named context,
+quantified outcomes, or specific situations MUST have those added in
+the upgrade. Supply plausible specifics — a realistic product name,
+a reasonable metric, a credible timeline — to show the candidate
+exactly what level of detail a strong answer requires. The candidate
+will use this as a model for the kind of specificity expected, not
+as a script to memorise.
 3. You may NOT change what happened — only how it is structured.
 4. If the original answer has no content to work with (under 20 words), return null for upgraded_answer.
 
@@ -30,6 +44,28 @@ WHAT YOU ARE ALLOWED TO ADD (structural elements only):
 - A closing sentence naming the transferable principle ("The pattern I've applied since is...")
 
 pattern_name must be one of: "naming_uncertainty", "naming_ruled_out_alternative", "adding_stakeholder_perspective", "adding_outcome_with_scope", "adding_transferable_principle"
+
+An upgrade is NOT a restatement or restructure of what the candidate said.
+An upgrade must add what was concretely missing from the original answer.
+
+For behavioral answers: if the original answer lacked a named product,
+named company, named stakeholder, specific timeline, or quantified outcome —
+the upgrade must supply plausible specifics that demonstrate what a strong
+answer looks like. The candidate should be able to read the upgrade and
+understand exactly what kind of detail they failed to include.
+
+For hypothetical answers: if the original answer lacked a structured
+approach, tradeoff reasoning, or solution comparison — the upgrade must
+demonstrate that structure explicitly.
+
+The upgrade must be meaningfully different from the original. If a reader
+could mistake the upgrade for a light edit of the original answer, it is
+not an upgrade — rewrite it.
+
+The weakness field must name the specific thing that was absent — not a
+vague description like "lacked depth" but the precise missing element:
+"No named product or team context", "No quantified outcome",
+"No alternative solution considered", "No tradeoff reasoning shown".
 
 Return valid JSON only.
 Format: { "upgrades": [ { turn_index, question_context, weakness, original_verbatim, upgraded_answer, pattern_name } ] }

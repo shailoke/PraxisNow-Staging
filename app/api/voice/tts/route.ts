@@ -20,6 +20,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
  * response is received, to synthesise the interviewer's spoken question.
  */
 export async function POST(request: NextRequest) {
+    const TTS_T0 = Date.now() // TTS_T0: route handler entered
     try {
         const { text, voice = 'onyx' } = await request.json()
 
@@ -30,16 +31,20 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        const TTS_T1 = Date.now() // TTS_T1: before openai.audio.speech.create()
         const response = await openai.audio.speech.create({
             model: 'tts-1',
             voice: voice as any,
             input: text.trim(),
             response_format: 'mp3',
         })
+        const TTS_T2 = Date.now() // TTS_T2: after await (stream available)
 
         // response.body is a ReadableStream<Uint8Array> — pipe it directly
         const stream = response.body as ReadableStream<Uint8Array>
 
+        const TTS_T3 = Date.now() // TTS_T3: before return new Response(stream, ...)
+        console.log(`[TTS_LATENCY] T0→T1: ${TTS_T1 - TTS_T0}ms | T1→T2: ${TTS_T2 - TTS_T1}ms | T2→T3: ${TTS_T3 - TTS_T2}ms | TOTAL: ${TTS_T3 - TTS_T0}ms | chars: ${text.trim().length}`)
         return new Response(stream, {
             headers: {
                 'Content-Type': 'audio/mpeg',
