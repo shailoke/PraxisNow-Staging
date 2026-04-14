@@ -57,6 +57,8 @@ export function useBatchVoice(
     const audioChunksRef            = useRef<Blob[]>([])
     const audioContextRef           = useRef<AudioContext | null>(null)
     const audioSourceRef            = useRef<AudioBufferSourceNode | null>(null)
+    const audioElRef                = useRef<HTMLAudioElement | null>(null)
+    const blobUrlRef                = useRef<string | null>(null)
     const ttsAbortControllerRef     = useRef<AbortController | null>(null)
     const pendingSystemMessagesRef  = useRef<string[]>([])
     const isPausedRef               = useRef(isPausedExternal)
@@ -140,18 +142,28 @@ export function useBatchVoice(
                 throw new Error(`TTS error: ${ttsRes.status}`)
             }
 
-            const audioBuffer = await ttsRes.arrayBuffer()
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-            audioContextRef.current = audioContext
-            const decodedBuffer = await audioContext.decodeAudioData(audioBuffer)
-            const source = audioContext.createBufferSource()
-            audioSourceRef.current = source
-            source.buffer = decodedBuffer
-            source.connect(audioContext.destination)
+            const blob = await ttsRes.blob()
+            const blobUrl = URL.createObjectURL(blob)
 
             await new Promise<void>((resolve) => {
-                source.onended = () => {
-                    audioContext.close()
+                const audioEl = new Audio(blobUrl)
+
+                audioEl.onended = () => {
+                    URL.revokeObjectURL(blobUrl)
+                    audioContextRef.current = null   // no-op, kept for abort compat
+                    audioSourceRef.current = null    // no-op, kept for abort compat
+                    setIsInterviewerSpeaking(false)
+                    setIsSpeaking(false)
+                    setInterviewState('WAITING_FOR_USER')
+                    assistantTurnCount.current += 1
+                    audioChunksRef.current = []
+                    startRecording()
+                    resolve()
+                }
+
+                audioEl.onerror = (err) => {
+                    console.error('[AUDIO_PLAYBACK_ERROR]', err)
+                    URL.revokeObjectURL(blobUrl)
                     audioContextRef.current = null
                     audioSourceRef.current = null
                     setIsInterviewerSpeaking(false)
@@ -162,7 +174,10 @@ export function useBatchVoice(
                     startRecording()
                     resolve()
                 }
-                source.start(0)
+
+                audioElRef.current = audioEl
+                blobUrlRef.current = blobUrl
+                audioEl.play()
             })
 
         } catch (err: any) {
@@ -406,8 +421,14 @@ export function useBatchVoice(
      * Stop AudioContext playback, abort TTS fetch, reset state.
      */
     const abortInterviewerAudio = useCallback(() => {
-        audioSourceRef.current?.stop()
-        audioContextRef.current?.close()
+        // Stop audio element if active
+        audioElRef.current?.pause()
+        audioElRef.current = null
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current)
+            blobUrlRef.current = null
+        }
+        // These are now no-ops but kept for safety
         audioContextRef.current = null
         audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
@@ -434,9 +455,14 @@ export function useBatchVoice(
             mediaStreamRef.current = null
         }
 
-        // Stop AudioContext
-        audioSourceRef.current?.stop()
-        audioContextRef.current?.close()
+        // Stop audio element
+        audioElRef.current?.pause()
+        audioElRef.current = null
+        if (blobUrlRef.current) {
+            URL.revokeObjectURL(blobUrlRef.current)
+            blobUrlRef.current = null
+        }
+        // These are now no-ops but kept for safety
         audioContextRef.current = null
         audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
