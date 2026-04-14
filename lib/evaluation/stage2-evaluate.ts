@@ -9,7 +9,7 @@ export interface CompetencyScore {
   name: string
   score: number        // 1-5
   evidence: string     // specific moment or quote from transcript
-  gap: string | null   // what was missing, null if score >= 4
+  gap: string | null   // what was missing — required for scores 1-4, null only if score is 5
 }
 
 export interface TurnDiagnostic {
@@ -87,11 +87,11 @@ ${evaluationGuidance}
 Scoring philosophy: Score only the competencies for which you observed clear evidence in the transcript — either positive or negative. If a competency was not tested or not reached, omit it entirely. Do not score a competency 1 simply because it was absent. A candidate who demonstrated strong thinking on the competencies that came up should score well overall even if they did not cover every possible dimension.
 
 Score each competency 1-5:
-5 — Exceptional, unprompted depth, no gaps
-4 — Strong, minor gaps only
-3 — Solid, clear gaps present
-2 — Present but shallow or incomplete
-1 — Absent or fundamentally wrong
+5 — Exceptional, unprompted depth, no gaps — gap field must be null
+4 — Strong, minor gaps only — gap field must name the minor gap
+3 — Solid, clear gaps present — gap field must name the primary gap
+2 — Present but shallow or incomplete — gap field must name what was missing
+1 — Absent or fundamentally wrong — gap field must name what was absent
 
 Evidence must be a specific moment, behaviour, or quote from the transcript. "Candidate showed good thinking" is not acceptable evidence — quote what they actually said or describe the exact moment.
 
@@ -103,7 +103,7 @@ Return ONLY valid JSON with no preamble, no explanation, and no markdown code fe
       "name": "<competency name>",
       "score": <1-5>,
       "evidence": "<specific moment or quote from transcript>",
-      "gap": "<what was missing, or null if score >= 4>"
+      "gap": "<what was missing — required for scores 1 through 4, null only if score is 5>"
     }
   ],
   "overall_score": <1.0-5.0, one decimal place>,

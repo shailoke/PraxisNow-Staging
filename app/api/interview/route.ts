@@ -4,6 +4,7 @@ import OpenAI from 'openai'
 import { Database } from '@/lib/database.types'
 
 export async function POST(req: NextRequest) {
+    const t0 = Date.now() // T0: route handler entered
     try {
         const {
             session_id,
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 })
+        const t1 = Date.now() // T1: session/scenario DB read complete
 
         // STEP 5 — TURN AUTHORITY GATE
         const hasSpeechAuthority = is_first_question === true || turn_authority === true
@@ -61,6 +63,9 @@ export async function POST(req: NextRequest) {
                 reason: 'No turn authority granted'
             })
         }
+
+        // T2: no interview_turns read on this path before GPT — delta will be ~0ms
+        const t2 = t1
 
         // STEP 6 — FETCH ANTI-CONVERGENCE BLOCKLIST
         let recentQuestions: string[] = []
@@ -78,6 +83,7 @@ export async function POST(req: NextRequest) {
         } catch (err) {
             console.warn('[INTERVIEW] Failed to fetch anti-convergence blocklist:', err)
         }
+        const t3 = Date.now() // T3: blocklist fetch complete
 
         // STEP 7 — BUILD CONVERSATION HISTORY
         const sessionHistory = messages
@@ -103,6 +109,7 @@ export async function POST(req: NextRequest) {
         ]
 
         // STEP 10 — CALL GPT-4o
+        const t4 = Date.now() // T4: openai.chat.completions.create() called
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: openaiMessages,
@@ -110,6 +117,7 @@ export async function POST(req: NextRequest) {
             max_tokens: 500,
         })
 
+        const t5 = Date.now() // T5: openai response received (choices[0] available)
         const assistantMessage = (completion.choices[0].message.content ?? '').trim()
 
         // STEP 11 — VALIDATE RESPONSE
@@ -118,6 +126,7 @@ export async function POST(req: NextRequest) {
         }
 
         // STEP 12 — ATOMIC DB WRITES
+        const t6 = Date.now() // T6: first DB write started (mark answered)
         let nextIndex = 1
         try {
             // WRITE A — Mark previous turn answered
@@ -166,6 +175,7 @@ export async function POST(req: NextRequest) {
         } catch (dbErr: any) {
             throw new Error(dbErr.message)
         }
+        const t7 = Date.now() // T7: all DB writes complete
 
         // STEP 13 — WRITE TO user_question_history (fire-and-forget)
         ;(async () => {
@@ -186,6 +196,8 @@ export async function POST(req: NextRequest) {
         })()
 
         // STEP 14 — RETURN
+        const t8 = Date.now() // T8: NextResponse.json() returned
+        console.log(`[LATENCY] T0→T1: ${t1 - t0}ms | T1→T2: ${t2 - t1}ms | T2→T3: ${t3 - t2}ms | T3→T4: ${t4 - t3}ms | T4→T5: ${t5 - t4}ms | T5→T6: ${t6 - t5}ms | T6→T7: ${t7 - t6}ms | T7→T8: ${t8 - t7}ms | TOTAL: ${t8 - t0}ms`)
         return NextResponse.json({ message: assistantMessage })
 
     } catch (error: any) {
