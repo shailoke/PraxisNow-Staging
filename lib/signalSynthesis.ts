@@ -106,7 +106,7 @@ function assignCorrectionTier(
     correction: Correction,
     primaryFailureMode: PrimaryFailureMode | null
 ): number {
-    const issue = correction.issue.toLowerCase();
+    const issue = (correction.issue ?? '').toLowerCase();
     const primaryLabel = primaryFailureMode?.label?.toLowerCase() || '';
 
     // Tier 1: Aligned with primary failure mode
@@ -172,7 +172,7 @@ function rankCorrections(
     }
 
     // Assign tier to each correction
-    const tieredCorrections = corrections.map((correction, index) => ({
+    const tieredCorrections = (corrections ?? []).map((correction, index) => ({
         correction,
         tier: assignCorrectionTier(correction, primaryFailureMode),
         originalIndex: index
@@ -186,7 +186,7 @@ function rankCorrections(
         return a.originalIndex - b.originalIndex;
     });
 
-    return tieredCorrections.map(tc => tc.correction);
+    return (tieredCorrections ?? []).map(tc => tc.correction);
 }
 
 // ========================================================================
@@ -203,7 +203,7 @@ function translateDimensionToIntent(dimension: string): string {
     // Remove role/level prefixes if present
     clean = clean.replace(/^for\s+(\w+\s*)+:\s*/i, '');
 
-    const lower = clean.toLowerCase();
+    const lower = (clean ?? '').toLowerCase();
 
     // Strategic dimensions
     if (lower.includes('priorit')) {
@@ -251,11 +251,11 @@ function translateDimensionToIntent(dimension: string): string {
     // If it starts with a verb, convert to noun phrase
     if (/^(navigate|handle|manage|demonstrate|show|exhibit)\s+/i.test(clean)) {
         clean = clean.replace(/^(navigate|handle|manage|demonstrate|show|exhibit)\s+/i, '');
-        return `Your ability to ${clean.toLowerCase()}`;
+        return `Your ability to ${(clean ?? '').toLowerCase()}`;
     }
 
     // Otherwise, prefix with capability language
-    return `Evidence that you can ${clean.toLowerCase()}`;
+    return `Evidence that you can ${(clean ?? '').toLowerCase()}`;
 }
 
 /**
@@ -270,7 +270,7 @@ function generateInterviewerIntentBullets(dimensions: string[]): string[] {
         ];
     }
 
-    const bullets = dimensions.slice(0, 5).map(translateDimensionToIntent);
+    const bullets = (dimensions ?? []).slice(0, 5).map(translateDimensionToIntent);
 
     // Ensure we have at least 3 bullets
     if (bullets.length < 3) {
@@ -299,7 +299,7 @@ function identifyPrimaryPreparationGap(
     // Shallow depth: limit confidence
     if (evaluationDepth === 'shallow') {
         if (prioritizedCorrections.length > 0) {
-            return `Based on limited evidence: ${prioritizedCorrections[0].issue.toLowerCase()}`;
+            return `Based on limited evidence: ${(prioritizedCorrections[0].issue ?? '').toLowerCase()}`;
         }
         return 'Based on limited evidence: insufficient data for confident gap identification';
     }
@@ -331,11 +331,11 @@ function identifySecondaryPreparationGaps(
         return [];
     }
 
-    const gaps = prioritizedCorrections.slice(1, 1 + maxGaps).map(c => c.issue);
+    const gaps = (prioritizedCorrections ?? []).slice(1, 1 + maxGaps).map(c => c.issue);
 
     // Prefix with confidence limiter for shallow depth
     if (evaluationDepth === 'shallow') {
-        return gaps.map(gap => `Based on limited evidence: ${gap.toLowerCase()}`);
+        return (gaps ?? []).map(gap => `Based on limited evidence: ${(gap ?? '').toLowerCase()}`);
     }
 
     return gaps;
@@ -359,10 +359,10 @@ function detectRepeatedIssues(
     // Collect all issues across all answers
     const issueFrequency: Record<string, number> = {};
 
-    answerDiagnostics.forEach(diagnostic => {
-        diagnostic.issues_detected.forEach(issue => {
+    (answerDiagnostics ?? []).forEach(diagnostic => {
+        (diagnostic.issues_detected ?? []).forEach(issue => {
             // Normalize issue for matching (lowercase, trim)
-            const normalized = issue.toLowerCase().trim();
+            const normalized = (issue ?? '').toLowerCase().trim();
 
             // Group similar issues by keywords
             let matchedKey: string | null = null;

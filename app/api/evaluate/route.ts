@@ -387,8 +387,9 @@ export async function POST(req: NextRequest) {
 
             strengths: topStrengths.map((s: any) => ({
                 skill: s.skill,
-                observation: `Turn ${s.evidence_from_turn}: "${s.exact_quote_fragment}"`,
-                why_it_matters: s.why_it_signals_seniority,
+                evidence: s.evidence ?? '',
+                observation: s.observation ?? '',
+                why_it_matters: s.why_it_signals_seniority ?? '',
             })),
             areas_for_improvement: gaps,
 

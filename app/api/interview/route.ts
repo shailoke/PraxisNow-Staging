@@ -125,57 +125,58 @@ export async function POST(req: NextRequest) {
             throw new Error('GPT response failed validation — candidate speech detected.')
         }
 
-        // STEP 12 — ATOMIC DB WRITES
-        const t6 = Date.now() // T6: first DB write started (mark answered)
+        // DB writes fire in background — message returned to client immediately
         let nextIndex = 1
-        try {
-            // WRITE A — Mark previous turn answered
-            if (turn_authority === true) {
-                const { data: latestTurn } = await supabase
+        ;(async () => {
+            try {
+                // STEP 12: Write A — mark current turn answered
+                if (turn_authority === true) {
+                    const { data: latestTurn } = await supabase
+                        .from('interview_turns')
+                        .select('id, turn_index')
+                        .eq('session_id', session_id)
+                        .order('turn_index', { ascending: false })
+                        .limit(1)
+                        .single()
+
+                    if (latestTurn) {
+                        const { error: markError } = await supabase
+                            .from('interview_turns')
+                            .update({ answered: true })
+                            .eq('id', latestTurn.id)
+
+                        if (markError) throw new Error(`Failed to mark turn answered: ${markError.message}`)
+                    }
+                }
+
+                // STEP 12: Write B — insert new assistant turn
+                const { data: maxTurn } = await supabase
                     .from('interview_turns')
-                    .select('id, turn_index')
+                    .select('turn_index')
                     .eq('session_id', session_id)
                     .order('turn_index', { ascending: false })
                     .limit(1)
                     .single()
 
-                if (latestTurn) {
-                    const { error: markError } = await supabase
-                        .from('interview_turns')
-                        .update({ answered: true })
-                        .eq('id', latestTurn.id)
+                nextIndex = (maxTurn?.turn_index ?? 0) + 1
 
-                    if (markError) throw new Error(`Failed to mark turn answered: ${markError.message}`)
-                }
+                const { error: insertError } = await supabase
+                    .from('interview_turns')
+                    .insert({
+                        session_id,
+                        turn_index: nextIndex,
+                        turn_type: 'question',
+                        content: assistantMessage,
+                        answered: false,
+                    } as any)
+
+                if (insertError) throw new Error(`Failed to insert turn: ${insertError.message}`)
+
+            } catch (err) {
+                console.error('[INTERVIEW_DB_WRITE_ERROR] Background DB write failed:', err)
+                console.error('[INTERVIEW_DB_WRITE_ERROR] session_id:', session_id, 'message preview:', assistantMessage?.slice(0, 100))
             }
-
-            // WRITE B — Insert new turn
-            const { data: maxTurn } = await supabase
-                .from('interview_turns')
-                .select('turn_index')
-                .eq('session_id', session_id)
-                .order('turn_index', { ascending: false })
-                .limit(1)
-                .single()
-
-            nextIndex = (maxTurn?.turn_index ?? 0) + 1
-
-            const { error: insertError } = await supabase
-                .from('interview_turns')
-                .insert({
-                    session_id,
-                    turn_index: nextIndex,
-                    turn_type: 'question',
-                    content: assistantMessage,
-                    answered: false,
-                } as any)
-
-            if (insertError) throw new Error(`Failed to insert turn: ${insertError.message}`)
-
-        } catch (dbErr: any) {
-            throw new Error(dbErr.message)
-        }
-        const t7 = Date.now() // T7: all DB writes complete
+        })()
 
         // STEP 13 — WRITE TO user_question_history (fire-and-forget)
         ;(async () => {
@@ -196,8 +197,8 @@ export async function POST(req: NextRequest) {
         })()
 
         // STEP 14 — RETURN
-        const t8 = Date.now() // T8: NextResponse.json() returned
-        console.log(`[LATENCY] T0→T1: ${t1 - t0}ms | T1→T2: ${t2 - t1}ms | T2→T3: ${t3 - t2}ms | T3→T4: ${t4 - t3}ms | T4→T5: ${t5 - t4}ms | T5→T6: ${t6 - t5}ms | T6→T7: ${t7 - t6}ms | T7→T8: ${t8 - t7}ms | TOTAL: ${t8 - t0}ms`)
+        const t6 = Date.now() // response returned to client
+        console.log(`[LATENCY] T0→T1: ${t1-t0}ms | T1→T2: ${t2-t1}ms | T2→T3: ${t3-t2}ms | T3→T4: ${t4-t3}ms | T4→T5: ${t5-t4}ms | T5→T6(return): ${t6-t5}ms | TOTAL: ${t6-t0}ms | DB_writes: background`)
         return NextResponse.json({ message: assistantMessage })
 
     } catch (error: any) {

@@ -423,18 +423,20 @@ export async function generateSessionPDF(
             evaluation.strengths.forEach((s: any) => {
                 y = checkPageBreak(y, 80);
 
-                // Heading: skill name only. ASCII "PASS" prefix instead of unicode checkmark.
+                const skillText: string = s.skill ?? '';
+                if (!skillText) { y += 20; return; }
+
                 doc.fontSize(12).font(FONTS.bold).fillColor(COLORS.success)
-                    .text(`PASS  ${s.skill}`, SPACING.pageMargin, y);
+                    .text(`PASS  ${skillText}`, SPACING.pageMargin, y);
                 y += 20;
 
-                // Supporting text: use evidence (new sessions) falling back to observation (old sessions).
-                const supportText: string = s.evidence ?? s.observation ?? '';
-                if (supportText) {
+                // evidence only — never fall back to observation (may contain "Turn undefined: ...")
+                const evidenceText: string = s.evidence || '';
+                if (evidenceText) {
                     const supportWidth = width - (2 * SPACING.pageMargin);
                     doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                        .text(supportText, SPACING.pageMargin, y, { width: supportWidth });
-                    y += doc.heightOfString(supportText, { width: supportWidth }) + 20;
+                        .text(evidenceText, SPACING.pageMargin, y, { width: supportWidth });
+                    y += doc.heightOfString(evidenceText, { width: supportWidth }) + 20;
                 } else {
                     y += 20;
                 }
@@ -485,10 +487,15 @@ export async function generateSessionPDF(
                     y += 18;
                 }
 
-                // Gap Type Badge (if present)
+                // Support both new pipeline (string) and old pipeline (object) formats
+                const isString = typeof imp === 'string';
+                const headingText: string = isString ? imp : (imp.limit ?? '');
+                if (!headingText) { y += 10; return; }
+
+                // Gap Type Badge (object format only)
                 let gapBadge = '';
                 let gapColor = COLORS.warning;
-                if (imp.gap_type) {
+                if (!isString && imp.gap_type) {
                     if (imp.gap_type === 'fundamental') {
                         gapBadge = '[FUNDAMENTAL] ';
                         gapColor = '#d32f2f';
@@ -502,11 +509,11 @@ export async function generateSessionPDF(
                 }
 
                 doc.fontSize(12).font(FONTS.bold).fillColor(gapColor)
-                    .text(`${gapBadge}${imp.limit}`, SPACING.pageMargin, y);
+                    .text(`${gapBadge}${headingText}`, SPACING.pageMargin, y);
                 y += 20;
 
-                // Impact Scope (if present) - psychological clarity
-                if (imp.impact_scope) {
+                // Impact Scope (object format only)
+                if (!isString && imp.impact_scope) {
                     let impactText = '';
                     if (imp.impact_scope === 'blocks_hire') {
                         impactText = 'Impact: Blocks hiring at this level';
@@ -515,7 +522,6 @@ export async function generateSessionPDF(
                     } else if (imp.impact_scope === 'polish_only') {
                         impactText = 'Impact: Polish-level improvement (not a hiring risk)';
                     }
-
                     if (impactText) {
                         doc.fontSize(9).font(FONTS.italic).fillColor(COLORS.textMuted)
                             .text(impactText, SPACING.pageMargin, y);
@@ -523,12 +529,17 @@ export async function generateSessionPDF(
                     }
                 }
 
-                // Prepend "To reach the next level: " to why_it_matters in rendered text only.
+                // why_it_matters (object format only — string items carry no subtext)
                 // Data object is NOT mutated.
-                const whyItMattersText = `To reach the next level: ${imp.why_it_matters || ''}`;
-                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(whyItMattersText, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-                y += doc.heightOfString(whyItMattersText, { width: width - (2 * SPACING.pageMargin) }) + 20;
+                const whyText: string = isString ? '' : (imp.why_it_matters ?? '');
+                if (whyText) {
+                    const whyItMattersText = `To reach the next level: ${whyText}`;
+                    doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                        .text(whyItMattersText, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
+                    y += doc.heightOfString(whyItMattersText, { width: width - (2 * SPACING.pageMargin) }) + 20;
+                } else {
+                    y += 10;
+                }
             });
         }
 
