@@ -39,6 +39,7 @@ export default function SimulatorPage() {
 
     // Session State
     const [sessionId, setSessionId] = useState<string | null>(null)
+    const sessionIdRef = useRef<string | null>(null)
     const [evalResult, setEvalResult] = useState<EvalResult | null>(null)
     const [isEvaluating, setIsEvaluating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -392,6 +393,28 @@ You will receive time updates every 3 minutes. Follow them strictly.`
             }
         }
     }, [sessionStarted, releaseWakeLock])
+
+    // Keep sessionIdRef in sync with sessionId state so the beforeunload
+    // handler can read the current session ID without a stale closure.
+    useEffect(() => {
+        sessionIdRef.current = sessionId
+    }, [sessionId])
+
+    // Browser unload guard — fires when the tab is closed or navigated away mid-session.
+    // sendBeacon is best-effort; always returns 200 from the route.
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!sessionIdRef.current || !sessionStarted) return
+            e.preventDefault()
+            e.returnValue = ''
+            navigator.sendBeacon(
+                '/api/session/abandon',
+                JSON.stringify({ session_id: sessionIdRef.current })
+            )
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [sessionStarted])
 
     // Track when interviewer finishes speaking to show button
     useEffect(() => {

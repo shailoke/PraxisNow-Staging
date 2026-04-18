@@ -179,6 +179,11 @@ export function useBatchVoice(
                         startRecording()
                         resolve()
                     }
+                    audioEl.oncanplay = () => {
+                        setInterviewState('ASSISTANT_SPEAKING')
+                        setIsInterviewerSpeaking(true)
+                        setIsSpeaking(true)
+                    }
                     audioEl.play().catch(err => console.error('[AUDIO_PLAY_ERROR_FALLBACK]', err))
                 })
             }
@@ -189,6 +194,13 @@ export function useBatchVoice(
                 const mediaSource = new MediaSource()
                 const msUrl = URL.createObjectURL(mediaSource)
                 audioEl.src = msUrl
+
+                // Fires when browser has enough data to start playing — accurate ASSISTANT_SPEAKING point
+                audioEl.oncanplay = () => {
+                    setInterviewState('ASSISTANT_SPEAKING')
+                    setIsInterviewerSpeaking(true)
+                    setIsSpeaking(true)
+                }
 
                 mediaSource.addEventListener('sourceopen', async () => {
                     let sourceBuffer: SourceBuffer
@@ -211,6 +223,8 @@ export function useBatchVoice(
                     const reader = ttsRes.body!.getReader()
                     readerRef.current = reader
 
+                    let playbackStarted = false
+
                     const appendNext = async () => {
                         try {
                             const { done, value } = await reader.read()
@@ -219,9 +233,7 @@ export function useBatchVoice(
                                 if (!sourceBuffer.updating) {
                                     mediaSource.endOfStream()
                                 } else {
-                                    sourceBuffer.addEventListener('updateend', () => {
-                                        mediaSource.endOfStream()
-                                    }, { once: true })
+                                    sourceBuffer.addEventListener('updateend', () => mediaSource.endOfStream(), { once: true })
                                 }
                                 return
                             }
@@ -229,7 +241,13 @@ export function useBatchVoice(
                                 await new Promise<void>(r => sourceBuffer.addEventListener('updateend', () => r(), { once: true }))
                             }
                             sourceBuffer.appendBuffer(value)
-                            sourceBuffer.addEventListener('updateend', appendNext, { once: true })
+                            sourceBuffer.addEventListener('updateend', () => {
+                                if (!playbackStarted) {
+                                    playbackStarted = true
+                                    audioEl.play().catch(err => console.error('[AUDIO_PLAY_ERROR]', err))
+                                }
+                                appendNext()
+                            }, { once: true })
                         } catch (err) {
                             console.error('[AUDIO_STREAM_ERROR]', err)
                         }
@@ -267,7 +285,7 @@ export function useBatchVoice(
 
                 audioElRef.current = audioEl
                 blobUrlRef.current = msUrl
-                audioEl.play().catch(err => console.error('[AUDIO_PLAY_ERROR]', err))
+                // play() is called inside appendNext() after first chunk is appended
             })
 
         } catch (err: any) {
@@ -313,10 +331,9 @@ export function useBatchVoice(
             const { content: tmayContent } = await openingRes.json()
 
             // 3. Speak TMAY as full audio.
+            //    oncanplay inside speakText fires ASSISTANT_SPEAKING when audio is actually ready.
             //    speakText onended will: reset state, call startRecording(), increment assistantTurnCount.
-            setIsInterviewerSpeaking(true)
-            setIsSpeaking(true)
-            setInterviewState('ASSISTANT_SPEAKING')
+            setInterviewState('THINKING')  // accurate — still waiting for TTS
             await speakText(tmayContent)
             // onended has already run — mic is recording, state is WAITING_FOR_USER
 
@@ -452,10 +469,9 @@ export function useBatchVoice(
             if (!llmText) throw new Error('Empty response from interview API')
 
             // 6. Speak full response as one continuous audio.
+            //    oncanplay inside speakText fires ASSISTANT_SPEAKING when audio is actually ready.
             //    speakText onended will: reset state, call startRecording(), increment assistantTurnCount.
-            setIsInterviewerSpeaking(true)
-            setIsSpeaking(true)
-            setInterviewState('ASSISTANT_SPEAKING')
+            setInterviewState('THINKING')  // accurate — still waiting for TTS
             await speakText(llmText)
             // onended has already run — mic is recording, state is WAITING_FOR_USER
 

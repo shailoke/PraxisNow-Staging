@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import ScenarioCard from '@/components/ScenarioCard'
 import { Button } from '@/components/ui/button'
 import SupportModal from '@/components/SupportModal'
-import { LogOut, Zap, Trophy, AlertTriangle, User as UserIcon, Plus, Download as DownloadIcon, Loader2, X, FileText, ChevronRight, HelpCircle, MicOff, Play, Clock, Lock } from 'lucide-react'
+import { LogOut, Zap, Trophy, AlertTriangle, AlertCircle, User as UserIcon, Plus, Download as DownloadIcon, Loader2, X, FileText, ChevronRight, HelpCircle, MicOff, Play, Clock, Lock } from 'lucide-react'
 
 
 import Link from 'next/link'
@@ -34,6 +34,13 @@ type ScoreHistoryRow = {
     round_title: string
     dimension_scores: unknown
     weighted_composite: number | null
+    created_at: string
+}
+
+type StuckSession = {
+    id: string
+    scenario_id: number | null
+    session_type: string
     created_at: string
 }
 
@@ -100,6 +107,8 @@ export default function DashboardPage() {
     const [isSupportOpen, setIsSupportOpen] = useState(false)
     const [currentBar, setCurrentBar] = useState<CurrentBarCardProps | null>(null)
     const [scoreHistory, setScoreHistory] = useState<ScoreHistoryRow[]>([])
+    const [stuckSessions, setStuckSessions] = useState<StuckSession[]>([])
+    const [recoveringId, setRecoveringId] = useState<string | null>(null)
 
     const handleGeneratePDF = async (e: React.MouseEvent, sessionId: string) => {
         e.stopPropagation(); // Prevent row click
@@ -147,6 +156,28 @@ export default function DashboardPage() {
         if (!selectedSession) return
         const scenarioId = selectedSession.custom_scenario_id || selectedSession.scenario_id
         router.push(`/simulator/${scenarioId}?replay_from=${selectedSession.id}`)
+    }
+
+    const recoverSession = async (sessionId: string) => {
+        setRecoveringId(sessionId)
+        try {
+            const res = await fetch('/api/evaluate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            })
+            if (res.ok) {
+                router.push(`/results/${sessionId}`)
+            } else {
+                const data = await res.json()
+                console.error('[RECOVER] Evaluate failed:', data.error)
+            }
+        } catch (err) {
+            console.error('[RECOVER] Error:', err)
+        } finally {
+            setRecoveringId(null)
+            setStuckSessions(prev => prev.filter(s => s.id !== sessionId))
+        }
     }
 
     // Data Loading
@@ -198,6 +229,22 @@ export default function DashboardPage() {
                 .order('created_at', { ascending: false })
 
             setSessions(dbSessions as any || [])
+
+            // 5a. Fetch stuck sessions (status=evaluating, 10–90 min old) for recovery banner
+            try {
+                const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+                const ninetyMinutesAgo = new Date(Date.now() - 90 * 60 * 1000).toISOString()
+                const { data: stuck } = await supabase
+                    .from('sessions')
+                    .select('id, scenario_id, session_type, created_at')
+                    .eq('user_id', user.id)
+                    .eq('status', 'evaluating')
+                    .lt('created_at', tenMinutesAgo)
+                    .gt('created_at', ninetyMinutesAgo)
+                setStuckSessions((stuck || []) as StuckSession[])
+            } catch {
+                // Non-critical — banner simply won't render
+            }
 
             // 5b. Targeted fetch: most recent session with evaluation_data for CurrentBarCard
             // Deliberately separate from the bulk fetch — keeps history payload lean.
@@ -424,6 +471,28 @@ export default function DashboardPage() {
                         >
                             View Plans
                         </Button>
+                    </div>
+                )}
+
+                {/* Recovery Banner — shown when a session is stuck in 'evaluating' for 10–90 min */}
+                {stuckSessions.length > 0 && (
+                    <div className="mb-8 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            {stuckSessions.length === 1 ? 'An interview session' : 'Some interview sessions'} didn&apos;t finish evaluating. Tap below to recover.
+                        </div>
+                        {stuckSessions.map(s => (
+                            <div key={s.id} className="flex items-center justify-between text-sm text-amber-200/80">
+                                <span>Session from {new Date(s.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <button
+                                    onClick={() => recoverSession(s.id)}
+                                    disabled={recoveringId === s.id}
+                                    className="ml-4 px-3 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold disabled:opacity-50 disabled:cursor-wait transition-colors"
+                                >
+                                    {recoveringId === s.id ? 'Recovering...' : 'Resume Evaluation'}
+                                </button>
+                            </div>
+                        ))}
                     </div>
                 )}
 
