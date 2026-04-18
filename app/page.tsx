@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Mic, Zap, BarChart, CheckCircle2, Bot } from 'lucide-react'
+import { Zap, BarChart, CheckCircle2, Bot } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 
 export default function LandingPage() {
   const router = useRouter()
 
+  // ── Preserved: existing Razorpay purchase handler ──────────────────────────
   const handlePurchase = async (packId: string) => {
     // Validate Razorpay key is configured
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
@@ -79,7 +80,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
-      {/* Navbar */}
+
+      {/* ── Section 1: Nav ──────────────────────────────────────────────────── */}
       <nav className="fixed w-full z-50 glass-panel border-b-0 border-white/5 bg-black/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -92,182 +94,316 @@ export default function LandingPage() {
               priority
             />
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-              PraxisNow AI
+              PraxisNow
             </span>
           </div>
           <div className="flex gap-4">
             <Button variant="ghost" asChild>
-              <Link href="/auth">Sign In</Link>
+              <Link href="/auth">Sign in</Link>
             </Button>
             <Button asChild>
-              <Link href="/auth">Get Started</Link>
+              <Link href="/auth">Get started</Link>
             </Button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* ── Section 2: Hero ─────────────────────────────────────────────────── */}
       <section className="relative pt-32 pb-20 px-6">
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none"></div>
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
+          {/* Purple pill badge */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-            </span>
-            Live: Real-time AI Interviewers
+            Your first interview is free
           </div>
 
           <h1 className="text-6xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
-            Prepare for Your Next <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400">
-              Tech Interview
-            </span>
+            Practice interviews that feel<br />
+            <span style={{ color: '#7F77DD' }}>uncomfortably real.</span>
           </h1>
 
-          <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto leading-relaxed font-medium">
-            Practice realistic, high-pressure interviews with AI.
-          </p>
-          <p className="text-md text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-            From fresh graduates to senior leaders, PraxisNow helps you prepare for conversations that actually decide outcomes.
+          <p className="text-lg text-gray-400 mb-10 max-w-[520px] mx-auto leading-relaxed">
+            An AI interviewer calibrated to the standard top tech companies actually use. It asks targeted follow-up questions, probes for specifics, and evaluates you the way a real hiring panel would. Get a detailed coaching report after every session.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button className="h-12 px-8 text-lg rounded-full" asChild>
-              <Link href="/auth">
-                Start Practicing Now
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
-          </div>
+          <Button className="h-12 px-8 text-lg rounded-full" asChild>
+            <Link href="/auth">Start your free session →</Link>
+          </Button>
 
-          <div className="mt-16 pt-8 border-t border-white/5">
-            <p className="text-xs uppercase tracking-widest text-gray-600 mb-4 font-bold">Built For</p>
-            <div className="flex flex-wrap justify-center gap-3 text-sm font-medium text-gray-400 mb-3">
-              <span>Product Managers</span>
-              <span>•</span>
-              <span>Project Managers</span>
-              <span>•</span>
-              <span>Software Development Engineers</span>
-              <span>•</span>
-              <span>Marketers</span>
-              <span>•</span>
-              <span>Data Scientists</span>
-            </div>
-            <p className="text-xs text-gray-500 text-center">Including fresh graduates applying for these roles</p>
+          {/* Role pills */}
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            {['Product Manager', 'Software Development Engineer', 'Data Scientist'].map((role) => (
+              <span key={role} className="px-4 py-1.5 rounded-full border border-white/10 text-sm text-gray-400">
+                {role}
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Dimension-Based Interviews Section */}
-      <section className="py-16 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Build Custom Interviews</h2>
-          <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto">
-            Build custom interviews by choosing the skills you want to be evaluated on.
-          </p>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            Select your role, pick the dimensions that matter most (like product sense, communication, or technical depth), and add context. Our AI interviewer adapts in real-time to create realistic, targeted practice.
-          </p>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20" id="features">
-        <div className="grid md:grid-cols-2 gap-8">
-          {[
-            {
-              icon: Mic,
-              title: "Realistic Interview Pressure",
-              desc: "Practice with an interviewer that probes, interrupts, and pushes — just like a real interview."
-            },
-            {
-              icon: Zap, // Using Zap for Replay/Refresh logic if RefreshCw isn't imported, but I should import it. I'll use Zap for now or just generic icons if I can't guarantee import. Actually I'll stick to existing imports or add new ones to top.
-              title: "Replay & Improve (Pro)",
-              desc: "Retry the same interview questions to apply feedback and see how your answers improve."
-            },
-            {
-              icon: CheckCircle2, // Using CheckCircle2 for Upgrades/Quality
-              title: "Answer Upgrades (Pro)",
-              desc: "See two stronger ways experienced candidates handle key questions — fast, practical, and reusable."
-            },
-            {
-              icon: Bot,
-              title: "Dedicated AI Fluency Round (Pro)",
-              desc: "A full-length interview focused entirely on real-world AI implementation, trade-offs, and system depth."
-            }
-          ].map((feature, i) => (
-            <div key={i} className="glass-panel p-8 rounded-2xl hover:bg-white/5 transition-colors">
-              <div className="w-12 h-12 rounded-lg bg-purple-600/20 flex items-center justify-center mb-6 text-purple-400">
-                <feature.icon className="w-6 h-6" />
+      {/* ── Section 3: How it works ─────────────────────────────────────────── */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs uppercase tracking-widest text-purple-400 mb-3 font-bold">How it works</p>
+            <h2 className="text-3xl md:text-4xl font-bold">Three steps from signup to coaching report</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                step: 'Step 1',
+                title: 'Pick your role and round',
+                body: 'Choose PM, SDE, or Data Scientist. Each role has four rounds that mirror the hiring loop at top tech companies.'
+              },
+              {
+                step: 'Step 2',
+                title: 'Interview under real pressure',
+                body: '30 minutes. The interviewer asks targeted follow-up questions and probes weak answers — staying in character for the full session.'
+              },
+              {
+                step: 'Step 3',
+                title: 'Get your coaching report',
+                body: 'Competency scores with evidence from your actual answers, your primary gap, answer rewrites, and a downloadable PDF.'
+              },
+            ].map((card) => (
+              <div key={card.step} className="glass-panel p-8 rounded-2xl">
+                <span className="inline-block px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold mb-4">
+                  {card.step}
+                </span>
+                <h3 className="text-xl font-bold mb-3">{card.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{card.body}</p>
               </div>
-              <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-              <p className="text-gray-400 leading-relaxed">{feature.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section >
-
-      {/* Pricing Section */}
-      < section className="py-20 px-6 relative" id="pricing" >
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-4">Simple Pricing</h2>
-          <p className="text-gray-400 mb-12">Invest in your career with our flexible plans</p>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Starter */}
-            <div className="glass-panel p-8 rounded-3xl border border-white/5 hover:border-purple-500/30 transition-all flex flex-col">
-              <h3 className="text-2xl font-bold mb-2">Starter</h3>
-              <div className="text-4xl font-bold mb-1">₹999</div>
-              <p className="text-xs text-gray-400 mb-6">Exposure to real interview pressure</p>
-              <ul className="text-left space-y-4 mb-6 text-gray-300">
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> 2 interviews (30 min each)</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Realistic AI interviewer</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Interviewer-grade evaluation</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Basic PDF performance summary</li>
-              </ul>
-              <p className="text-xs text-gray-500 mb-4 border-t border-white/5 pt-4">Does NOT include:</p>
-              <ul className="text-left space-y-2 mb-8 text-gray-500 text-xs flex-grow">
-                <li className="flex items-center gap-2">• No question randomization</li>
-                <li className="flex items-center gap-2">• No interview replay</li>
-                <li className="flex items-center gap-2">• No answer upgrades</li>
-                <li className="flex items-center gap-2">• No deep performance insights</li>
-                <li className="flex items-center gap-2">• No custom interview scenarios</li>
-              </ul>
-              <Button onClick={() => handlePurchase('starter')} variant="outline" className="w-full py-6 rounded-xl">Try Starter</Button>
-            </div>
-
-            {/* Pro */}
-            <div className="glass-panel p-8 rounded-3xl border border-purple-500/50 bg-gradient-to-b from-purple-900/20 to-black/20 relative overflow-hidden flex flex-col shadow-[0_0_40px_rgba(168,85,247,0.15)]">
-              <div className="absolute top-0 right-0 bg-gradient-to-l from-purple-600 to-pink-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">Recommended</div>
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="text-4xl font-bold mb-1">₹2499</div>
-              <p className="text-xs text-gray-400 mb-6">Complete preparation toolkit with advanced insights</p>
-              <ul className="text-left space-y-4 mb-8 text-gray-300 flex-grow">
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Dedicated AI Fluency Round (role-specific)</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> 5 interviews (30 min each)</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Question randomization</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Interview replay (same questions)</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Deep performance insights in PDF</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Answer upgrades included</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Advanced custom scenarios (3-4 dimensions)</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Replay-based improvement detection</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-purple-500" /> Offer & salary conversation simulation</li>
-              </ul>
-              <Button onClick={() => handlePurchase('pro')} className="w-full py-6 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all">Get Pro</Button>
-            </div>
-
-
+            ))}
           </div>
         </div>
-      </section >
+      </section>
 
+      {/* ── Section 4: Interview rounds ─────────────────────────────────────── */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs uppercase tracking-widest text-purple-400 mb-3 font-bold">Interview rounds</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Four rounds per role. The full hiring loop.</h2>
+            <p className="text-gray-400 max-w-xl mx-auto">
+              Each round tests a distinct set of competencies. Complete all four to know exactly where you stand.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Product Manager */}
+            <div className="glass-panel p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-purple-400 mb-5">Product Manager</h3>
+              <ul className="space-y-3">
+                <li className="text-gray-300 text-sm">R1: Product Sense &amp; Design</li>
+                <li className="text-gray-300 text-sm">R2: Metrics &amp; Analytical Thinking</li>
+                <li className="text-gray-300 text-sm">R3: Execution &amp; Leadership</li>
+                <li className="flex items-center gap-2 text-gray-300 text-sm">
+                  <span>R4: AI Product Strategy</span>
+                  <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-medium">AI</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Software Development Engineer */}
+            <div className="glass-panel p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-blue-400 mb-5">Software Development Engineer</h3>
+              <ul className="space-y-3">
+                <li className="text-gray-300 text-sm">R1: System Design &amp; Architecture</li>
+                <li className="text-gray-300 text-sm">R2: Algorithms &amp; Problem Solving</li>
+                <li className="text-gray-300 text-sm">R3: Engineering Execution &amp; Leadership</li>
+                <li className="flex items-center gap-2 text-gray-300 text-sm">
+                  <span>R4: AI Engineering</span>
+                  <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-medium">AI</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Data Scientist */}
+            <div className="glass-panel p-6 rounded-2xl">
+              <h3 className="text-lg font-bold text-teal-400 mb-5">Data Scientist</h3>
+              <ul className="space-y-3">
+                <li className="text-gray-300 text-sm">R1: Problem Framing &amp; Analytics</li>
+                <li className="text-gray-300 text-sm">R2: ML Design &amp; Evaluation</li>
+                <li className="text-gray-300 text-sm">R3: Research Depth &amp; Leadership</li>
+                <li className="flex items-center gap-2 text-gray-300 text-sm">
+                  <span>R4: AI Research &amp; Alignment</span>
+                  <span className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded font-medium">AI</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 5: What you get ─────────────────────────────────────────── */}
+      <section className="py-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs uppercase tracking-widest text-purple-400 mb-3 font-bold">What you get</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Every session produces a coaching report</h2>
+            <p className="text-gray-400 max-w-xl mx-auto">
+              Not a generic score. Evidence-anchored feedback based on what you actually said.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {[
+              {
+                Icon: BarChart,
+                title: 'Competency scorecard',
+                body: 'Scores on the specific competencies for that round — with a quote or behaviour from your transcript as evidence for every score.'
+              },
+              {
+                Icon: Zap,
+                title: 'The one thing to fix',
+                body: 'One primary gap identified — the single highest-leverage change before your next session. Not a list of everything you did wrong.'
+              },
+              {
+                Icon: CheckCircle2,
+                title: 'Answer upgrades',
+                body: 'Your weakest answers rewritten to show exactly what a stronger response looks like — a rewrite of what you actually said, not a template.'
+              },
+              {
+                Icon: Bot,
+                title: 'Score history',
+                body: 'Every session is tracked. See your scores improve across rounds and identify where to focus your next session.'
+              },
+            ].map((card, i) => (
+              <div key={i} className="glass-panel p-8 rounded-2xl hover:bg-white/5 transition-colors">
+                <div className="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center mb-4 text-purple-400">
+                  <card.Icon className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">{card.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{card.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 6: Pricing ──────────────────────────────────────────────── */}
+      <section className="py-20 px-6 relative" id="pricing">
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-xs uppercase tracking-widest text-purple-400 mb-3 font-bold">Pricing</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple pricing. No tiers.</h2>
+          <p className="text-gray-400 mb-12">Every session is 30 minutes, any role, any round. Sessions do not expire.</p>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* Free session */}
+            <div className="glass-panel p-6 rounded-2xl border border-purple-500/20 bg-purple-500/5 flex flex-col">
+              <h3 className="text-lg font-bold mb-1">Free session</h3>
+              <div className="text-3xl font-bold mb-1">₹0</div>
+              <p className="text-sm text-gray-400 mb-6 flex-grow">1 session · any round except AI</p>
+              <Button className="w-full rounded-xl" variant="outline" asChild>
+                <Link href="/auth">Start free →</Link>
+              </Button>
+            </div>
+
+            {/* Single */}
+            <div className="glass-panel p-6 rounded-2xl border border-white/5 flex flex-col">
+              <h3 className="text-lg font-bold mb-1">Single</h3>
+              <div className="text-3xl font-bold mb-1">₹499</div>
+              <p className="text-sm text-gray-400 mb-6 flex-grow">1 session</p>
+              <Button className="w-full rounded-xl" variant="outline" onClick={() => handlePurchase('single')}>
+                Buy
+              </Button>
+            </div>
+
+            {/* Practice Pack — highlighted */}
+            <div className="glass-panel p-6 rounded-2xl border border-purple-500/50 bg-gradient-to-b from-purple-900/20 to-black/20 relative flex flex-col shadow-[0_0_30px_rgba(168,85,247,0.12)]">
+              <div className="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl uppercase tracking-wider">
+                Most popular
+              </div>
+              <h3 className="text-lg font-bold mb-1">Practice Pack</h3>
+              <div className="text-3xl font-bold mb-1">₹1,399</div>
+              <p className="text-sm text-gray-400 mb-2">3 sessions</p>
+              <span className="inline-block self-start px-2 py-0.5 rounded bg-green-500/15 text-green-400 text-xs font-medium mb-5 flex-grow">
+                Save ₹98
+              </span>
+              <Button className="w-full rounded-xl bg-purple-600 hover:bg-purple-700" onClick={() => handlePurchase('practice_pack')}>
+                Buy
+              </Button>
+            </div>
+
+            {/* Full Prep */}
+            <div className="glass-panel p-6 rounded-2xl border border-white/5 flex flex-col">
+              <h3 className="text-lg font-bold mb-1">Full Prep</h3>
+              <div className="text-3xl font-bold mb-1">₹2,199</div>
+              <p className="text-sm text-gray-400 mb-2">5 sessions</p>
+              <span className="inline-block self-start px-2 py-0.5 rounded bg-green-500/15 text-green-400 text-xs font-medium mb-5 flex-grow">
+                Save ₹296
+              </span>
+              <Button className="w-full rounded-xl" variant="outline" onClick={() => handlePurchase('full_prep')}>
+                Buy
+              </Button>
+            </div>
+          </div>
+
+          <p className="mt-8 text-xs text-gray-600">
+            All sessions are 30 minutes · Any role · Any round · Sessions never expire
+          </p>
+        </div>
+      </section>
+
+      {/* ── Section 7: FAQ ──────────────────────────────────────────────────── */}
+      <section className="py-20 px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-xs uppercase tracking-widest text-purple-400 mb-3 font-bold">FAQ</p>
+            <h2 className="text-3xl md:text-4xl font-bold">Common questions</h2>
+          </div>
+          <div className="divide-y divide-white/5">
+            {[
+              {
+                q: 'What is a session?',
+                a: 'One 30-minute interview on a specific round — for example, PM Product Sense & Design or SDE System Design. You can do the same round multiple times and track your score improvement across sessions.'
+              },
+              {
+                q: 'Which round should I start with?',
+                a: 'Start with Round 1 for your role. Your free session is a good way to experience the format before deciding where to focus your preparation.'
+              },
+              {
+                q: 'What makes this different from reading interview guides?',
+                a: 'Reading about interviews and doing interviews are different skills. PraxisNow puts you in the seat, under pressure, having to produce answers in real time. The evaluation after each session tells you specifically what you did well and what you did not — based on your actual answers.'
+              },
+              {
+                q: 'What are the AI rounds?',
+                a: 'Round 4 for each role focuses on AI-specific knowledge — AI Product Strategy for PMs, AI Engineering for SDEs, and AI Research & Alignment for Data Scientists. These rounds are available with any paid session.'
+              },
+              {
+                q: 'Do sessions expire?',
+                a: 'No. Sessions you purchase are yours to use whenever you are ready.'
+              },
+            ].map((item, i) => (
+              <div key={i} className="py-6">
+                <h3 className="text-lg font-semibold mb-3">{item.q}</h3>
+                <p className="text-gray-400 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 8: Footer CTA ───────────────────────────────────────────── */}
+      <section className="py-24 px-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Ready to find out where you actually stand?
+          </h2>
+          <p className="text-gray-400 mb-8">
+            Join candidates preparing seriously for their next tech interview.
+          </p>
+          <Button className="h-12 px-8 text-lg rounded-full" asChild>
+            <Link href="/auth">Start your free session →</Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Razorpay checkout script — preserved */}
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
         strategy="lazyOnload"
       />
-    </div >
+    </div>
   )
 }
