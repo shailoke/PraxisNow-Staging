@@ -3,21 +3,56 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { Database } from '@/lib/database.types'
+import { trackEvent } from '@/lib/analytics'
 
-// Package Configuration to ensure consistency
-// PHASE 2: Pro+ merged into Pro - pro_plus SKU maps to Pro tier for backward compatibility
+// Package Configuration
+// All active SKUs map to Pro tier. Legacy SKUs kept for backward-compat webhook replays.
 const PACKAGES = {
-    'starter': { amount: 59900, sessions: 3, tier: 'Starter' },
-    'pro': { amount: 89900, sessions: 5, tier: 'Pro' },
-    'pro_plus': { amount: 119900, sessions: 7, tier: 'Pro' } // Legacy SKU → Pro tier
+    single: {
+        amount: 49900,
+        sessions: 1,
+        label: 'PraxisNow — Single Session',
+        tier: 'Pro' as const
+    },
+    practice_pack: {
+        amount: 139900,
+        sessions: 3,
+        label: 'PraxisNow — Practice Pack (3 Sessions)',
+        tier: 'Pro' as const
+    },
+    full_prep: {
+        amount: 219900,
+        sessions: 5,
+        label: 'PraxisNow — Full Prep (5 Sessions)',
+        tier: 'Pro' as const
+    },
+    // Legacy SKUs — backward compatibility only, not exposed in UI
+    starter: {
+        amount: 59900,
+        sessions: 3,
+        label: 'Starter Pack (Legacy)',
+        tier: 'Pro' as const
+    },
+    pro: {
+        amount: 89900,
+        sessions: 5,
+        label: 'Pro Pack (Legacy)',
+        tier: 'Pro' as const
+    },
+    pro_plus: {
+        amount: 119900,
+        sessions: 7,
+        label: 'Pro Plus Pack (Legacy)',
+        tier: 'Pro' as const
+    }
 } as const
 
-type Tier = 'Starter' | 'Pro' | 'Pro+' // Pro+ kept for type safety during migration
+type Tier = 'Starter' | 'Pro' | 'Pro+' // Legacy types kept for migration safety
 
 const TIER_WEIGHT = {
     'Starter': 1,
     'Pro': 2,
-    'Pro+': 2 // Pro+ = Pro (same weight, no upgrade/downgrade)
+    'Pro+': 2
 }
 
 export async function POST(req: NextRequest) {
@@ -117,6 +152,14 @@ export async function POST(req: NextRequest) {
                 console.error('Tier Update Error:', updateError)
             }
         }
+
+        // Fire-and-forget analytics
+        trackEvent('pack_purchased', user.id, {
+            sku: packId,
+            amount_paise: pack.amount,
+            sessions_granted: pack.sessions,
+            label: pack.label,
+        })
 
         return NextResponse.json({ success: true, upgraded: TIER_WEIGHT[newTier] > TIER_WEIGHT[currentTier] })
 

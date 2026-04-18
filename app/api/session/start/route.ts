@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/database.types'
 import { normalizeRole } from '@/lib/runtime-scenario'
+import { trackEvent } from '@/lib/analytics'
 
 export async function POST(req: NextRequest) {
     try {
@@ -60,6 +61,29 @@ export async function POST(req: NextRequest) {
                 .from('sessions')
                 .update({ status: 'failed' })
                 .eq('id', existing.id)
+        }
+
+        // FREE SESSION ELIGIBILITY
+        const { data: userRecord } = await adminClient
+            .from('users')
+            .select('free_session_used, available_sessions, package_tier')
+            .eq('id', user.id)
+            .single()
+
+        const AI_ROUND_SCENARIO_IDS = [4, 8, 12]
+        const isAIRound = AI_ROUND_SCENARIO_IDS.includes(Number(scenario_id))
+        const canUseFreeSession =
+            !userRecord?.free_session_used &&
+            !isAIRound &&
+            (userRecord?.available_sessions ?? 0) === 0
+
+        // If AI round and no sessions remaining — block immediately
+        if (isAIRound && (userRecord?.available_sessions ?? 0) === 0) {
+            trackEvent('ai_round_paywall_hit', user.id, { scenario_id })
+            return NextResponse.json(
+                { error: 'AI_ROUND_REQUIRES_PURCHASE' },
+                { status: 403 }
+            )
         }
 
         // STEP 4 — NEGOTIATION SIMULATION PATH
@@ -122,15 +146,17 @@ export async function POST(req: NextRequest) {
 
         if (!profile) return NextResponse.json({ error: 'User profile not found.' }, { status: 404 })
 
-        if (!profile.package_tier || profile.package_tier === 'Free') {
-            return NextResponse.json(
-                { error: 'No active plan. Please purchase a plan to start an interview.' },
-                { status: 403 }
-            )
-        }
+        if (!canUseFreeSession) {
+            if (!profile.package_tier || profile.package_tier === 'Free') {
+                return NextResponse.json(
+                    { error: 'No active plan. Please purchase a plan to start an interview.' },
+                    { status: 403 }
+                )
+            }
 
-        if ((profile.available_sessions ?? 0) < 1) {
-            return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
+            if ((profile.available_sessions ?? 0) < 1) {
+                return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
+            }
         }
 
         // STEP 6 — FETCH SCENARIO
@@ -142,25 +168,29 @@ export async function POST(req: NextRequest) {
 
         if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 })
 
-        // STEP 7 — TIER CHECK FOR AI ROUND
-        if ((scenario as any).round === 4 &&
-            profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+') {
-            return NextResponse.json({ error: 'AI Round requires Pro tier.' }, { status: 403 })
+        // STEP 7 — AI ROUND REQUIRES PAID SESSIONS (not tier-gated)
+        if (isAIRound && !canUseFreeSession && (userRecord?.available_sessions ?? 0) === 0) {
+            return NextResponse.json(
+                { error: 'AI_ROUND_REQUIRES_PURCHASE' },
+                { status: 403 }
+            )
         }
 
-        // STEP 8 — DEDUCT CREDIT ATOMICALLY
-        const { data: deducted, error: deductError } = await adminClient
-            .from('users')
-            .update({
-                available_sessions: (profile.available_sessions ?? 1) - 1,
-                total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
-            })
-            .eq('id', user.id)
-            .gt('available_sessions', 0)
-            .select('id')
+        // STEP 8 — DEDUCT CREDIT ATOMICALLY (skipped for free sessions)
+        if (!canUseFreeSession) {
+            const { data: deducted, error: deductError } = await adminClient
+                .from('users')
+                .update({
+                    available_sessions: (profile.available_sessions ?? 1) - 1,
+                    total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
+                })
+                .eq('id', user.id)
+                .gt('available_sessions', 0)
+                .select('id')
 
-        if (deductError || !deducted || deducted.length === 0) {
-            return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
+            if (deductError || !deducted || deducted.length === 0) {
+                return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
+            }
         }
 
         // STEP 9 — INSERT SESSION
@@ -172,6 +202,7 @@ export async function POST(req: NextRequest) {
             status: 'created',
             transcript: '',
             session_type: 'interview',
+            is_free_session: canUseFreeSession,
         }
 
         const { data: session, error: insertError } = await adminClient
@@ -209,9 +240,27 @@ export async function POST(req: NextRequest) {
             throw new Error('Invariant violation: TMAY must be auto-asked on session start. Turn creation failed.')
         }
 
-        // STEP 11 — RETURN
+        // STEP 11 — MARK FREE SESSION USED (after confirmed session creation)
+        if (canUseFreeSession) {
+            await adminClient
+                .from('users')
+                .update({ free_session_used: true })
+                .eq('id', user.id)
+        }
+
+        // Fire-and-forget analytics
+        trackEvent('session_started', user.id, {
+            scenario_id,
+            role: scenario.role,
+            round: (session as any).round,
+            is_free_session: canUseFreeSession,
+            is_ai_round: isAIRound,
+        })
+
+        // STEP 12 — RETURN
         return NextResponse.json({
             ...session,
+            is_free_session: canUseFreeSession,
             initial_turn: {
                 turn_index: 0,
                 content: 'Tell me about yourself.',

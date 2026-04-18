@@ -11,6 +11,7 @@ import {
     Zap, Trophy, Clock, Lock, MicOff
 } from 'lucide-react'
 import Link from 'next/link'
+import Script from 'next/script'
 import CurrentBarCard, { type CurrentBarCardProps } from '@/components/CurrentBarCard'
 import DashboardFilters, { FilterState } from '@/components/DashboardFilters'
 import type { Database } from '@/lib/database.types'
@@ -100,6 +101,7 @@ export default function DashboardPage() {
     const [scoreHistory, setScoreHistory] = useState<ScoreHistoryRow[]>([])
     const [stuckSessions, setStuckSessions] = useState<StuckSession[]>([])
     const [recoveringId, setRecoveringId] = useState<string | null>(null)
+    const [showPaywall, setShowPaywall] = useState(false)
 
     // ── Functions ─────────────────────────────────────────────────────────────
 
@@ -171,6 +173,79 @@ export default function DashboardPage() {
         router.push('/')
     }
 
+    const handlePurchase = async (packId: string) => {
+        const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+        if (!razorpayKey) {
+            alert('Payment configuration error. Please contact support.')
+            return
+        }
+        try {
+            const res = await fetch('/api/razorpay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ packId })
+            })
+            if (!res.ok) throw new Error(`Failed to create order: ${res.statusText}`)
+            const data = await res.json()
+            if (data.error) throw new Error(data.error)
+
+            const descriptionMap: Record<string, string> = {
+                single: 'PraxisNow — Single Session',
+                practice_pack: 'PraxisNow — Practice Pack (3 Sessions)',
+                full_prep: 'PraxisNow — Full Prep (5 Sessions)',
+            }
+
+            const options = {
+                key: razorpayKey,
+                amount: data.amount,
+                currency: 'INR',
+                name: 'PraxisNow AI',
+                description: descriptionMap[packId] || 'Interview Sessions',
+                order_id: data.id,
+                handler: async function (response: any) {
+                    try {
+                        const verifyRes = await fetch('/api/razorpay/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                packId
+                            })
+                        })
+                        const verifyData = await verifyRes.json()
+                        if (verifyData.success) {
+                            window.location.href = '/dashboard?payment=success'
+                        } else {
+                            throw new Error(verifyData.error || 'Verification failed')
+                        }
+                    } catch (err) {
+                        alert('Payment successful, but verification failed. Please contact support.')
+                    }
+                },
+                theme: { color: '#9333ea' }
+            }
+
+            if (typeof (window as any).Razorpay === 'undefined') {
+                alert('Payment system is still loading. Please try again in a moment.')
+                return
+            }
+            const rzp = new (window as any).Razorpay(options)
+            rzp.open()
+        } catch (err) {
+            alert(`Payment failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        }
+    }
+
+    const handleStartInterview = (scenarioId: number) => {
+        if (sessionsRemaining === 0 && freeSessionUsed) {
+            setShowPaywall(true)
+            return
+        }
+        router.push(`/simulator/${scenarioId}`)
+    }
+
     // ── Data Loading ──────────────────────────────────────────────────────────
 
     useEffect(() => {
@@ -183,7 +258,7 @@ export default function DashboardPage() {
                 { data: profile, error: profileError },
                 { data: dbScenarios }
             ] = await Promise.all([
-                supabase.from('users').select('package_tier, available_sessions, onboarding_complete, primary_role, first_name, full_name, avatar_url').eq('id', user.id).single(),
+                supabase.from('users').select('package_tier, available_sessions, free_session_used, onboarding_complete, primary_role, first_name, full_name, avatar_url').eq('id', user.id).single(),
                 supabase.from('scenarios').select('id, role, round, round_title, evaluation_dimensions').eq('is_active', true).order('round', { ascending: true })
             ])
 
@@ -387,6 +462,8 @@ export default function DashboardPage() {
 
     const hasActivePack = !!(userProfile?.package_tier && userProfile.package_tier !== 'Free')
     const hasSessions = (userProfile?.available_sessions ?? 0) > 0
+    const sessionsRemaining = userProfile?.available_sessions ?? 0
+    const freeSessionUsed = userProfile?.free_session_used ?? true
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-purple-500/30">
@@ -469,8 +546,8 @@ export default function DashboardPage() {
 
             <main className="max-w-5xl mx-auto px-6 py-8">
 
-                {/* No Active Pack Banner */}
-                {!hasActivePack && (
+                {/* No Active Pack Banner — hidden when free session banner is active */}
+                {!hasActivePack && (freeSessionUsed || sessionsRemaining > 0) && (
                     <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between text-red-200">
                         <div className="flex items-center gap-3">
                             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
@@ -508,6 +585,20 @@ export default function DashboardPage() {
                     </div>
                 )}
 
+                {/* ── Free Session Welcome Banner ──────────────────────────── */}
+                {!freeSessionUsed && sessionsRemaining === 0 && (
+                    <div className="mb-6 bg-green-500/10 border border-green-500/25 rounded-xl px-5 py-4 flex items-start gap-3">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5 shrink-0 text-green-400">
+                            <path d="M8 1l1.5 3h3l-2.5 2 1 3L8 7.5 5 9l1-3L3.5 4h3L8 1z"
+                                stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                        </svg>
+                        <p className="text-sm text-green-200 leading-relaxed">
+                            <strong className="text-green-300 font-semibold">Your first session is on us.</strong>{' '}
+                            Try any round (except AI rounds) completely free — no payment needed. Start below.
+                        </p>
+                    </div>
+                )}
+
                 {/* ── Role Progress Card ───────────────────────────────────── */}
                 <div className="mb-4 bg-white/[0.03] border border-white/10 rounded-2xl p-5">
                     {levelLabel === null ? (
@@ -524,13 +615,8 @@ export default function DashboardPage() {
                             </div>
                             {recommendedNextRound && (
                                 <button
-                                    onClick={() => {
-                                        if (!hasActivePack) { router.push('/pricing'); return }
-                                        if (!hasSessions) { router.push('/pricing'); return }
-                                        router.push(`/simulator/${recommendedNextRound.scenario_id}`)
-                                    }}
-                                    disabled={!hasActivePack || !hasSessions}
-                                    className="shrink-0 px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white disabled:opacity-40 transition-colors"
+                                    onClick={() => handleStartInterview(recommendedNextRound.scenario_id)}
+                                    className="shrink-0 px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white transition-colors"
                                 >
                                     Start Round 1
                                 </button>
@@ -589,13 +675,8 @@ export default function DashboardPage() {
                             {' '}— {recommendedNextRound.reason}. This is your highest-leverage session.
                         </p>
                         <button
-                            onClick={() => {
-                                if (!hasActivePack) { router.push('/pricing'); return }
-                                if (!hasSessions) { router.push('/pricing'); return }
-                                router.push(`/simulator/${recommendedNextRound.scenario_id}`)
-                            }}
-                            disabled={!hasActivePack || !hasSessions}
-                            className="shrink-0 px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white disabled:opacity-40 transition-colors whitespace-nowrap"
+                            onClick={() => handleStartInterview(recommendedNextRound.scenario_id)}
+                            className="shrink-0 px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white transition-colors whitespace-nowrap"
                         >
                             Start now
                         </button>
@@ -662,8 +743,8 @@ export default function DashboardPage() {
                                                     : 'border-white/10 bg-white/[0.03]'
                                             }`}
                                         >
-                                            {/* Lock overlay */}
-                                            {!hasActivePack && (
+                                            {/* Lock overlay — only when no pack AND free session already used */}
+                                            {!hasActivePack && freeSessionUsed && (
                                                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/30 backdrop-blur-[2px]">
                                                     <div className="flex flex-col items-center gap-1.5">
                                                         <Lock className="w-5 h-5 text-gray-400" />
@@ -738,27 +819,29 @@ export default function DashboardPage() {
                                                     <Clock className="w-3 h-3" />
                                                     30 min
                                                 </div>
-                                                <button
-                                                    onClick={() => {
-                                                        if (!hasActivePack) { router.push('/pricing'); return }
-                                                        if (!hasSessions) { router.push('/pricing'); return }
-                                                        router.push(`/simulator/${scenario.id}`)
-                                                    }}
-                                                    disabled={!hasActivePack || !hasSessions}
-                                                    className={`text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors disabled:opacity-40 ${
-                                                        isCompleted
-                                                            ? 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-                                                            : 'bg-purple-600 hover:bg-purple-500 text-white'
-                                                    }`}
-                                                >
-                                                    {!hasActivePack
-                                                        ? 'Locked'
-                                                        : !hasSessions
-                                                            ? 'No sessions'
+                                                {scenario.round === 4 && sessionsRemaining === 0 && freeSessionUsed ? (
+                                                    <button
+                                                        onClick={() => setShowPaywall(true)}
+                                                        className="text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors bg-purple-600 hover:bg-purple-500 text-white"
+                                                    >
+                                                        Unlock AI Round
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleStartInterview(scenario.id)}
+                                                        className={`text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors ${
+                                                            isCompleted
+                                                                ? 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                                                                : 'bg-purple-600 hover:bg-purple-500 text-white'
+                                                        }`}
+                                                    >
+                                                        {!hasActivePack && freeSessionUsed
+                                                            ? 'Locked'
                                                             : isCompleted
                                                                 ? 'Retake'
                                                                 : 'Start Interview'}
-                                                </button>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )
@@ -908,6 +991,86 @@ export default function DashboardPage() {
                 userId={user?.id}
                 sessionId={selectedSession?.id}
             />
+
+            {/* ── Paywall Modal ─────────────────────────────────────────── */}
+            {showPaywall && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowPaywall(false)} />
+                    <div className="relative w-full max-w-xl bg-[#1a1a24] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setShowPaywall(false)}
+                            className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-full transition-colors z-10"
+                        >
+                            <X className="w-4 h-4 text-gray-400" />
+                        </button>
+
+                        <div className="p-8">
+                            <h2 className="text-xl font-bold text-white mb-2">Ready to keep going?</h2>
+                            <p className="text-sm text-gray-400 mb-8">
+                                Your free session has been used. Buy a session pack to continue practising.
+                            </p>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                {/* Single Session */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">Single Session</p>
+                                        <p className="text-2xl font-bold text-white mt-1">₹499</p>
+                                        <p className="text-xs text-gray-500 mt-1">1 session</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handlePurchase('single')}
+                                        className="mt-auto w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-colors"
+                                    >
+                                        Buy
+                                    </button>
+                                </div>
+
+                                {/* Practice Pack — most popular */}
+                                <div className="relative bg-purple-500/10 border border-purple-500/40 rounded-xl p-4 flex flex-col gap-3">
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2.5 py-0.5 bg-purple-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-full whitespace-nowrap">
+                                        Most popular
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">Practice Pack</p>
+                                        <p className="text-2xl font-bold text-white mt-1">₹1,399</p>
+                                        <p className="text-xs text-gray-500 mt-1">3 sessions</p>
+                                        <p className="text-xs text-green-400 mt-0.5">Save ₹98</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handlePurchase('practice_pack')}
+                                        className="mt-auto w-full py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition-colors"
+                                    >
+                                        Buy
+                                    </button>
+                                </div>
+
+                                {/* Full Prep */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-white">Full Prep</p>
+                                        <p className="text-2xl font-bold text-white mt-1">₹2,199</p>
+                                        <p className="text-xs text-gray-500 mt-1">5 sessions</p>
+                                        <p className="text-xs text-green-400 mt-0.5">Save ₹296</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handlePurchase('full_prep')}
+                                        className="mt-auto w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-colors"
+                                    >
+                                        Buy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p className="text-center text-xs text-gray-500 mt-6">
+                                All sessions are 30 minutes · Any role · Any round
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
 
             {/* SESSION DETAILS MODAL — DISABLED FOR UI SIMPLIFICATION */}
             {false && selectedSession && (

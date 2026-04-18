@@ -52,6 +52,38 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event_name: string
+          id: string
+          properties: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_name: string
+          id?: string
+          properties?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_name?: string
+          id?: string
+          properties?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_turns: {
         Row: {
           answered: boolean
@@ -270,6 +302,7 @@ export type Database = {
           evaluation_data: Json | null
           evaluation_depth: string | null
           id: string
+          is_free_session: boolean
           momentum_card: Json | null
           overall_score: number | null
           pdf_url: string | null
@@ -289,6 +322,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -308,6 +342,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -486,6 +521,7 @@ export type Database = {
           designation: string | null
           email: string | null
           first_name: string | null
+          free_session_used: boolean
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -505,6 +541,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -524,6 +561,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id?: string
           is_admin?: boolean | null

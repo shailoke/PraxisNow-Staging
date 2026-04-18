@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/database.types'
 import { generateSessionPDF } from '@/lib/pdfGenerator'
+import { trackEvent } from '@/lib/analytics'
 
 export async function POST(req: NextRequest) {
     try {
@@ -158,6 +159,13 @@ export async function POST(req: NextRequest) {
             .eq('id', session_id);
 
         if (updateError) throw new Error(`Session Update Failed: ${updateError.message}`);
+
+        // Fire-and-forget analytics
+        trackEvent('pdf_downloaded', authUser.id, {
+            session_id,
+            role,
+            round: baseScenario?.round ?? null,
+        })
 
         return NextResponse.json({ pdf_url: signedData?.signedUrl });
 
