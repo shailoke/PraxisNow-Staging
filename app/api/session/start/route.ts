@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/database.types'
 import { normalizeRole } from '@/lib/runtime-scenario'
+import { trackEvent } from '@/lib/analytics'
 
 export async function POST(req: NextRequest) {
     try {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
 
         // If AI round and no sessions remaining — block immediately
         if (isAIRound && (userRecord?.available_sessions ?? 0) === 0) {
+            trackEvent('ai_round_paywall_hit', user.id, { scenario_id })
             return NextResponse.json(
                 { error: 'AI_ROUND_REQUIRES_PURCHASE' },
                 { status: 403 }
@@ -245,6 +247,15 @@ export async function POST(req: NextRequest) {
                 .update({ free_session_used: true })
                 .eq('id', user.id)
         }
+
+        // Fire-and-forget analytics
+        trackEvent('session_started', user.id, {
+            scenario_id,
+            role: scenario.role,
+            round: (session as any).round,
+            is_free_session: canUseFreeSession,
+            is_ai_round: isAIRound,
+        })
 
         // STEP 12 — RETURN
         return NextResponse.json({

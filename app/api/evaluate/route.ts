@@ -13,6 +13,7 @@ import { runStage4 } from '@/lib/evaluation/stage4-rules'
 import { validateAnswerUpgrades } from '@/lib/grounding-check'
 import { synthesizePreparationSignals } from '@/lib/signalSynthesis'
 import type { ReplayComparison } from '@/lib/replay-comparison'
+import { trackEvent } from '@/lib/analytics'
 
 export const maxDuration = 120;
 
@@ -730,6 +731,17 @@ export async function POST(req: NextRequest) {
         } catch (starErr) {
             console.error('[EVALUATE] Star interviewer check failed (non-critical):', starErr)
         }
+
+        // Fire-and-forget analytics
+        trackEvent('session_completed', session.user_id, {
+            session_id,
+            role,
+            round,
+            overall_score: stage2.overall_score,
+            hiring_signal: stage2.hiring_signal,
+            evaluation_depth: evaluationDepth,
+            is_free_session: session.is_free_session ?? false,
+        })
 
         return NextResponse.json({ ...evaluation, pdf_url: signedUrl, momentum_card: momentumCard });
 

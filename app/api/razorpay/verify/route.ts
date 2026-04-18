@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import crypto from 'crypto'
 import { Database } from '@/lib/database.types'
+import { trackEvent } from '@/lib/analytics'
 
 // Package Configuration
 // All active SKUs map to Pro tier. Legacy SKUs kept for backward-compat webhook replays.
@@ -151,6 +152,14 @@ export async function POST(req: NextRequest) {
                 console.error('Tier Update Error:', updateError)
             }
         }
+
+        // Fire-and-forget analytics
+        trackEvent('pack_purchased', user.id, {
+            sku: packId,
+            amount_paise: pack.amount,
+            sessions_granted: pack.sessions,
+            label: pack.label,
+        })
 
         return NextResponse.json({ success: true, upgraded: TIER_WEIGHT[newTier] > TIER_WEIGHT[currentTier] })
 
