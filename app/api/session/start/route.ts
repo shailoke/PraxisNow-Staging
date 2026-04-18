@@ -166,10 +166,12 @@ export async function POST(req: NextRequest) {
 
         if (!scenario) return NextResponse.json({ error: 'Scenario not found.' }, { status: 404 })
 
-        // STEP 7 — TIER CHECK FOR AI ROUND
-        if ((scenario as any).round === 4 &&
-            profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+') {
-            return NextResponse.json({ error: 'AI Round requires Pro tier.' }, { status: 403 })
+        // STEP 7 — AI ROUND REQUIRES PAID SESSIONS (not tier-gated)
+        if (isAIRound && !canUseFreeSession && (userRecord?.available_sessions ?? 0) === 0) {
+            return NextResponse.json(
+                { error: 'AI_ROUND_REQUIRES_PURCHASE' },
+                { status: 403 }
+            )
         }
 
         // STEP 8 — DEDUCT CREDIT ATOMICALLY (skipped for free sessions)

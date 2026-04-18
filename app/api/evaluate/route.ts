@@ -352,10 +352,9 @@ export async function POST(req: NextRequest) {
             console.log(`[EVAL_STAGE3] ${answerUpgrades.length} grounded upgrades produced.`);
         }
 
-        // ── Stage 4: Personal Rules (Pro/Pro+, full depth only) ───────────────────────
+        // ── Stage 4: Personal Rules (full depth only) ────────────────────────────────
         let personalRules: any[] = [];
-        const isExtendedEval = user.package_tier === 'Pro' || user.package_tier === 'Pro+';
-        if (isExtendedEval && evaluationDepth === 'full') {
+        if (evaluationDepth === 'full') {
             console.log('[EVAL_STAGE4] Generating session-specific rules...');
             personalRules = await runStage4(stage1, stage2);
             console.log(`[EVAL_STAGE4] ${personalRules.length} validated rules produced.`);
@@ -753,9 +752,9 @@ function BUILD_PROMPT(params: {
 }) {
     const isShallow = params.evaluationDepth === 'shallow';
     const isInsufficient = params.evaluationDepth === 'insufficient';
-    const isStarter = params.package_tier === 'Starter';
-    const isPro = params.package_tier === 'Pro';
-    const isProPlus = params.package_tier === 'Pro+';
+    const isStarter = false;  // Starter tier no longer exists
+    const isPro = true;       // All active users get Pro-equivalent evaluation
+    const isProPlus = false;  // Pro+ tier no longer exists
 
     return `PRAXISNOW — INTERVIEWER-CALIBRATED CORRECTIVE REPORT
 
@@ -806,7 +805,7 @@ CONTEXT
 Role: ${params.role} ${params.level}
 Scenario: ${params.scenario_title}
 Dimensions: ${params.role_specific_dimensions}
-Tier: ${params.package_tier}
+Tier: Pro
 
 Transcript:
 ${params.full_transcript}
