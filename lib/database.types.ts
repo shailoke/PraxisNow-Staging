@@ -270,6 +270,7 @@ export type Database = {
           evaluation_data: Json | null
           evaluation_depth: string | null
           id: string
+          is_free_session: boolean
           momentum_card: Json | null
           overall_score: number | null
           pdf_url: string | null
@@ -289,6 +290,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -308,6 +310,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -486,6 +489,7 @@ export type Database = {
           designation: string | null
           email: string | null
           first_name: string | null
+          free_session_used: boolean
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -505,6 +509,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -524,6 +529,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
