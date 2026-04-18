@@ -54,29 +54,62 @@ User speaks → MediaRecorder (250ms chunks) → blob collected on stop
   → POST transcript → /api/turns/answer             (write user_answer BEFORE answered=true)
   → POST → /api/interview (gpt-4o, non-streaming)  → THINKING state
   → Response returned immediately (DB writes fire in background IIFE)
-  → POST text → /api/voice/tts (tts-1, 'onyx')    → ASSISTANT_SPEAKING state
-  → ttsRes.blob() → URL.createObjectURL() → new Audio(blobUrl)
-  → audioEl.play()
-  → audioEl.onended: revokeObjectURL, reset state, startRecording()
+  → POST text → /api/voice/tts (tts-1, 'onyx')    → still THINKING (no state change yet)
+  → MediaSource stream pump (primary) OR blob URL (iOS Safari fallback)
+  → audioEl.oncanplay fires → ASSISTANT_SPEAKING state
+  → audioEl.play() [primary: inside appendNext() after first appendBuffer]
+  → audioEl.onended: cleanup, reset state, startRecording()
   → WAITING_FOR_USER state
 ```
 
 ### Audio playback mechanism
 
-TTS audio is played via an `HTMLAudioElement` with a blob URL — **not** `AudioContext` + `AudioBufferSourceNode`. This eliminates the 3–4 second `decodeAudioData()` gap.
+TTS audio uses **MediaSource streaming** as the primary path so audio starts after the first chunk (~300ms) rather than waiting for the full response to buffer. iOS Safari falls back to a blob URL because `MediaSource.isTypeSupported('audio/mpeg')` returns false there.
 
+**Capability check (runs once per TTS call):**
+```typescript
+const supportsMediaSource = typeof MediaSource !== 'undefined' &&
+    MediaSource.isTypeSupported('audio/mpeg')
+```
+
+**Primary path — MediaSource stream pump:**
+```typescript
+const mediaSource = new MediaSource()
+const msUrl = URL.createObjectURL(mediaSource)
+const audioEl = new Audio(msUrl)
+audioEl.oncanplay = () => { setInterviewState('ASSISTANT_SPEAKING'); ... }
+
+mediaSource.addEventListener('sourceopen', () => {
+    const sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg')
+    let playbackStarted = false
+    const appendNext = async () => {
+        const { done, value } = await reader.read()
+        if (done) { mediaSource.endOfStream(); return }
+        sourceBuffer.appendBuffer(value)
+        sourceBuffer.addEventListener('updateend', () => {
+            if (!playbackStarted) {
+                playbackStarted = true
+                audioEl.play()   // play fires after FIRST chunk, not before
+            }
+            appendNext()
+        }, { once: true })
+    }
+    appendNext()
+})
+```
+
+**Fallback path — blob URL (iOS Safari):**
 ```typescript
 const blob = await ttsRes.blob()
 const blobUrl = URL.createObjectURL(blob)
 const audioEl = new Audio(blobUrl)
+audioEl.oncanplay = () => { setInterviewState('ASSISTANT_SPEAKING'); ... }
 audioEl.onended = () => { URL.revokeObjectURL(blobUrl); /* reset state, startRecording */ }
-audioEl.onerror = (err) => { console.error('[AUDIO_PLAYBACK_ERROR]', err); URL.revokeObjectURL(blobUrl); /* same reset */ }
-audioElRef.current = audioEl
-blobUrlRef.current = blobUrl
+audioEl.onerror = (err) => { URL.revokeObjectURL(blobUrl); /* same reset */ }
 audioEl.play()
 ```
 
-`audioContextRef` and `audioSourceRef` remain declared as no-op refs for abort compatibility but are never set during playback.
+`audioContextRef` and `audioSourceRef` remain declared as no-op refs for abort compatibility but are never set during playback. `readerRef` holds the active `ReadableStreamDefaultReader` so `abortInterviewerAudio()` can cancel it mid-stream.
 
 ### DB write pattern (interview route)
 
@@ -111,6 +144,9 @@ This saves ~1,200–1,400ms per turn.
 - 5KB blob guard in `askNextQuestion()` rejects near-empty recordings
 - `user_answer` is written by `/api/turns/answer` **before** `/api/interview` is called — enforced in `useBatchVoice.ts`
 - All post-turn side effects (`assistantTurnCount++`, `startRecording()`) live in `audioEl.onended` — never before
+- **`ASSISTANT_SPEAKING` state is set inside `audioEl.oncanplay`** — never at the call site. The state stays as `THINKING` until the browser signals it has enough data to play.
+- **`audioEl.play()` is called inside `appendNext()` after the first `appendBuffer`** (primary MediaSource path) — calling it before any data is buffered will throw `NotAllowedError` or stall silently.
+- **`readerRef` holds the active `ReadableStreamDefaultReader`** — `abortInterviewerAudio()` calls `readerRef.current?.cancel()` to terminate the stream mid-flight.
 - **Do NOT call `setEvalResult` before `router.push`** in `handleEnd()` for standard interviews
 
 ---
@@ -301,16 +337,18 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 | `app/api/interview/route.ts` | Core interview loop — gpt-4o question generation, fire-and-forget DB writes, anti-convergence blocklist, latency instrumentation |
 | `app/api/evaluate/route.ts` | 4-stage evaluation pipeline → momentum card → PDF → signed URL. `maxDuration = 120`. |
 | `app/api/session/start/route.ts` | Session creation, TMAY pre-seeding, credit deduction, round stored on session row, tier gate for R4 |
+| `app/api/session/abandon/route.ts` | sendBeacon target — marks session `abandoned` via service-role client if still in a live status. Always returns 200. |
 | `app/api/voice/stt/route.ts` | Whisper-1 STT — accepts audio blob, returns transcript |
 | `app/api/voice/tts/route.ts` | TTS-1 synthesis — pipes `ReadableStream<audio/mpeg>`. **Edge runtime.** |
 | `app/api/voice/opening/route.ts` | Fetches Turn 0 content for TMAY playback |
 | `app/api/razorpay/route.ts` | Razorpay order creation |
 | `app/api/razorpay/verify/route.ts` | Payment verification + tier upgrade logic |
 | `app/results/[session_id]/page.tsx` | Results screen — Verdict, Performance Scorecard, Strongest Moment, The One Thing, What's Next |
-| `app/dashboard/page.tsx` | Dashboard — Practice tab (role selector, scenario grid, score history), History tab |
-| `app/simulator/[scenarioId]/page.tsx` | Interview simulator — evaluation progress UI, redirects on eval complete |
-| `hooks/useBatchVoice.ts` | **Primary voice hook** — STT→LLM→TTS batch pipeline, blob URL audio playback |
+| `app/dashboard/page.tsx` | Dashboard — Practice tab (role selector, scenario grid, score history), History tab. Amber recovery banner appears when sessions are stuck in `evaluating` status (10–90 min old). |
+| `app/simulator/[scenarioId]/page.tsx` | Interview simulator — evaluation progress UI, redirects on eval complete. `beforeunload` guard fires `navigator.sendBeacon('/api/session/abandon', ...)` when tab is closed mid-session. |
+| `hooks/useBatchVoice.ts` | **Primary voice hook** — STT→LLM→TTS batch pipeline. MediaSource stream pump (primary) + blob URL fallback (iOS Safari). State transitions via `oncanplay`. |
 | `hooks/useRealtimeVoice.ts` | Legacy voice hook — WebRTC/Realtime API. Not used in production. |
+| `supabase/migrations/20250418_stale_session_cleanup.sql` | pg_cron job (runs hourly) — marks sessions stuck in `created/active/evaluating` for >90 min as `abandoned`. **Must be run via Supabase SQL Editor**, not `db push` (requires superuser for pg_cron). |
 | `lib/evaluation/stage1-extract.ts` | Stage 1 — parses `interview_turns` into `Stage1Output` |
 | `lib/evaluation/stage2-evaluate.ts` | Stage 2 — o4-mini competency scoring (1–5), 5-arg `runStage2` |
 | `lib/evaluation/stage3-rewrite.ts` | Stage 3 — grounded answer rewrites; behavioral vs hypothetical rules |
@@ -346,7 +384,7 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 | `momentum_card` | `{ strongest_signal, one_fix, progress_note }`. Derived after stage 2. |
 | `pdf_url` | Storage path (not signed URL). Signed URL generated on demand. |
 | `replay_of_session_id` | Links to original session for replay sessions. |
-| `status` | `'created' \| 'active' \| 'evaluating' \| 'completed' \| 'failed'` |
+| `status` | `'created' \| 'active' \| 'evaluating' \| 'completed' \| 'failed' \| 'abandoned'` |
 
 ### `interview_turns`
 | Column | Notes |
@@ -376,6 +414,27 @@ Anti-convergence store. Keyed by `user_id` + `role` + `round`. Queried with `.li
 
 ### `purchases`
 Payment records. Insert triggers session credit addition.
+
+---
+
+## Session Lifecycle & Abandonment
+
+Sessions can end in five terminal states: `completed`, `failed`, `abandoned`, and two implicit stuck states covered by the cleanup job.
+
+### How sessions become `abandoned`
+
+| Trigger | Mechanism |
+|---|---|
+| User closes/navigates away mid-session | `beforeunload` in simulator fires `navigator.sendBeacon('/api/session/abandon', { session_id })` → route marks status `abandoned` if still in a live status |
+| Session stuck >90 min in any live status | pg_cron job (`20250418_stale_session_cleanup.sql`) runs hourly, bulk-updates to `abandoned` |
+
+### Dashboard recovery banner
+
+On dashboard load, a query fetches sessions with `status = evaluating` that are between 10 and 90 minutes old (i.e., the evaluate job started but never completed). An amber banner renders above the welcome section with a "Resume Evaluation" button per session. Clicking it re-POSTs to `/api/evaluate` and redirects to `/results/:id` on success. The 10-minute lower bound avoids showing the banner for sessions whose evaluate call is still legitimately in-flight.
+
+### pg_cron cleanup
+
+`supabase/migrations/20250418_stale_session_cleanup.sql` must be run manually in the Supabase Dashboard SQL Editor — pg_cron requires superuser privileges not available to the CLI migration runner. The job also requires the `sessions` table CHECK constraint to include `'abandoned'` (steps documented in the migration file comments).
 
 ---
 
