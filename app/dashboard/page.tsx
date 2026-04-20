@@ -706,21 +706,17 @@ export default function DashboardPage() {
 
                         {/* Role selector pills */}
                         <div className="flex items-center gap-2 mb-6 flex-wrap">
-                            {([
-                                { label: 'PM', full: 'Product Manager' },
-                                { label: 'SDE', full: 'Software Development Engineer' },
-                                { label: 'DS', full: 'Data Scientist' },
-                            ] as const).map(({ label, full }) => (
+                            {(['Product Manager', 'Software Development Engineer', 'Data Scientist'] as const).map((role) => (
                                 <button
-                                    key={full}
-                                    onClick={() => setSelectedRole(full)}
+                                    key={role}
+                                    onClick={() => setSelectedRole(role)}
                                     className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                                        selectedRole === full
+                                        selectedRole === role
                                             ? 'bg-purple-600 border-purple-500 text-white'
                                             : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
                                     }`}
                                 >
-                                    {label}
+                                    {role}
                                 </button>
                             ))}
                         </div>
