@@ -421,25 +421,14 @@ export async function generateSessionPDF(
             y = addSectionTitle('Core Strengths', y);
 
             evaluation.strengths.forEach((s: any) => {
-                y = checkPageBreak(y, 80);
+                y = checkPageBreak(y, 60);
 
                 const skillText: string = s.skill ?? '';
                 if (!skillText) { y += 20; return; }
 
                 doc.fontSize(12).font(FONTS.bold).fillColor(COLORS.success)
                     .text(`PASS  ${skillText}`, SPACING.pageMargin, y);
-                y += 20;
-
-                // evidence only — never fall back to observation (may contain "Turn undefined: ...")
-                const evidenceText: string = s.evidence || '';
-                if (evidenceText) {
-                    const supportWidth = width - (2 * SPACING.pageMargin);
-                    doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                        .text(evidenceText, SPACING.pageMargin, y, { width: supportWidth });
-                    y += doc.heightOfString(evidenceText, { width: supportWidth }) + 20;
-                } else {
-                    y += 20;
-                }
+                y += 24;
             });
             y += 10;
         }
