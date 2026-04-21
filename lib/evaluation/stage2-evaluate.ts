@@ -94,7 +94,12 @@ reasoning — one solution direction is not ideation regardless of how well \
 it is explained. Scores of 4 or above require the behaviour to be \
 demonstrated consistently across multiple turns, not just once. A score \
 of 5 is disqualified if the behaviour appeared only once or only when the \
-interviewer explicitly invited it.`
+interviewer explicitly invited it. \
+A candidate who describes what they would clarify ("First I'd clarify X") \
+without actually directing a question at the interviewer has not demonstrated \
+problem framing. Describing intent is not evidence of the behaviour. Only \
+score problem framing highly if the candidate actually asked the interviewer \
+a direct question and waited for a response before proceeding.`
 
   // ── System prompt ─────────────────────────────────────────────────────────────
   const systemPrompt = `You are a senior interviewer at a top tech company writing a debrief after \
