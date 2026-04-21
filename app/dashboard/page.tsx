@@ -546,8 +546,8 @@ export default function DashboardPage() {
 
             <main className="max-w-5xl mx-auto px-6 py-8">
 
-                {/* No Active Pack Banner — hidden when free session banner is active */}
-                {!hasActivePack && (freeSessionUsed || sessionsRemaining > 0) && (
+                {/* No Active Pack Banner — only when free session is used AND no sessions remain */}
+                {!hasActivePack && freeSessionUsed && sessionsRemaining === 0 && (
                     <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between text-red-200">
                         <div className="flex items-center gap-3">
                             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
@@ -815,11 +815,12 @@ export default function DashboardPage() {
                                                     <Clock className="w-3 h-3" />
                                                     30 min
                                                 </div>
-                                                {scenario.round === 4 && sessionsRemaining === 0 && freeSessionUsed ? (
+                                                {[4, 8, 12].includes(scenario.id) && sessionsRemaining === 0 ? (
                                                     <button
                                                         onClick={() => setShowPaywall(true)}
-                                                        className="text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors bg-purple-600 hover:bg-purple-500 text-white"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-lg transition-colors bg-purple-600 hover:bg-purple-500 text-white"
                                                     >
+                                                        <Lock className="w-3 h-3" />
                                                         Unlock AI Round
                                                     </button>
                                                 ) : (
@@ -831,11 +832,7 @@ export default function DashboardPage() {
                                                                 : 'bg-purple-600 hover:bg-purple-500 text-white'
                                                         }`}
                                                     >
-                                                        {!hasActivePack && freeSessionUsed
-                                                            ? 'Locked'
-                                                            : isCompleted
-                                                                ? 'Retake'
-                                                                : 'Start Interview'}
+                                                        {isCompleted ? 'Retake' : 'Start Interview'}
                                                     </button>
                                                 )}
                                             </div>
