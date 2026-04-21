@@ -7,9 +7,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface CompetencyScore {
   name: string
-  score: number        // 1-5
+  score: number        // 1.0-5.0 in 0.5 increments
   evidence: string     // specific moment or quote from transcript
-  gap: string | null   // what was missing — required for scores 1-4, null only if score is 5
+  gap: string | null   // what was missing — required for scores below 5.0, null only if score is 5.0
 }
 
 export interface TurnDiagnostic {
@@ -76,62 +76,133 @@ export async function runStage2(
   )
   const roundType = isBehavioral ? 'BEHAVIORAL' : 'HYPOTHETICAL'
 
-  // System prompt
-  const systemPrompt = `You are a MAANG interviewer writing a debrief after a ${role} interview, ${roundTitle} round.
+  // ── PART 2 — Round-type calibration block ────────────────────────────────────
+  const calibrationBlock = roundType === 'BEHAVIORAL'
+    ? `Calibration for behavioral rounds:
+A story without a named situation, named product, or quantified outcome \
+does not constitute a strong behavioral answer regardless of structure. \
+Scores of 4 or above require clear personal ownership with a specific \
+measurable outcome. A score of 5 requires the story to be exceptional — \
+specific, owned, quantified, and showing genuine insight about what was \
+learned. If all answers are hypothetically framed ("I would...") rather \
+than experience-based ("I did..."), no competency should score above 2.`
+    : `Calibration for hypothetical rounds:
+A single clarifying question does not constitute strong problem framing — \
+strong candidates return to clarification across multiple turns. Solution \
+ideation requires meaningfully different options with explicit tradeoff \
+reasoning — one solution direction is not ideation regardless of how well \
+it is explained. Scores of 4 or above require the behaviour to be \
+demonstrated consistently across multiple turns, not just once. A score \
+of 5 is disqualified if the behaviour appeared only once or only when the \
+interviewer explicitly invited it.`
+
+  // ── System prompt ─────────────────────────────────────────────────────────────
+  const systemPrompt = `You are a senior interviewer at a top tech company writing a debrief after \
+a ${role} interview, ${roundTitle} round.
 
 Round type: ${roundType}
 
 About this round:
 ${evaluationGuidance}
 
-Scoring philosophy: Score only the competencies for which you observed clear evidence in the transcript — either positive or negative. If a competency was not tested or not reached, omit it entirely. Do not score a competency 1 simply because it was absent. A candidate who demonstrated strong thinking on the competencies that came up should score well overall even if they did not cover every possible dimension.
+Read the full transcript carefully. Before scoring anything, reason through \
+the session as a whole. Consider the full arc — not just individual answers. \
+Look for patterns of strength and weakness across multiple turns. A behaviour \
+shown once does not define a competency. A behaviour shown consistently across \
+turns does.
 
-Score each competency 1-5:
-5 — Exceptional, unprompted depth, no gaps — gap field must be null
-4 — Strong, minor gaps only — gap field must name the minor gap
-3 — Solid, clear gaps present — gap field must name the primary gap
-2 — Present but shallow or incomplete — gap field must name what was missing
-1 — Absent or fundamentally wrong — gap field must name what was absent
+${calibrationBlock}
 
-Evidence must be a specific moment, behaviour, or quote from the transcript. "Candidate showed good thinking" is not acceptable evidence — quote what they actually said or describe the exact moment.
+Score each competency on this scale. Half scores are allowed and encouraged \
+where the candidate falls between bands:
 
-Return ONLY valid JSON with no preamble, no explanation, and no markdown code fences. The response must be parseable by JSON.parse() with no preprocessing.
+5.0 — Exceptional throughout the session. Unprompted depth on multiple turns. \
+      No meaningful gaps. DISQUALIFIED if the behaviour appeared only once \
+      or only when prompted.
+
+4.0 to 4.5 — Strong with minor gaps. The right behaviour shown consistently \
+             but not at exceptional depth.
+
+3.0 to 3.5 — Present and correct but shallow or inconsistent. Shown in some \
+             turns but not sustained across the session.
+
+2.0 to 2.5 — Attempted but incomplete, surface-level, or only appeared when \
+             explicitly prompted by the interviewer.
+
+1.0 to 1.5 — Absent or fundamentally wrong.
+
+Before finalising any score of 4.5 or 5.0, verify: was this behaviour \
+demonstrated across multiple turns? If it appeared only once, the score \
+must not exceed 3.5.
+
+Evidence must be a specific moment, behaviour, or quote from the transcript. \
+"Candidate showed good thinking" is not evidence. Quote what they actually \
+said or describe the exact moment.
+
+Gap must name the precise missing element — not "lacked depth" but the \
+specific thing that was absent: which option was not considered, which metric \
+was not defined, which user behaviour was not addressed, which tradeoff was \
+not reasoned through. Gap is required for any score below 5.0.
+
+Before producing your JSON output, write a free-form debrief in plain text. \
+This debrief will be used as your reasoning scratchpad — it will not be shown \
+to the user but it will improve the quality of your structured output.
+
+In your free-form debrief cover:
+- What the candidate did well, with specific transcript evidence
+- Where they fell short, with specific transcript evidence
+- Your honest assessment of their level and why
+- What would need to change for them to perform at the next level
+- Any patterns you noticed across multiple turns
+
+Be direct. Be specific. Name moments. Use half scores where appropriate.
+
+After your free-form debrief, output the JSON below and nothing else after it.
 
 {
   "competencies": [
     {
-      "name": "<competency name>",
-      "score": <1-5>,
-      "evidence": "<specific moment or quote from transcript>",
-      "gap": "<what was missing — required for scores 1 through 4, null only if score is 5>"
+      "name": "<competency name — derive from the round type and what actually came up>",
+      "score": <1.0 to 5.0 in 0.5 increments>,
+      "evidence": "<specific quote or moment from transcript>",
+      "gap": "<precise missing element, or null if score is 5.0>"
     }
   ],
-  "overall_score": <1.0-5.0, one decimal place>,
-  "recommendation": "<Strong Hire|Lean Hire|Lean No Hire|Strong No Hire>",
-  "narrative": "<3-4 sentences: what cleared the bar, what the primary gap is, what the recommendation means in practice>",
-  "strengths": ["<specific strength observed>"],
-  "gaps": ["<specific gap observed>"],
+  "overall_score": <1.0 to 5.0, one decimal place, your holistic judgment of the session — not an average>,
+  "recommendation": "<Strong Hire | Lean Hire | Lean No Hire | Strong No Hire>",
+  "narrative": "<4-6 sentences: what cleared the bar, what the primary gap is, honest level calibration, what would push them to the next level>",
+  "strengths": ["<specific strength with evidence>"],
+  "gaps": ["<specific gap with the precise missing element>"],
   "turn_diagnostics": [
     {
       "turn_index": <number>,
       "question_context": "<brief question summary>",
-      "signal_strength": "<strong|moderate|weak>",
-      "what_worked": "<what the candidate did well on this turn>",
-      "what_missed": "<what was missing or weak on this turn>",
-      "fix_in_one_sentence": "<one actionable fix for this specific answer>"
+      "signal_strength": "<strong | moderate | weak>",
+      "what_worked": "<specific behaviour that worked>",
+      "what_missed": "<specific behaviour that was missing>",
+      "fix_in_one_sentence": "<one actionable fix>"
     }
   ],
   "dominant_failure_pattern": "<the single most repeated weakness across the session, or null if none>"
-}`
+}
 
-  // Transcript assembly
+Score only competencies for which you observed clear evidence. Omit \
+competencies that did not come up. Do not score a competency 1 simply \
+because it was absent.
+
+Only score what you saw. A missing competency is not a failed one.
+
+Return the free-form debrief first, then the JSON. The JSON must be valid \
+and parseable. Do not wrap it in markdown code fences.`
+
+  // ── Transcript assembly ───────────────────────────────────────────────────────
   const transcript = stage1Output.turns
     .map(t => `Interviewer: ${t.question}\n\nCandidate: ${t.candidate_answer_verbatim}`)
     .join('\n\n')
 
   const userMessage = `Here is the interview transcript:\n\n${transcript}`
 
-  // OpenAI call
+  // ── OpenAI call ───────────────────────────────────────────────────────────────
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>
   try {
     response = await openai.chat.completions.create({
@@ -148,9 +219,17 @@ Return ONLY valid JSON with no preamble, no explanation, and no markdown code fe
 
   const raw = response.choices[0]?.message?.content ?? ''
 
+  // Find the JSON portion — it starts after the free-form debrief.
+  // The new prompt instructs the model to write free-form text first, then JSON.
+  // Use lastIndexOf('\n{') to find the final top-level object rather than the first '{'.
+  const jsonStart = raw.lastIndexOf('\n{')
+  const jsonString = jsonStart !== -1
+    ? raw.slice(jsonStart).trim()
+    : raw.trim()
+
   let parsed: any
   try {
-    parsed = JSON.parse(raw)
+    parsed = JSON.parse(jsonString)
   } catch {
     console.error('[STAGE2] Parse failed. rawLength:', raw.length)
     console.error('[STAGE2] Last 200 chars:', raw.slice(-200))
@@ -209,7 +288,7 @@ Return ONLY valid JSON with no preamble, no explanation, and no markdown code fe
 
   return {
     competencies:    parsed.competencies    ?? [],
-    overall_score:   parsed.overall_score   ?? 0,
+    overall_score:   Math.round((parsed.overall_score ?? 0) * 10) / 10,
     recommendation:  parsed.recommendation  ?? 'Lean No Hire',
     narrative:       parsed.narrative       ?? '',
     strengths:       parsed.strengths       ?? [],
