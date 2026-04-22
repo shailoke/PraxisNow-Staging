@@ -57,6 +57,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/simulator/:path*',
+        '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
