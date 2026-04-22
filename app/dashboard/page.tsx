@@ -239,10 +239,21 @@ export default function DashboardPage() {
     }
 
     const handleStartInterview = (scenarioId: number) => {
+        const isAIRound = [4, 8, 12].includes(scenarioId)
+
+        // Block AI rounds for users with no paid sessions
+        if (isAIRound && sessionsRemaining === 0) {
+            setShowPaywall(true)
+            return
+        }
+
+        // Block all rounds if free session already used and no paid sessions
         if (sessionsRemaining === 0 && freeSessionUsed) {
             setShowPaywall(true)
             return
         }
+
+        // Allow through — either has paid sessions or free session available
         router.push(`/simulator/${scenarioId}`)
     }
 
