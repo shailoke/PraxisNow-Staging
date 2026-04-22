@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 
 // Edge runtime required — prevents Vercel's 30-second serverless timeout
 // from killing audio mid-stream on long interviewer responses.
+// @supabase/ssr is Edge-compatible: it uses Web Fetch/Crypto APIs with no Node.js dependencies.
 export const runtime = 'edge'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -22,6 +25,28 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 export async function POST(request: NextRequest) {
     const TTS_T0 = Date.now() // TTS_T0: route handler entered
     try {
+        // AUTH CHECK — createServerClient + cookies() is supported in Edge runtime
+        const cookieStore = await cookies()
+        const authClient = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value },
+                    set(name: string, value: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value, ...options }) } catch { }
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value: '', ...options }) } catch { }
+                    },
+                },
+            }
+        )
+        const { data: { user }, error: authError } = await authClient.auth.getUser()
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
         const { text, voice = 'onyx' } = await request.json()
 
         if (!text || typeof text !== 'string' || !text.trim()) {

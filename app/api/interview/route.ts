@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 import OpenAI from 'openai'
 import { Database } from '@/lib/database.types'
 
@@ -27,6 +29,28 @@ export async function POST(req: NextRequest) {
             throw new Error('Invariant violation: Turn advancement requires explicit user input.')
         }
 
+        // STEP 1b — AUTH CHECK
+        const cookieStore = await cookies()
+        const authClient = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value },
+                    set(name: string, value: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value, ...options }) } catch { }
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value: '', ...options }) } catch { }
+                    },
+                },
+            }
+        )
+        const { data: { user }, error: authError } = await authClient.auth.getUser()
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
         // STEP 2 — SETUP
         const supabase = createClient<Database>(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,6 +64,11 @@ export async function POST(req: NextRequest) {
             .select('scenario_id, user_id, round')
             .eq('id', session_id)
             .single()
+
+        // OWNERSHIP CHECK
+        if (!session || session.user_id !== user.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
 
         const userId = session?.user_id ?? ''
         const round = (session as any)?.round ?? null
