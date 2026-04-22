@@ -4,9 +4,24 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import { createClient } from '@/lib/supabase'
 
 export default function PricingPage() {
     const router = useRouter()
+    const supabase = createClient()
+
+    // ── Free session handler — routes to dashboard if already signed in ────────
+    const handleStartFree = async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            // Already signed in — go directly to dashboard
+            // The dashboard shows the free session banner and Start Interview works
+            router.push('/dashboard')
+        } else {
+            // Not signed in — go to sign-in, then redirect back to dashboard after auth
+            router.push('/auth/signin?redirect=/dashboard')
+        }
+    }
 
     // ── Preserved: existing Razorpay purchase handler ──────────────────────────
     const handlePurchase = async (packId: string) => {
@@ -112,9 +127,9 @@ export default function PricingPage() {
                     </div>
                     <Button
                         className="shrink-0 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold px-6"
-                        asChild
+                        onClick={handleStartFree}
                     >
-                        <Link href="/auth">Start free →</Link>
+                        Start free →
                     </Button>
                 </div>
 
@@ -126,8 +141,8 @@ export default function PricingPage() {
                         <p className="text-base font-bold mb-1">Free session</p>
                         <p className="text-3xl font-bold mb-1">₹0</p>
                         <p className="text-sm text-gray-400 mb-6 flex-grow">1 session · any round except AI</p>
-                        <Button variant="outline" className="w-full rounded-xl" asChild>
-                            <Link href="/auth">Start free →</Link>
+                        <Button variant="outline" className="w-full rounded-xl" onClick={handleStartFree}>
+                            Start free →
                         </Button>
                     </div>
 

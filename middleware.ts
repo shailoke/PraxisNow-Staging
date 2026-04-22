@@ -44,16 +44,10 @@ export async function middleware(request: NextRequest) {
             .eq('id', user.id)
             .single()
 
-        const hasActivePack = !!(profile?.package_tier && profile.package_tier !== 'Free')
-        const remainingSessions = profile?.available_sessions ?? 0
-        const freeSessionUsed = profile?.free_session_used ?? true
+        const hasActiveSessions = (profile?.available_sessions ?? 0) > 0
+        const freeSessionAvailable = profile?.free_session_used === false
 
-        // Allow through if:
-        // 1. User has a paid pack with sessions remaining, OR
-        // 2. User has not yet used their free session
-        const canAccess = (hasActivePack && remainingSessions > 0) || !freeSessionUsed
-
-        if (!canAccess) {
+        if (!hasActiveSessions && !freeSessionAvailable) {
             return NextResponse.redirect(new URL('/pricing', request.url))
         }
     }
