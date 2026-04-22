@@ -228,10 +228,10 @@ export default function ResultsPage() {
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     const init = async () => {
-      // ── Auth guard (mirrors dashboard pattern) ──────────────────────────
-      const { data: { session: authSession } } = await supabase.auth.getSession()
-      if (!authSession) { router.replace('/dashboard'); return }
-      const userId = authSession.user.id
+      // ── Auth guard — getUser() verifies with Supabase server; getSession() trusts client JWT ──
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/dashboard'); return }
+      const userId = user.id
 
       // ── Parallel initial fetch ──────────────────────────────────────────
       const [sessionRow, { data: turnsData }] = await Promise.all([

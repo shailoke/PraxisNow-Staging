@@ -213,6 +213,44 @@ export type Database = {
           },
         ]
       }
+      razorpay_orders: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          order_id: string
+          sku: string
+          user_id: string | null
+          verified: boolean
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          order_id: string
+          sku: string
+          user_id?: string | null
+          verified?: boolean
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          sku?: string
+          user_id?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "razorpay_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenarios: {
         Row: {
           applicant_context: string | null

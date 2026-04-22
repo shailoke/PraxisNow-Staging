@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
     try {
@@ -16,10 +18,43 @@ export async function POST(request: NextRequest) {
             }, { status: 400 })
         }
 
+        // AUTH CHECK
+        const cookieStore = await cookies()
+        const authClient = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) { return cookieStore.get(name)?.value },
+                    set(name: string, value: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value, ...options }) } catch { }
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        try { cookieStore.set({ name, value: '', ...options }) } catch { }
+                    },
+                },
+            }
+        )
+        const { data: { user }, error: authError } = await authClient.auth.getUser()
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         )
+
+        // OWNERSHIP CHECK — verify the session belongs to the authenticated user
+        const { data: session } = await supabase
+            .from('sessions')
+            .select('user_id')
+            .eq('id', session_id)
+            .single()
+
+        if (!session || session.user_id !== user.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
 
         // =========================================================
         // TRANSACTIONAL TURN SYSTEM: Idempotent turn reuse
