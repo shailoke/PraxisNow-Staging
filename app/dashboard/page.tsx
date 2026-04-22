@@ -350,7 +350,6 @@ export default function DashboardPage() {
                     .select('id, round, dimension_scores, evaluation_data, overall_score, created_at, scenarios:scenario_id(role, round_title)')
                     .eq('user_id', user.id)
                     .eq('status', 'completed')
-                    .or('dimension_scores.not.is.null,overall_score.not.is.null')
                     .order('created_at', { ascending: true })
 
                 const mapped: ScoreHistoryRow[] = (scoreRows || []).map((r: any) => ({
