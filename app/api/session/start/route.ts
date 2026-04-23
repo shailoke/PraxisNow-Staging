@@ -74,8 +74,7 @@ export async function POST(req: NextRequest) {
         const isAIRound = AI_ROUND_SCENARIO_IDS.includes(Number(scenario_id))
         const canUseFreeSession =
             !userRecord?.free_session_used &&
-            !isAIRound &&
-            (userRecord?.available_sessions ?? 0) === 0
+            !isAIRound
 
         // If AI round and no sessions remaining — block immediately
         if (isAIRound && (userRecord?.available_sessions ?? 0) === 0) {
