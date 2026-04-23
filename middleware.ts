@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
             .single()
 
         const hasActiveSessions = (profile?.available_sessions ?? 0) > 0
-        const freeSessionAvailable = profile?.free_session_used === false
+        const freeSessionAvailable = profile?.free_session_used !== true
 
         console.log('[MIDDLEWARE] path:', request.nextUrl.pathname)
         console.log('[MIDDLEWARE] profile:', JSON.stringify({
