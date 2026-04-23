@@ -162,7 +162,7 @@ export default function SimulatorPage() {
 
                 // Client-side protection double-check
                 if (!hasActivePack && remainingSessions <= 0 && !canAccessViaFreeSession) {
-                    router.replace('/pricing')
+                    window.location.href = '/pricing'
                     return
                 }
             } else {
