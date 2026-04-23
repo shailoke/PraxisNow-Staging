@@ -324,7 +324,7 @@ export default function DashboardPage() {
                     .not('evaluation_data', 'is', null)
                     .order('created_at', { ascending: false })
                     .limit(1)
-                    .single()
+                    .maybeSingle()
 
                 if (recentEvalSession) {
                     const evalData = (recentEvalSession as any).evaluation_data
