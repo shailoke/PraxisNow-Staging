@@ -47,6 +47,15 @@ export async function middleware(request: NextRequest) {
         const hasActiveSessions = (profile?.available_sessions ?? 0) > 0
         const freeSessionAvailable = profile?.free_session_used === false
 
+        console.log('[MIDDLEWARE] path:', request.nextUrl.pathname)
+        console.log('[MIDDLEWARE] profile:', JSON.stringify({
+            package_tier: profile?.package_tier,
+            available_sessions: profile?.available_sessions,
+            free_session_used: profile?.free_session_used
+        }))
+        console.log('[MIDDLEWARE] hasActiveSessions:', hasActiveSessions)
+        console.log('[MIDDLEWARE] freeSessionAvailable:', freeSessionAvailable)
+
         if (!hasActiveSessions && !freeSessionAvailable) {
             return NextResponse.redirect(new URL('/pricing', request.url))
         }
