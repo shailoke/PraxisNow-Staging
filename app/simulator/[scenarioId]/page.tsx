@@ -157,6 +157,7 @@ export default function SimulatorPage() {
                 const remainingSessions = profile?.available_sessions ?? 0
                 const freeSessionUsed = profile?.free_session_used !== true
                 const isAIScenario = [4, 8, 12].includes(Number(scenarioIdStr))
+                console.log('[SIMULATOR] scenarioId:', scenarioIdStr, 'isAIScenario:', isAIScenario)
                 const canAccessViaFreeSession = freeSessionUsed && !isAIScenario
 
                 // Client-side protection double-check
