@@ -164,6 +164,34 @@ Be direct. Be specific. Name moments. Use half scores where appropriate.
 
 After your free-form debrief, output the JSON below and nothing else after it.
 
+Before writing any competency score, answer these verification questions internally. Do not skip this step.
+
+For every score of 4.0 or above:
+- On which specific turns did this behaviour appear? If you cannot name at least two distinct turns, the score must not exceed 3.5.
+- Was the behaviour unprompted or did the interviewer explicitly invite it? If the interviewer asked for it, reduce the score by 0.5.
+- Does the evidence you plan to cite actually demonstrate the competency, or does it merely mention the topic? Mentioning is not demonstrating.
+
+For Problem Framing and Clarifying Questions in hypothetical rounds:
+- Did the candidate direct a question at the interviewer and pause for a response before proceeding? If they described intent ("First I'd clarify X") without asking, this is not evidence of the behaviour. Score must not exceed 2.5.
+- Did the clarifying behaviour appear on more than one turn? If only at the start and never again, score must not exceed 3.0.
+- Did the framing actually shape the direction of their answer? If they clarified and then ignored their own clarification, it does not count.
+
+For Solution Ideation and Solution Breadth in hypothetical rounds:
+- Did the candidate name at least two structurally different solution options? Variations of the same idea do not count as multiple options.
+- Did they explicitly compare tradeoffs between options before choosing? If they proposed one direction without comparison, score must not exceed 2.5.
+- Did the comparison happen unprompted or only after the interviewer pushed? If only after pushing, reduce by 0.5.
+
+For all competencies in behavioral rounds:
+- Does the story name a specific real product, company, team, or situation? Generic stories without specifics must score 2.0 or below regardless of structure.
+- Does the candidate say "I did" not "I would"? Hypothetically framed answers in a behavioral round must score 2.0 or below.
+- Is there a measurable outcome? "Things improved" is not a measurable outcome. A number, a decision reversed, a timeline met is.
+- If the same story is reused across multiple competencies, each reuse scores lower than the first — repetition signals a thin story bank.
+
+For Metrics and Analytical competencies:
+- Did the candidate define a specific metric, not just name a category? "Engagement metrics" is not a metric. "7-day retention rate" is.
+- Did they connect the metric to a decision? Naming metrics without connecting them to action scores 2.5 or below.
+- Did they identify at least one guardrail metric or potential unintended consequence of optimising the primary metric?
+
 {
   "competencies": [
     {
