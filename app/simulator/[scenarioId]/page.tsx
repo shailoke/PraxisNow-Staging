@@ -155,20 +155,10 @@ export default function SimulatorPage() {
 
                 const hasActivePack = !!(profile?.package_tier && profile.package_tier !== 'Free')
                 const remainingSessions = profile?.available_sessions ?? 0
-                const scenarioIdNum = parseInt(String(scenarioIdStr), 10)
+                const scenarioIdNum = parseInt(scenarioIdStr, 10)
                 const isAIScenario = [4, 8, 12].includes(scenarioIdNum)
                 const freeSessionAvailable = profile?.free_session_used !== true
                 const canAccessViaFreeSession = freeSessionAvailable && !isAIScenario
-
-                console.log('[SIMULATOR] access check:', {
-                    scenarioIdNum,
-                    isAIScenario,
-                    hasActivePack,
-                    remainingSessions,
-                    freeSessionAvailable,
-                    canAccessViaFreeSession,
-                    free_session_used_raw: profile?.free_session_used
-                })
 
                 // Client-side protection double-check
                 if (!hasActivePack && remainingSessions <= 0 && !canAccessViaFreeSession) {
