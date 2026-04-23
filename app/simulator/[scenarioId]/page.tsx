@@ -149,15 +149,18 @@ export default function SimulatorPage() {
             if (user) {
                 const { data: profile } = await supabase
                     .from('users')
-                    .select('package_tier, available_sessions')
+                    .select('package_tier, available_sessions, free_session_used')
                     .eq('id', user.id)
                     .single()
 
-                const hasActivePack = profile?.package_tier && profile.package_tier !== 'Free';
-                const remainingSessions = profile?.available_sessions || 0;
+                const hasActivePack = !!(profile?.package_tier && profile.package_tier !== 'Free')
+                const remainingSessions = profile?.available_sessions ?? 0
+                const freeSessionUsed = profile?.free_session_used !== true
+                const isAIScenario = [4, 8, 12].includes(Number(scenarioIdStr))
+                const canAccessViaFreeSession = freeSessionUsed && !isAIScenario
 
                 // Client-side protection double-check
-                if (!hasActivePack || remainingSessions <= 0) {
+                if (!hasActivePack && remainingSessions <= 0 && !canAccessViaFreeSession) {
                     router.replace('/pricing')
                     return
                 }
