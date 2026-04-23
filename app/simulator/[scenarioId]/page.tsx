@@ -161,6 +161,18 @@ export default function SimulatorPage() {
                 const canAccessViaFreeSession = freeSessionAvailable && !isAIScenario
 
                 // Client-side protection double-check
+                console.log('[ACCESS CHECK]', {
+                    hasActivePack,
+                    remainingSessions,
+                    isAIScenario,
+                    freeSessionAvailable,
+                    canAccessViaFreeSession,
+                    free_session_used_raw: profile?.free_session_used,
+                    package_tier: profile?.package_tier,
+                    available_sessions: profile?.available_sessions,
+                    scenarioIdNum,
+                    willRedirect: !hasActivePack && remainingSessions <= 0 && !canAccessViaFreeSession
+                })
                 if (!hasActivePack && remainingSessions <= 0 && !canAccessViaFreeSession) {
                     window.location.href = '/pricing'
                     return
