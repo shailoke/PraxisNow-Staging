@@ -206,7 +206,7 @@ export default function LandingPage() {
 
             {/* Software Development Engineer */}
             <div className="glass-panel p-6 rounded-2xl">
-              <h3 className="text-lg font-bold text-blue-400 mb-5">Software Development Engineer</h3>
+              <h3 className="text-lg font-bold text-purple-400 mb-5">Software Development Engineer</h3>
               <ul className="space-y-3">
                 <li className="text-gray-300 text-sm">R1: System Design &amp; Architecture</li>
                 <li className="text-gray-300 text-sm">R2: Algorithms &amp; Problem Solving</li>
@@ -220,7 +220,7 @@ export default function LandingPage() {
 
             {/* Data Scientist */}
             <div className="glass-panel p-6 rounded-2xl">
-              <h3 className="text-lg font-bold text-teal-400 mb-5">Data Scientist</h3>
+              <h3 className="text-lg font-bold text-purple-400 mb-5">Data Scientist</h3>
               <ul className="space-y-3">
                 <li className="text-gray-300 text-sm">R1: Problem Framing &amp; Analytics</li>
                 <li className="text-gray-300 text-sm">R2: ML Design &amp; Evaluation</li>
