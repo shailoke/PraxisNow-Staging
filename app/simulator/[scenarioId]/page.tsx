@@ -199,6 +199,7 @@ export default function SimulatorPage() {
     const [sessionStarted, setSessionStarted] = useState(false)
     const [showResults, setShowResults] = useState(false)
     const [isEnding, setIsEnding] = useState(false)
+    const [isNavigatingToResults, setIsNavigatingToResults] = useState(false)
 
     // UI-ONLY STATE (Clarification 1: Does not persist, not sent to server)
     const [waitingForNextQuestion, setWaitingForNextQuestion] = useState(false)
@@ -570,6 +571,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                     // Do NOT call setEvalResult here: the simulator results view
                     // is never rendered for standard interviews; setting evalResult
                     // before the push causes a .map() crash on undefined fields.
+                    setIsNavigatingToResults(true)
                     router.push(`/results/${sessionId}`)
                 }
             } else {
@@ -751,12 +753,12 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                                 )
                             )}
                         </>
-                    ) : (
+                    ) : !isNavigatingToResults ? (
                         <div className="text-center py-12 text-red-400 flex flex-col gap-2">
                             <p className="font-bold">Failed to load evaluation results.</p>
                             <p className="text-sm font-mono bg-red-500/10 p-2 rounded">{errorMsg || 'Please try again or check the dashboard.'}</p>
                         </div>
-                    )}
+                    ) : null}
 
                     <div className="mt-8 flex gap-4 justify-center">
                         <div onClick={handleDashboard} className="cursor-pointer text-sm text-gray-500 hover:text-white transition-colors border-b border-transparent hover:border-white">
