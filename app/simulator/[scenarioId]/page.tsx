@@ -734,7 +734,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                                         {/* Pro Analysis (if available) */}
                                         {evalResult.readiness_assessment && (
                                             <div className="col-span-full mt-4 pt-4 border-t border-white/10">
-                                                <h3 className="font-semibold text-lg mb-4 text-purple-200">Pro Analysis</h3>
+                                                <h3 className="font-semibold text-lg mb-4 text-purple-200">Full Analysis</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="bg-purple-900/20 border border-purple-500/20 p-4 rounded-xl">
                                                         <div className="text-xs uppercase text-purple-400 font-bold mb-1">Readiness</div>

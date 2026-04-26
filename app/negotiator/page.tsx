@@ -148,11 +148,11 @@ export default function NegotiatorPage() {
                 <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center">
                     <Lock className="w-10 h-10 text-gray-400" />
                 </div>
-                <h1 className="text-2xl font-bold">Pro Exclusive Access</h1>
+                <h1 className="text-2xl font-bold">Salary Negotiation Coach</h1>
                 <p className="text-gray-400 max-w-md mx-auto mt-2">
-                    The Salary Negotiation Coach is available only on the Pro plan. Upgrade to unlock guided negotiation simulations, tactics training, and PDF summaries.
+                    The Salary Negotiation Coach is included with paid sessions. Purchase a session pack to unlock guided negotiation simulations, tactics training, and PDF summaries.
                 </p>
-                <Button onClick={() => router.push('/pricing')} className="bg-purple-600 hover:bg-purple-700">View Plans</Button>
+                <Button onClick={() => router.push('/pricing')} className="bg-purple-600 hover:bg-purple-700">View session packs</Button>
                 <Button variant="ghost" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
             </div>
         )
@@ -209,7 +209,6 @@ export default function NegotiatorPage() {
 
             <div className="z-10 text-center max-w-2xl px-6">
                 <div className="mb-8">
-                    <h2 className="text-indigo-400 text-sm tracking-widest uppercase mb-2 font-bold">Pro Feature</h2>
                     <h1 className="text-4xl font-bold mb-4">Salary Negotiation Coach</h1>
                     <p className="text-gray-400">Master the art of negotiation in a risk-free environment.</p>
                 </div>
