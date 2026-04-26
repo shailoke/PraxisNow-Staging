@@ -61,6 +61,8 @@ export function useBatchVoice(
     const blobUrlRef                = useRef<string | null>(null)
     const readerRef                 = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
     const ttsAbortControllerRef     = useRef<AbortController | null>(null)
+    const interruptedTextRef         = useRef<string | null>(null)
+    const speakRejectRef             = useRef<((reason: Error) => void) | null>(null)
     const pendingSystemMessagesRef  = useRef<string[]>([])
     const isPausedRef               = useRef(isPausedExternal)
     const isFirstQuestionPending    = useRef(true)
@@ -150,11 +152,13 @@ export function useBatchVoice(
                 // Fallback: blob URL path for browsers without MediaSource (iOS Safari)
                 const blob = await ttsRes.blob()
                 const blobUrl = URL.createObjectURL(blob)
-                return new Promise<void>((resolve) => {
+                return new Promise<void>((resolve, reject) => {
+                    speakRejectRef.current = reject
                     const audioEl = new Audio(blobUrl)
                     audioElRef.current = audioEl
                     blobUrlRef.current = blobUrl
                     audioEl.onended = () => {
+                        speakRejectRef.current = null
                         URL.revokeObjectURL(blobUrl)
                         audioContextRef.current = null
                         audioSourceRef.current = null
@@ -167,6 +171,7 @@ export function useBatchVoice(
                         resolve()
                     }
                     audioEl.onerror = (err) => {
+                        speakRejectRef.current = null
                         console.error('[AUDIO_PLAYBACK_ERROR_FALLBACK]', err)
                         URL.revokeObjectURL(blobUrl)
                         audioContextRef.current = null
@@ -189,7 +194,8 @@ export function useBatchVoice(
             }
 
             // MediaSource path continues below (existing code unchanged)
-            return new Promise<void>((resolve) => {
+            return new Promise<void>((resolve, reject) => {
+                speakRejectRef.current = reject
                 const audioEl = new Audio()
                 const mediaSource = new MediaSource()
                 const msUrl = URL.createObjectURL(mediaSource)
@@ -257,6 +263,7 @@ export function useBatchVoice(
                 })
 
                 audioEl.onended = () => {
+                    speakRejectRef.current = null
                     URL.revokeObjectURL(msUrl)
                     audioContextRef.current = null   // no-op, kept for abort compat
                     audioSourceRef.current = null    // no-op, kept for abort compat
@@ -270,6 +277,7 @@ export function useBatchVoice(
                 }
 
                 audioEl.onerror = (err) => {
+                    speakRejectRef.current = null
                     console.error('[AUDIO_PLAYBACK_ERROR]', err)
                     URL.revokeObjectURL(msUrl)
                     audioContextRef.current = null
@@ -291,7 +299,7 @@ export function useBatchVoice(
         } catch (err: any) {
             if (err.name === 'AbortError') {
                 console.log('[useBatchVoice] TTS fetch aborted (pause or end)')
-                return
+                throw err
             }
             console.error('[useBatchVoice] speakText error:', err)
         }
@@ -472,7 +480,16 @@ export function useBatchVoice(
             //    oncanplay inside speakText fires ASSISTANT_SPEAKING when audio is actually ready.
             //    speakText onended will: reset state, call startRecording(), increment assistantTurnCount.
             setInterviewState('THINKING')  // accurate — still waiting for TTS
-            await speakText(llmText)
+            interruptedTextRef.current = llmText
+            try {
+                await speakText(llmText)
+            } catch (e) {
+                // speakText was aborted mid-playback (e.g. user paused)
+                // interruptedTextRef.current already holds the text
+                // handleResume will replay it — nothing to do here
+                return
+            }
+            interruptedTextRef.current = null
             // onended has already run — mic is recording, state is WAITING_FOR_USER
 
             // 7. Post-turn state updates
@@ -495,6 +512,29 @@ export function useBatchVoice(
             startRecording()
         }
     }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText, targetDuration])
+
+    // ── replayInterruptedText ──────────────────────────────────────────────
+    /**
+     * Re-speak the question that was interrupted mid-playback by a pause.
+     * Called by handleResume() in the simulator page after isPaused flips false.
+     * speakText's onended handler takes care of startRecording() and state reset.
+     */
+    const replayInterruptedText = useCallback(async () => {
+        const text = interruptedTextRef.current
+        if (!text) return
+        setInterviewState('THINKING')
+        try {
+            await speakText(text)
+        } catch (e) {
+            // aborted again during replay — leave interruptedTextRef for next resume
+            return
+        }
+        // speakText onended already ran: startRecording() and setInterviewState('WAITING_FOR_USER')
+        const assistantMsg: Message = { role: 'assistant', content: text }
+        messagesRef.current = [...messagesRef.current, assistantMsg]
+        setMessages([...messagesRef.current])
+        interruptedTextRef.current = null
+    }, [speakText])
 
     // ── injectSystemMessage ────────────────────────────────────────────────
     /**
@@ -544,6 +584,9 @@ export function useBatchVoice(
         ttsAbortControllerRef.current = null
         setIsInterviewerSpeaking(false)
         setIsSpeaking(false)
+        speakRejectRef.current?.(new Error('AbortError'))
+        speakRejectRef.current = null
+        setInterviewState('WAITING_FOR_USER')
         console.log('[useBatchVoice] abortInterviewerAudio — audio stopped')
     }, [])
 
@@ -612,6 +655,8 @@ export function useBatchVoice(
         getTurnStats,
         interviewState,
         error,
+        interruptedTextRef,
+        replayInterruptedText,
     }
 }
 

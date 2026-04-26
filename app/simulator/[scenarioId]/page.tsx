@@ -193,7 +193,7 @@ export default function SimulatorPage() {
     // PAUSE STATE (must be before hook initialization)
     const [isPaused, setIsPaused] = useState(false)
 
-    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError } = useRealtimeVoice(sessionId, initialInstruction, isPaused, targetDuration)
+    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError, interruptedTextRef, replayInterruptedText } = useRealtimeVoice(sessionId, initialInstruction, isPaused, targetDuration)
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
     const [timeLeft, setTimeLeft] = useState(duration)
     const [sessionStarted, setSessionStarted] = useState(false)
@@ -456,8 +456,12 @@ You will receive time updates every 3 minutes. Follow them strictly.`
 
     const handleResume = () => {
         setIsPaused(false)
-        // BUG FIX: Resume does NOT auto-continue interviewer
-        // User must still click "Ask Next Question"
+        const interrupted = interruptedTextRef.current
+        if (interrupted) {
+            setTimeout(() => {
+                replayInterruptedText?.()
+            }, 500) // 500ms delay gives React time to settle after isPaused flips
+        }
         console.log('▶️ [RESUME] Session resumed - timer resumes, waiting for ASK_NEXT_QUESTION')
     }
 
