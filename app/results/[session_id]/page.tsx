@@ -657,13 +657,13 @@ export default function ResultsPage() {
           ) : (
             <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-3">
               <p className="text-gray-300 text-sm">
-                Answer Upgrades are available on Pro. Upgrade to see AI-rewritten versions of your actual answers.
+                Answer upgrades are included with every paid session. Purchase a session pack to see AI-rewritten versions of your actual answers.
               </p>
               <Link
-                href="/dashboard"
+                href="/pricing"
                 className="inline-block px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-sm font-bold text-white transition-all"
               >
-                View Pro Plans
+                View session packs
               </Link>
             </div>
           )}
