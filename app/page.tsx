@@ -86,16 +86,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image
-              src="/praxisnow-logo.png"
+              src="/praxisnow-logo-dark.svg"
               alt="PraxisNow"
-              width={140}
-              height={40}
-              className="h-8 w-auto"
+              width={220}
+              height={44}
+              className="h-9 w-auto"
               priority
             />
-            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-              PraxisNow
-            </span>
           </div>
           <div className="flex gap-4">
             <Button variant="ghost" asChild>

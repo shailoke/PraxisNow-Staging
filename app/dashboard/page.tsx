@@ -10,6 +10,7 @@ import {
     Download as DownloadIcon, Loader2, X, FileText,
     Zap, Trophy, Clock, Lock, MicOff
 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import Script from 'next/script'
 import CurrentBarCard, { type CurrentBarCardProps } from '@/components/CurrentBarCard'
@@ -481,9 +482,15 @@ export default function DashboardPage() {
                 <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
 
                     {/* Logo */}
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                        <span className="font-bold text-white tracking-tight">PraxisNow</span>
+                    <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+                        <Image
+                            src="/praxisnow-logo-dark.svg"
+                            alt="PraxisNow"
+                            width={220}
+                            height={44}
+                            className="h-9 w-auto"
+                            priority
+                        />
                     </div>
 
                     {/* Right controls */}

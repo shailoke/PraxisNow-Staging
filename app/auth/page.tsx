@@ -11,14 +11,13 @@ export default function AuthPage() {
             <div className="z-10 w-full flex flex-col items-center">
                 <div className="flex items-center gap-4 mb-2 mt-4">
                     <Image
-                        src="/praxisnow-logo.png"
+                        src="/praxisnow-logo-dark.svg"
                         alt="PraxisNow"
-                        width={200}
-                        height={60}
-                        className="h-10 w-auto"
+                        width={280}
+                        height={56}
+                        className="h-14 w-auto"
                         priority
                     />
-                    <h1 className="text-4xl text-white font-bold tracking-tight">PraxisNow AI</h1>
                 </div>
                 <p className="text-gray-400 mb-8 mt-2">Master your interview skills</p>
                 <AuthForm />
