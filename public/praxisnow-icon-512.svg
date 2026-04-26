@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="badgeGrad" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge background -->
+  <rect width="512" height="512" rx="112" fill="url(#badgeGrad)"/>
+
+  <!-- Mic capsule -->
+  <rect x="186" y="60" width="140" height="220" rx="70" fill="white"/>
+
+  <!-- Mic stand arc -->
+  <path d="M100,220 Q100,380 256,380 Q412,380 412,220"
+        fill="none" stroke="white" stroke-width="28" stroke-linecap="round"/>
+
+  <!-- Mic stem -->
+  <line x1="256" y1="380" x2="256" y2="448" stroke="white" stroke-width="28" stroke-linecap="round"/>
+
+  <!-- Mic base -->
+  <line x1="168" y1="472" x2="344" y2="472" stroke="white" stroke-width="28" stroke-linecap="round"/>
+</svg>

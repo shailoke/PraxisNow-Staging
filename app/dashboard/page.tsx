@@ -10,6 +10,7 @@ import {
     Download as DownloadIcon, Loader2, X, FileText,
     Zap, Trophy, Clock, Lock, MicOff
 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import Script from 'next/script'
 import CurrentBarCard, { type CurrentBarCardProps } from '@/components/CurrentBarCard'
@@ -471,6 +472,7 @@ export default function DashboardPage() {
     const hasSessions = (userProfile?.available_sessions ?? 0) > 0
     const sessionsRemaining = userProfile?.available_sessions ?? 0
     const freeSessionUsed = userProfile?.free_session_used ?? true
+    const totalSessionsAvailable = sessionsRemaining + (freeSessionUsed ? 0 : 1)
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-purple-500/30">
@@ -480,9 +482,15 @@ export default function DashboardPage() {
                 <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
 
                     {/* Logo */}
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/')}>
-                        <div className="w-2 h-2 rounded-full bg-purple-500" />
-                        <span className="font-bold text-white tracking-tight">PraxisNow</span>
+                    <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+                        <Image
+                            src="/praxisnow-logo-dark.svg"
+                            alt="PraxisNow"
+                            width={220}
+                            height={44}
+                            className="h-9 w-auto"
+                            priority
+                        />
                     </div>
 
                     {/* Right controls */}
@@ -491,7 +499,7 @@ export default function DashboardPage() {
                         {/* Sessions left badge */}
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-gray-300">
                             <Zap className="w-3 h-3 text-purple-400" />
-                            {userProfile?.available_sessions ?? 0} sessions left
+                            {totalSessionsAvailable} sessions left
                         </div>
 
                         {/* Report issue */}
@@ -593,6 +601,11 @@ export default function DashboardPage() {
                 )}
 
                 {/* ── Free Session Welcome Banner ──────────────────────────── */}
+                {!freeSessionUsed && sessionsRemaining > 0 && (
+                    <p className="text-sm text-green-400 mb-6">
+                        You also have a free session available — your first session on any non-AI round is free.
+                    </p>
+                )}
                 {!freeSessionUsed && sessionsRemaining === 0 && (
                     <div className="mb-6 bg-green-500/10 border border-green-500/25 rounded-xl px-5 py-4 flex items-start gap-3">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5 shrink-0 text-green-400">
