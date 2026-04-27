@@ -162,6 +162,16 @@ In your free-form debrief cover:
 
 Be direct. Be specific. Name moments. Use half scores where appropriate.
 
+CALIBRATION RULE — PATTERN OVER SINGLE WEAKNESS:
+A single polish gap (e.g. clarifying questions only in turn 1, missing statistical significance \
+in one experiment design) must not drag the overall recommendation below the candidate's \
+demonstrated ceiling. Evaluate the PATTERN across all turns. If a candidate demonstrates \
+Senior or above behaviour on 3 out of 4 turns, the recommendation must reflect that ceiling — \
+not the single weakest turn. A Lean Hire with overall_score >= 4.0 represents a strong Senior \
+candidate. Reserve Borderline/No Hire verdicts for candidates who demonstrate fundamental \
+gaps (e.g. inability to structure, no analytical framework, cannot prioritise) across MULTIPLE \
+turns.
+
 After your free-form debrief, output the JSON below and nothing else after it.
 
 Before writing any competency score, answer these verification questions internally. Do not skip this step.
@@ -203,6 +213,7 @@ For Metrics and Analytical competencies:
   ],
   "overall_score": <1.0 to 5.0, one decimal place, your holistic judgment of the session — not an average>,
   "recommendation": "<Strong Hire | Lean Hire | Lean No Hire | Strong No Hire>",
+  "hireable_level": "<the level this candidate's performance demonstrates — use specific labels: 'Junior', 'Mid', 'Senior', 'Staff / Principal', 'Director / VP'. For candidates demonstrating strong cross-functional thinking, multi-layer analysis, and strategic depth across multiple turns, do not anchor on Mid. Name the level their performance actually demonstrates.>",
   "narrative": "<4-6 sentences: what cleared the bar, what the primary gap is, honest level calibration, what would push them to the next level>",
   "strengths": ["<specific strength with evidence>"],
   "gaps": ["<specific gap with the precise missing element>"],
@@ -289,7 +300,9 @@ and parseable. Do not wrap it in markdown code fences.`
 
   // hireable_level
   const hireable_level =
-    parsed.recommendation === 'Strong Hire' ? 'Senior'
+    parsed.recommendation === 'Strong Hire' && (parsed.overall_score ?? 0) >= 4.5 ? 'Principal / Staff'
+    : parsed.recommendation === 'Strong Hire' ? 'Senior'
+    : parsed.recommendation === 'Lean Hire' && (parsed.overall_score ?? 0) >= 4.0 ? 'Senior'
     : parsed.recommendation === 'Lean Hire' ? 'Mid'
     : 'Junior'
 

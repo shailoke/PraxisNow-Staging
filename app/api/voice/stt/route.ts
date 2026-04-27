@@ -6,6 +6,12 @@ import OpenAI from 'openai'
 // Standard Node runtime — Whisper returns JSON (no streaming), no timeout concern
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
+export const config = {
+    api: { bodyParser: { sizeLimit: '10mb' } }
+}
+
+export const maxDuration = 30
+
 /**
  * POST /api/voice/stt
  *

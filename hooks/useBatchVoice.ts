@@ -400,6 +400,14 @@ export function useBatchVoice(
                 return
             }
 
+            // Guard: reject blobs too large to send to STT (>8MB causes 413)
+            if (audioBlob.size > 8 * 1024 * 1024) {
+                console.warn('[useBatchVoice] Audio blob too large, skipping STT', audioBlob.size, 'bytes')
+                audioChunksRef.current = []
+                startRecording()
+                return
+            }
+
             // 2. STT
             setInterviewState('TRANSCRIBING')
 

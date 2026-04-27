@@ -610,21 +610,41 @@ export async function generateSessionPDF(
             y += doc.heightOfString(introStr, { width: CONTENT_W, lineGap: 3 }) + SPACING.sectionGap;
 
             evaluation.answer_upgrades.forEach((upgrade: any, index: number) => {
-                y = checkPageBreak(y, 160);
+                // Pre-compute all heights for dynamic page-break decision
+                const qStr       = `${index + 1}.  ${upgrade.question_context || ''}`;
+                const weakText   = (upgrade.weakness       || '') as string;
+                const upgradeText = (upgrade.upgraded_answer || '') as string;
+                const labelH     = FONT_SIZES.small + 8;
+
+                doc.fontSize(FONT_SIZES.body).font(FONTS.bold);
+                const qH = doc.heightOfString(qStr, { width: CONTENT_W }) + 10;
+
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular);
+                const weakBodyH = weakText
+                    ? doc.heightOfString(weakText, { width: INNER_W, lineGap: 3 })
+                    : 0;
+
+                doc.fontSize(FONT_SIZES.body).font(FONTS.italic);
+                const upgradeBodyH = upgradeText
+                    ? doc.heightOfString(`"${upgradeText}"`, { width: INNER_W, lineGap: 3 })
+                    : 0;
+
+                const weakCardH    = weakText    ? labelH + weakBodyH    + 2 * SPACING.cardPadding + 8                 : 0;
+                const upgradeCardH = upgradeText ? labelH + upgradeBodyH + 2 * SPACING.cardPadding + SPACING.sectionGap : 0;
+                const totalNeeded  = qH + weakCardH + upgradeCardH;
+
+                y = checkPageBreak(y, totalNeeded);
 
                 // Question heading
-                const qStr = `${index + 1}.  ${upgrade.question_context || ''}`;
                 doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.textPrimary)
                     .text(qStr, SPACING.pageMargin, y, { width: CONTENT_W });
                 y += doc.heightOfString(qStr, { width: CONTENT_W }) + 10;
 
                 // Weakness card
-                const weakText: string = upgrade.weakness || '';
                 if (weakText) {
-                    y = checkPageBreak(y, 50);
-                    const labelH = FONT_SIZES.small + 8;
-                    const bodyH  = doc.heightOfString(weakText, { width: INNER_W, lineGap: 3 });
-                    const cardH  = labelH + bodyH + 2 * SPACING.cardPadding;
+                    y = checkPageBreak(y, weakCardH || 50);
+                    const bodyH = doc.heightOfString(weakText, { width: INNER_W, lineGap: 3 });
+                    const cardH = labelH + bodyH + 2 * SPACING.cardPadding;
                     drawCard(y, cardH, COLORS.dangerLight, COLORS.danger);
                     const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
                     doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.danger)
@@ -635,12 +655,10 @@ export async function generateSessionPDF(
                 }
 
                 // Upgraded answer card
-                const upgradeText: string = upgrade.upgraded_answer || '';
                 if (upgradeText) {
-                    y = checkPageBreak(y, 60);
-                    const labelH  = FONT_SIZES.small + 8;
-                    const bodyH   = doc.heightOfString(`"${upgradeText}"`, { width: INNER_W, lineGap: 3 });
-                    const cardH   = labelH + bodyH + 2 * SPACING.cardPadding;
+                    y = checkPageBreak(y, upgradeCardH || 60);
+                    const bodyH = doc.heightOfString(`"${upgradeText}"`, { width: INNER_W, lineGap: 3 });
+                    const cardH = labelH + bodyH + 2 * SPACING.cardPadding;
                     drawCard(y, cardH, COLORS.successLight, COLORS.success);
                     const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
                     doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.success)
