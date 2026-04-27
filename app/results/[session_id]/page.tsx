@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { Loader2, DownloadIcon } from 'lucide-react'
+import LegalFooter from '@/components/LegalFooter'
 
 // ── Strictly typed local interfaces ──────────────────────────────────────────
 // evaluation_data is typed as Json in database.types.ts; cast here for safety.
@@ -720,6 +721,8 @@ export default function ResultsPage() {
         </div>
 
       </div>
+
+      <LegalFooter />
     </div>
   )
 }

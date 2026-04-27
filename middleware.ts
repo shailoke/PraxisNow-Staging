@@ -29,36 +29,57 @@ export async function middleware(request: NextRequest) {
         }
     )
 
-    // Only protect /simulator routes
-    if (request.nextUrl.pathname.startsWith('/simulator')) {
-        const { data: { user } } = await supabase.auth.getUser()
+    const pathname = request.nextUrl.pathname
 
-        if (!user) {
-            return NextResponse.redirect(new URL('/auth', request.url))
-        }
+    // Public paths bypass all checks
+    const isPublic =
+        pathname === '/' ||
+        pathname.startsWith('/auth') ||
+        pathname === '/consent' ||
+        pathname === '/privacy' ||
+        pathname === '/terms' ||
+        pathname === '/ai-disclaimer'
 
-        // Check active pack from database
+    if (isPublic) {
+        return supabaseResponse
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user) {
+        // Fetch profile for consent gate and simulator session gate
         const { data: profile } = await supabase
             .from('users')
-            .select('package_tier, available_sessions, free_session_used')
+            .select('package_tier, available_sessions, free_session_used, terms_accepted')
             .eq('id', user.id)
             .single()
 
-        const hasActiveSessions = (profile?.available_sessions ?? 0) > 0
-        const freeSessionAvailable = profile?.free_session_used !== true
-
-        console.log('[MIDDLEWARE] path:', request.nextUrl.pathname)
-        console.log('[MIDDLEWARE] profile:', JSON.stringify({
-            package_tier: profile?.package_tier,
-            available_sessions: profile?.available_sessions,
-            free_session_used: profile?.free_session_used
-        }))
-        console.log('[MIDDLEWARE] hasActiveSessions:', hasActiveSessions)
-        console.log('[MIDDLEWARE] freeSessionAvailable:', freeSessionAvailable)
-
-        if (!hasActiveSessions && !freeSessionAvailable) {
-            return NextResponse.redirect(new URL('/pricing', request.url))
+        // Consent gate — applies to all authenticated non-public paths
+        if (profile?.terms_accepted !== true) {
+            return NextResponse.redirect(new URL('/consent', request.url))
         }
+
+        // Simulator session gate
+        if (pathname.startsWith('/simulator')) {
+            const hasActiveSessions = (profile?.available_sessions ?? 0) > 0
+            const freeSessionAvailable = profile?.free_session_used !== true
+
+            console.log('[MIDDLEWARE] path:', pathname)
+            console.log('[MIDDLEWARE] profile:', JSON.stringify({
+                package_tier: profile?.package_tier,
+                available_sessions: profile?.available_sessions,
+                free_session_used: profile?.free_session_used
+            }))
+            console.log('[MIDDLEWARE] hasActiveSessions:', hasActiveSessions)
+            console.log('[MIDDLEWARE] freeSessionAvailable:', freeSessionAvailable)
+
+            if (!hasActiveSessions && !freeSessionAvailable) {
+                return NextResponse.redirect(new URL('/pricing', request.url))
+            }
+        }
+    } else if (pathname.startsWith('/simulator')) {
+        // Simulator requires auth
+        return NextResponse.redirect(new URL('/auth', request.url))
     }
 
     return supabaseResponse
