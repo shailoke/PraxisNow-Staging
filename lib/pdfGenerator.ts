@@ -1,15 +1,18 @@
 import PDFDocument from 'pdfkit';
 
 /**
- * PraxisNow PDF Report Generator v2 (Interviewer-Calibrated)
- * Renders the corrective feedback report directly from the evaluator output.
- * 
+ * PraxisNow PDF Report Generator v3
+ * Visual redesign: card-based layout, tighter type scale, left-accent bars.
+ *
  * SCHEMA:
  * 1. tmay_analysis
  * 2. high_level_assessment
- * 3. strengths
- * 4. areas_for_improvement
- * 5. answer_upgrades
+ * 3. competencies / dimension_scores  (performance scorecard)
+ * 4. strengths
+ * 5. areas_for_improvement
+ * 6. answer_upgrades
+ * 7. transcript_extracts + answer_level_diagnostics
+ * 8. personal_answer_rules (Pro only)
  */
 
 interface PDFMetadata {
@@ -23,42 +26,46 @@ interface PDFMetadata {
     dimension_order?: string[];
 }
 
-// ========================================================================
+// ============================================================================
 // DESIGN TOKENS
-// ========================================================================
+// ============================================================================
 const COLORS = {
-    textPrimary: '#030213',
-    textSecondary: '#5e5e6d',
-    textMuted: '#7a6991',
+    textPrimary:    '#030213',
+    textSecondary:  '#5e5e6d',
+    textMuted:      '#9a9aaa',
     backgroundPage: '#ffffff',
-    borderSubtle: 'rgba(0,0,0,0.1)',
-    brandDark1: '#0a0514',
-    brandDark2: '#1a0f2e',
-    brandDark3: '#0f0820',
-    primary: '#7a6991',
-    accent: '#7a6991',
-    success: '#2e7d32',
-    warning: '#d32f2f'
+    backgroundCard: '#F8F7F4',
+    borderSubtle:   '#E0DFDC',
+    brandDark1:     '#0a0514',
+    brandDark2:     '#1a0f2e',
+    success:        '#2e7d32',
+    successLight:   '#e8f5e9',
+    warning:        '#b45309',
+    warningLight:   '#fef3e2',
+    danger:         '#c62828',
+    dangerLight:    '#fde8e8',
+    amber:          '#ca8a04',
 };
 
 const FONTS = {
     regular: 'Helvetica',
-    bold: 'Helvetica-Bold',
-    italic: 'Helvetica-Oblique'
+    bold:    'Helvetica-Bold',
+    italic:  'Helvetica-Oblique',
 };
 
 const FONT_SIZES = {
-    coverTitle: 42,
-    sectionTitle: 22,
-    subsectionTitle: 14,
-    body: 12,
-    metaLabel: 10
+    coverTitle:      34,
+    sectionEyebrow:   9,
+    sectionTitle:    13,
+    subsectionTitle: 13,
+    body:            11,
+    small:            9,
 };
 
 const SPACING = {
-    pageMargin: 72,
-    sectionGap: 30,
-    cardPadding: 20
+    pageMargin:  52,
+    cardPadding: 14,
+    sectionGap:  28,
 };
 
 export async function generateSessionPDF(
@@ -67,623 +74,700 @@ export async function generateSessionPDF(
     tier: string
 ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({
-            size: 'A4',
-            margin: 0,
-            bufferPages: true
-        });
+        const doc = new PDFDocument({ size: 'A4', margin: 0, bufferPages: true });
 
         const buffers: Buffer[] = [];
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
 
-        // --- HELPERS ---
-        const drawHeader = () => {
-            const width = doc.page.width;
-            doc.rect(0, 0, width, 4).fill(COLORS.brandDark2);
-            doc.fontSize(9).fillColor(COLORS.textSecondary).font(FONTS.regular)
-                .text('PRAXISNOW // INTERVIEWER CALIBRATION', SPACING.pageMargin, 35);
+        const PAGE_W       = doc.page.width;                            // 595.28
+        const PAGE_H       = doc.page.height;                           // 841.89
+        const CONTENT_W    = PAGE_W - 2 * SPACING.pageMargin;
+        const INNER_W      = CONTENT_W - 2 * SPACING.cardPadding - 3;  // inside left-accent cards
+
+        // Track current section name so checkPageBreak can stamp it on continuation pages
+        let currentSection = '';
+
+        // ── HELPERS ──────────────────────────────────────────────────────────────
+
+        /** Thin top rule + brand left / section name right */
+        const drawHeader = (sectionName: string): void => {
+            doc.rect(0, 0, PAGE_W, 2).fill(COLORS.brandDark2);
+            doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                .text('PRAXISNOW', SPACING.pageMargin, 18, { width: CONTENT_W / 2 });
+            if (sectionName) {
+                doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textMuted)
+                    .text(sectionName, SPACING.pageMargin, 18, { width: CONTENT_W, align: 'right' });
+            }
         };
 
-        const drawFooter = () => {
-            const width = doc.page.width;
-            const height = doc.page.height;
-            const bottom = height - 50;
-
-            doc.moveTo(SPACING.pageMargin, bottom - 20)
-                .lineTo(width - SPACING.pageMargin, bottom - 20)
-                .strokeColor(COLORS.borderSubtle).lineWidth(1).stroke();
-
-            doc.fontSize(8).fillColor(COLORS.textMuted)
-                .text('CONFIDENTIAL - PERSONAL PRACTICE ASSESSMENT', SPACING.pageMargin, bottom);
+        /** Horizontal rule + page number right-aligned, 28pt from bottom */
+        let pageNum = 2;
+        const drawFooter = (num: number): void => {
+            const ry = PAGE_H - 28;
+            doc.moveTo(SPACING.pageMargin, ry)
+                .lineTo(PAGE_W - SPACING.pageMargin, ry)
+                .strokeColor(COLORS.borderSubtle).lineWidth(0.5).stroke();
+            doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textMuted)
+                .text(`${num}`, SPACING.pageMargin, ry + 6, { width: CONTENT_W, align: 'right' });
         };
 
-        const addSectionTitle = (title: string, y: number) => {
-            doc.fontSize(FONT_SIZES.sectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
-                .text(title, SPACING.pageMargin, y);
-            return y + 35;
-        };
-
-        const addSubsection = (title: string, y: number) => {
-            doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
-                .text(title.toUpperCase(), SPACING.pageMargin, y);
-            return y + 20;
-        };
-
-        const addBodyText = (text: string, y: number, options: any = {}) => {
-            const width = options.width || doc.page.width - (2 * SPACING.pageMargin);
-            doc.fontSize(options.fontSize || FONT_SIZES.body)
-                .font(options.font || FONTS.regular)
-                .fillColor(options.color || COLORS.textPrimary)
-                .text(text || '', SPACING.pageMargin, y, { width, lineGap: 6 });
-            return y + doc.heightOfString(text || '', { width, lineGap: 6 }) + 10;
-        };
-
-        const checkPageBreak = (y: number, needed: number = 100) => {
-            if (y + needed > doc.page.height - 50) {
+        /** Add a new page with header if y would overflow */
+        const checkPageBreak = (y: number, needed = 100): number => {
+            if (y + needed > PAGE_H - 50) {
                 doc.addPage();
-                drawHeader();
+                drawHeader(currentSection);
                 return 80;
             }
             return y;
         };
 
-        // --- PAGE 1: COVER ---
-        const width = doc.page.width;
-        const height = doc.page.height;
-        const gradient = doc.linearGradient(0, 0, width, height);
-        gradient.stop(0, COLORS.brandDark1).stop(1, COLORS.brandDark2);
-        doc.rect(0, 0, width, height).fill(gradient);
+        /** Small all-caps eyebrow label above a section title */
+        const addEyebrow = (label: string, y: number): number => {
+            doc.fontSize(FONT_SIZES.sectionEyebrow).font(FONTS.bold).fillColor(COLORS.textMuted)
+                .text(label.toUpperCase(), SPACING.pageMargin, y);
+            return y + 14;
+        };
 
-        doc.fontSize(36).font(FONTS.bold).fillColor('#fff')
-            .text('Interviewer Calibration', SPACING.pageMargin, 200);
+        /** Bold section title */
+        const addSectionTitle = (title: string, y: number): number => {
+            doc.fontSize(FONT_SIZES.sectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                .text(title, SPACING.pageMargin, y);
+            return y + 20;
+        };
 
-        doc.fontSize(14).font(FONTS.regular).fillColor('#ccc')
-            .text(`${metadata.role} (${metadata.level})`, SPACING.pageMargin, 250);
+        /** Body text, returns y advanced past the block */
+        const addBodyText = (text: string, y: number, opts: { color?: string; font?: string; fontSize?: number } = {}): number => {
+            const str = text || '';
+            doc.fontSize(opts.fontSize || FONT_SIZES.body)
+                .font(opts.font || FONTS.regular)
+                .fillColor(opts.color || COLORS.textPrimary)
+                .text(str, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 4 });
+            return y + doc.heightOfString(str, { width: CONTENT_W, lineGap: 4 }) + 8;
+        };
 
-        doc.fontSize(12).text(metadata.date, SPACING.pageMargin, 275);
+        /**
+         * Card with optional left-accent bar.
+         * Returns { contentY, cardBottom } so caller can place text inside then
+         * advance y to cardBottom + gap.
+         */
+        const drawCard = (y: number, height: number, bg: string, accentColor?: string): void => {
+            doc.rect(SPACING.pageMargin, y, CONTENT_W, height).fill(bg);
+            if (accentColor) {
+                doc.rect(SPACING.pageMargin, y, 3, height).fill(accentColor);
+            }
+        };
 
-        doc.fontSize(10).text(`Session ID: ${metadata.session_id.slice(0, 8)}`, SPACING.pageMargin, height - 50);
+        // ── COVER PAGE ───────────────────────────────────────────────────────────
+        {
+            const grad = doc.linearGradient(0, 0, 0, PAGE_H);
+            grad.stop(0, COLORS.brandDark1).stop(1, COLORS.brandDark2);
+            doc.rect(0, 0, PAGE_W, PAGE_H).fill(grad);
 
+            // Eyebrow
+            doc.fontSize(FONT_SIZES.sectionEyebrow).font(FONTS.bold)
+                .fillColor('rgba(255,255,255,0.4)')
+                .text('INTERVIEW ASSESSMENT REPORT', SPACING.pageMargin, 200);
 
-        // --- PAGE 2: TMAY & HIGH LEVEL ---
-        doc.addPage();
-        drawHeader();
-        let y = 80;
+            // Role title
+            doc.fontSize(FONT_SIZES.coverTitle).font(FONTS.bold).fillColor('#ffffff')
+                .text(metadata.role, SPACING.pageMargin, 218, { lineGap: 4 });
 
-        // 1. TMAY ANALYSIS
-        if (evaluation.tmay_analysis) {
-            y = addSectionTitle('Tell Me About Yourself', y);
+            // Level + scenario sub-line
+            const subY = 218 + FONT_SIZES.coverTitle + 14;
+            doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor('rgba(255,255,255,0.6)')
+                .text(`${metadata.level}  |  ${metadata.scenario}`, SPACING.pageMargin, subY);
 
-            // Critique
-            y = addSubsection('Interviewer Critique', y);
-            y = addBodyText(evaluation.tmay_analysis.critique, y);
-            y += 10;
+            // Date
+            doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor('rgba(255,255,255,0.35)')
+                .text(metadata.date, SPACING.pageMargin, PAGE_H - 80);
 
-            // Rewrite Box
-            y = checkPageBreak(y, 200);
-
-            // Draw Box Background
-            doc.rect(SPACING.pageMargin, y, width - (2 * SPACING.pageMargin), 4)
-                .fill(COLORS.accent); // Top bar
-
-            y += 10; // Padding inside box visually (no real box rect yet, just spacing)
-
-            doc.fontSize(10).font(FONTS.bold).fillColor(COLORS.accent)
-                .text('INTERVIEWER REWRITE (IDEAL VERSION)', SPACING.pageMargin, y);
-            y += 20;
-
-            // Render Rewrite Text
-            doc.font(FONTS.italic).fillColor(COLORS.textPrimary);
-            y = addBodyText(evaluation.tmay_analysis.rewrite, y);
-            doc.font(FONTS.regular); // Reset
-
-            y += 20;
+            // Session ID
+            doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor('rgba(255,255,255,0.2)')
+                .text(`Session ${metadata.session_id.slice(0, 8)}`, SPACING.pageMargin, PAGE_H - 64);
         }
 
-        y = checkPageBreak(y, 250);
+        // ── PAGE 2: TMAY + HIGH-LEVEL ASSESSMENT ─────────────────────────────────
+        doc.addPage();
+        currentSection = 'High-Level Assessment';
+        drawHeader(currentSection);
+        let y = 56;
 
-        // 2. HIGH-LEVEL ASSESSMENT
+        // TMAY ANALYSIS
+        if (evaluation.tmay_analysis) {
+            y = addEyebrow('Tell Me About Yourself', y);
+            y = addSectionTitle('Opening Statement', y);
+
+            // Critique card
+            {
+                const critiqueText: string = evaluation.tmay_analysis.critique || '';
+                const innerH = doc.heightOfString(critiqueText, { width: INNER_W + 3, lineGap: 4 });
+                const cardH  = innerH + 2 * SPACING.cardPadding;
+                y = checkPageBreak(y, cardH + 10);
+                drawCard(y, cardH, COLORS.backgroundCard);
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(critiqueText, SPACING.pageMargin + SPACING.cardPadding, y + SPACING.cardPadding,
+                        { width: CONTENT_W - 2 * SPACING.cardPadding, lineGap: 4 });
+                y += cardH + SPACING.sectionGap;
+            }
+
+            // Model answer card (green accent)
+            {
+                const rewriteText: string = evaluation.tmay_analysis.rewrite || '';
+                const labelH  = FONT_SIZES.small + 8;
+                const bodyH   = doc.heightOfString(rewriteText, { width: INNER_W, lineGap: 4 });
+                const cardH   = labelH + bodyH + 2 * SPACING.cardPadding;
+                y = checkPageBreak(y, cardH + 10);
+                drawCard(y, cardH, COLORS.successLight, COLORS.success);
+                const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.success)
+                    .text('MODEL ANSWER', innerX, y + SPACING.cardPadding);
+                doc.fontSize(FONT_SIZES.body).font(FONTS.italic).fillColor(COLORS.textPrimary)
+                    .text(rewriteText, innerX, y + SPACING.cardPadding + labelH, { width: INNER_W, lineGap: 4 });
+                y += cardH + SPACING.sectionGap;
+            }
+        }
+
+        y = checkPageBreak(y, 200);
+
+        // HIGH-LEVEL ASSESSMENT
         if (evaluation.high_level_assessment) {
+            y = addEyebrow('Assessment', y);
             y = addSectionTitle('High-Level Assessment', y);
 
-            // Hiring Signal Badge
+            // Hiring signal badge pill
             if (evaluation.hiring_signal) {
-                const signalMap: any = {
-                    'STRONG_HIRE': { label: 'STRONG HIRE', color: '#2e7d32' },
-                    'HIRE': { label: 'HIRE', color: '#2e7d32' },
-                    'BORDERLINE': { label: 'BORDERLINE', color: '#d32f2f' },
-                    'NO_HIRE': { label: 'NO HIRE', color: '#d32f2f' }
+                type SigEntry = { label: string; bg: string; fg: string };
+                const signalMap: Record<string, SigEntry> = {
+                    'STRONG_HIRE': { label: 'STRONG HIRE',  bg: COLORS.successLight, fg: COLORS.success },
+                    'HIRE':        { label: 'HIRE',          bg: COLORS.successLight, fg: COLORS.success },
+                    'BORDERLINE':  { label: 'BORDERLINE',    bg: COLORS.warningLight, fg: COLORS.warning },
+                    'NO_HIRE':     { label: 'NO HIRE',       bg: COLORS.dangerLight,  fg: COLORS.danger  },
                 };
-                const signal = signalMap[evaluation.hiring_signal] || signalMap['BORDERLINE'];
+                const sig = signalMap[evaluation.hiring_signal] || signalMap['BORDERLINE'];
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold);
+                const badgeW = doc.widthOfString(sig.label) + 20;
+                doc.rect(SPACING.pageMargin, y, badgeW, 20).fill(sig.bg);
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(sig.fg)
+                    .text(sig.label, SPACING.pageMargin + 10, y + 5);
+                y += 28;
 
-                doc.fontSize(14).font(FONTS.bold).fillColor(signal.color)
-                    .text(signal.label, SPACING.pageMargin, y);
-                y += 25;
-
-                // Hireable Level
                 if (evaluation.hireable_level) {
-                    doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                    doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textSecondary)
                         .text(`Demonstrated Level: ${evaluation.hireable_level}`, SPACING.pageMargin, y);
-                    y += 25;
+                    y += 20;
                 }
             }
 
             const hla = evaluation.high_level_assessment;
 
-            y = addSubsection('Seniority Observation', y);
-            y = addBodyText(hla.seniority_observation, y);
-            y += 10;
+            if (hla.seniority_observation) {
+                y = checkPageBreak(y, 60);
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.textMuted)
+                    .text('SENIORITY OBSERVATION', SPACING.pageMargin, y);
+                y += 13;
+                y = addBodyText(hla.seniority_observation, y);
+                y += 4;
+            }
 
-            y = addSubsection('Strongest Signal', y);
-            y = addBodyText(hla.strongest_signals, y);
-            y += 10;
+            if (hla.strongest_signals) {
+                y = checkPageBreak(y, 60);
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.textMuted)
+                    .text('STRONGEST SIGNAL', SPACING.pageMargin, y);
+                y += 13;
+                y = addBodyText(hla.strongest_signals, y);
+                y += 4;
+            }
 
-            y = addSubsection('Primary Barrier to Next Level', y);
-            y = addBodyText(hla.barriers_to_next_level, y);
-            y += 20;
+            if (hla.barriers_to_next_level) {
+                y = checkPageBreak(y, 60);
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.textMuted)
+                    .text('PRIMARY BARRIER TO NEXT LEVEL', SPACING.pageMargin, y);
+                y += 13;
+                y = addBodyText(hla.barriers_to_next_level, y);
+            }
         }
 
-        drawFooter(); // Page 2 Footer
+        drawFooter(pageNum++);
 
-        // --- PAGE 3: STRENGTHS & IMPROVEMENTS ---
+        // ── PAGE 3: PERFORMANCE SCORECARD ────────────────────────────────────────
         doc.addPage();
-        drawHeader();
-        y = 80;
+        currentSection = 'Performance Scorecard';
+        drawHeader(currentSection);
+        y = 56;
 
-        // --- PERFORMANCE SCORECARD ---
         {
             type DimensionScore = {
-                dimension: string
-                score: number
-                band: string
-                weight: number
-                weighted_score: number
-                evidence: string
-                gap: string | null
-            }
+                dimension: string;
+                score: number;
+                band: string;
+                weight: number;
+                weighted_score: number;
+                evidence: string;
+                gap: string | null;
+            };
             type Competency = {
-                name: string
-                score: number   // 1-5
-                evidence: string
-                gap: string | null
-            }
+                name: string;
+                score: number;
+                evidence: string;
+                gap: string | null;
+            };
 
-            const competencies = evaluation.competencies as Competency[] | undefined
-            const dimensionScores = evaluation.dimension_scores as DimensionScore[] | undefined
-            const contentWidth = width - (2 * SPACING.pageMargin)
+            const competencies    = evaluation.competencies    as Competency[]    | undefined;
+            const dimensionScores = evaluation.dimension_scores as DimensionScore[] | undefined;
 
-            const scorecardBandColor: Record<string, string> = {
-                'Strong Hire':    '#16a34a',
-                'Lean Hire':      '#ca8a04',
-                'Lean No Hire':   '#ea580c',
-                'Strong No Hire': '#dc2626',
-            }
+            const bandColor: Record<string, string> = {
+                'Strong Hire':    COLORS.success,
+                'Lean Hire':      COLORS.amber,
+                'Lean No Hire':   COLORS.warning,
+                'Strong No Hire': COLORS.danger,
+            };
 
-            // ── New pipeline: competencies (1-5 scale) ─────────────────────────
+            const scoreBarColor5 = (s: number): string => {
+                if (s >= 4.5) return COLORS.success;
+                if (s >= 3.5) return COLORS.amber;
+                if (s >= 2.5) return COLORS.warning;
+                return COLORS.danger;
+            };
+
+            // ── New pipeline: competencies (1-5 scale) ────────────────────────────
             if (competencies && competencies.length > 0) {
-                y = checkPageBreak(y, 80)
-                y = addSectionTitle('Performance Scorecard', y)
+                y = addEyebrow('Round Performance', y);
+                y = addSectionTitle('Performance Scorecard', y);
 
-                const overallScore = evaluation.overall_score as number | undefined
-                const recommendation = evaluation.recommendation as string | undefined
+                const overallScore   = evaluation.overall_score  as number | undefined;
+                const recommendation = evaluation.recommendation as string | undefined;
 
                 if (overallScore !== undefined) {
-                    const recHex = recommendation ? (scorecardBandColor[recommendation] || COLORS.textSecondary) : COLORS.textSecondary
-                    const compositeText = recommendation
-                        ? `Overall: ${overallScore.toFixed(1)} / 5.0 — ${recommendation}`
-                        : `Overall: ${overallScore.toFixed(1)} / 5.0`
+                    const recHex = recommendation ? (bandColor[recommendation] || COLORS.textSecondary) : COLORS.textSecondary;
+                    const compositeStr = recommendation
+                        ? `Overall  ${overallScore.toFixed(1)} / 5.0  -  ${recommendation}`
+                        : `Overall  ${overallScore.toFixed(1)} / 5.0`;
                     doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(recHex)
-                        .text(compositeText, SPACING.pageMargin, y)
-                    y += 22
-                }
-
-                const scoreBarColor5 = (score: number): string => {
-                    if (score >= 4.5) return '#16a34a'
-                    if (score >= 3.5) return '#ca8a04'
-                    if (score >= 2.5) return '#ea580c'
-                    return '#dc2626'
+                        .text(compositeStr, SPACING.pageMargin, y);
+                    y += 24;
                 }
 
                 competencies.forEach((c: Competency, idx: number) => {
-                    y = checkPageBreak(y, 120)
+                    y = checkPageBreak(y, 90);
 
-                    // Competency name + score on one line
-                    const dimLabel = `${c.name}  ${c.score.toFixed(1)} / 5`
-                    doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
-                        .text(dimLabel, SPACING.pageMargin, y, { width: contentWidth })
-                    y += 20
+                    // Name left, score right
+                    const scoreStr = `${c.score.toFixed(1)} / 5`;
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                        .text(c.name, SPACING.pageMargin, y, { width: CONTENT_W - 60 });
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(scoreBarColor5(c.score))
+                        .text(scoreStr, SPACING.pageMargin, y, { width: CONTENT_W, align: 'right' });
+                    y += 17;
 
-                    // Score bar — background then fill (score / 5)
-                    doc.rect(SPACING.pageMargin, y, contentWidth, 6).fill('#E5E5E5')
-                    const filledWidth = Math.round(contentWidth * (c.score / 5))
-                    if (filledWidth > 0) {
-                        doc.rect(SPACING.pageMargin, y, filledWidth, 6).fill(scoreBarColor5(c.score))
-                    }
-                    y += 10
+                    // Progress bar
+                    doc.rect(SPACING.pageMargin, y, CONTENT_W, 5).fill('#E5E5E5');
+                    const filledW = Math.round(CONTENT_W * (c.score / 5));
+                    if (filledW > 0) doc.rect(SPACING.pageMargin, y, filledW, 5).fill(scoreBarColor5(c.score));
+                    y += 9;
 
-                    // Evidence
                     if (c.evidence) {
-                        y = checkPageBreak(y, 40)
-                        const evidenceText = `Evidence: ${c.evidence}`
-                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.italic).fillColor(COLORS.textSecondary)
-                            .text(evidenceText, SPACING.pageMargin, y, { width: contentWidth })
-                        y += doc.heightOfString(evidenceText, { width: contentWidth }) + 4
+                        y = checkPageBreak(y, 36);
+                        const evStr = `Evidence: ${c.evidence}`;
+                        doc.fontSize(FONT_SIZES.small).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                            .text(evStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                        y += doc.heightOfString(evStr, { width: CONTENT_W, lineGap: 3 }) + 3;
                     }
 
-                    // Gap note
                     if (c.gap) {
-                        y = checkPageBreak(y, 40)
-                        const gapText = `Gap: ${c.gap}`
-                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.regular).fillColor(COLORS.textMuted)
-                            .text(gapText, SPACING.pageMargin, y, { width: contentWidth })
-                        y += doc.heightOfString(gapText, { width: contentWidth }) + 4
+                        y = checkPageBreak(y, 36);
+                        const gapStr = `Gap: ${c.gap}`;
+                        doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textMuted)
+                            .text(gapStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                        y += doc.heightOfString(gapStr, { width: CONTENT_W, lineGap: 3 }) + 3;
                     }
 
-                    y += idx < competencies.length - 1 ? 10 : 20
-                })
+                    y += idx < competencies.length - 1 ? 14 : 20;
+                });
 
-            // ── Legacy fallback: dimension_scores (1-4 scale) ──────────────────
+            // ── Legacy fallback: dimension_scores (1-4 scale) ─────────────────────
             } else if (dimensionScores && dimensionScores.length > 0) {
-                y = checkPageBreak(y, 80)
-                y = addSectionTitle('Performance Scorecard', y)
+                y = addEyebrow('Round Performance', y);
+                y = addSectionTitle('Performance Scorecard', y);
 
-                const weightedComposite = evaluation.weighted_composite as number | undefined
-                const hireBand = evaluation.hire_band as string | undefined
+                const weightedComposite = evaluation.weighted_composite as number | undefined;
+                const hireBand          = evaluation.hire_band          as string | undefined;
 
                 if (weightedComposite !== undefined) {
-                    const bandHex = hireBand ? (scorecardBandColor[hireBand] || COLORS.textSecondary) : COLORS.textSecondary
-                    const compositeText = hireBand
-                        ? `Overall: ${weightedComposite.toFixed(1)} / 4.0 — ${hireBand}`
-                        : `Overall: ${weightedComposite.toFixed(1)} / 4.0`
+                    const bandHex = hireBand ? (bandColor[hireBand] || COLORS.textSecondary) : COLORS.textSecondary;
+                    const compositeStr = hireBand
+                        ? `Overall  ${weightedComposite.toFixed(1)} / 4.0  -  ${hireBand}`
+                        : `Overall  ${weightedComposite.toFixed(1)} / 4.0`;
                     doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(bandHex)
-                        .text(compositeText, SPACING.pageMargin, y)
-                    y += 22
+                        .text(compositeStr, SPACING.pageMargin, y);
+                    y += 24;
                 }
 
-                const scoreBarColor = (score: number): string => {
-                    if (score >= 4) return '#16a34a'
-                    if (score >= 3) return '#ca8a04'
-                    if (score >= 2) return '#ea580c'
-                    return '#dc2626'
-                }
+                const scoreBarColor4 = (s: number): string => {
+                    if (s >= 4) return COLORS.success;
+                    if (s >= 3) return COLORS.amber;
+                    if (s >= 2) return COLORS.warning;
+                    return COLORS.danger;
+                };
 
                 dimensionScores.forEach((ds: DimensionScore, idx: number) => {
-                    y = checkPageBreak(y, 120)
+                    y = checkPageBreak(y, 90);
 
-                    const dimBandHex = scorecardBandColor[ds.band] || COLORS.textSecondary
-                    const dimLabel = `${ds.dimension}  ${ds.score} / 4  (${ds.band})`
-                    doc.fontSize(FONT_SIZES.subsectionTitle).font(FONTS.bold).fillColor(dimBandHex)
-                        .text(dimLabel, SPACING.pageMargin, y, { width: contentWidth })
-                    y += 20
+                    const dimHex = bandColor[ds.band] || COLORS.textSecondary;
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                        .text(ds.dimension, SPACING.pageMargin, y, { width: CONTENT_W - 100 });
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(dimHex)
+                        .text(`${ds.score} / 4  (${ds.band})`, SPACING.pageMargin, y, { width: CONTENT_W, align: 'right' });
+                    y += 17;
 
-                    doc.rect(SPACING.pageMargin, y, contentWidth, 6).fill('#E5E5E5')
-                    const filledWidth = Math.round(contentWidth * (ds.score / 4))
-                    if (filledWidth > 0) {
-                        doc.rect(SPACING.pageMargin, y, filledWidth, 6).fill(scoreBarColor(ds.score))
-                    }
-                    y += 10
+                    doc.rect(SPACING.pageMargin, y, CONTENT_W, 5).fill('#E5E5E5');
+                    const filledW = Math.round(CONTENT_W * (ds.score / 4));
+                    if (filledW > 0) doc.rect(SPACING.pageMargin, y, filledW, 5).fill(scoreBarColor4(ds.score));
+                    y += 9;
 
                     if (ds.evidence) {
-                        y = checkPageBreak(y, 40)
-                        const evidenceText = `Evidence: ${ds.evidence}`
-                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.italic).fillColor(COLORS.textSecondary)
-                            .text(evidenceText, SPACING.pageMargin, y, { width: contentWidth })
-                        y += doc.heightOfString(evidenceText, { width: contentWidth }) + 4
+                        y = checkPageBreak(y, 36);
+                        const evStr = `Evidence: ${ds.evidence}`;
+                        doc.fontSize(FONT_SIZES.small).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                            .text(evStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                        y += doc.heightOfString(evStr, { width: CONTENT_W, lineGap: 3 }) + 3;
                     }
 
                     if (ds.gap) {
-                        y = checkPageBreak(y, 40)
-                        const gapText = `Gap: ${ds.gap}`
-                        doc.fontSize(FONT_SIZES.body - 2).font(FONTS.regular).fillColor(COLORS.textMuted)
-                            .text(gapText, SPACING.pageMargin, y, { width: contentWidth })
-                        y += doc.heightOfString(gapText, { width: contentWidth }) + 4
+                        y = checkPageBreak(y, 36);
+                        const gapStr = `Gap: ${ds.gap}`;
+                        doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textMuted)
+                            .text(gapStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                        y += doc.heightOfString(gapStr, { width: CONTENT_W, lineGap: 3 }) + 3;
                     }
 
-                    y += idx < dimensionScores.length - 1 ? 10 : 20
-                })
+                    y += idx < dimensionScores.length - 1 ? 14 : 20;
+                });
             }
         }
 
-        // --- DIMENSIONS ASSESSED ---
+        // Dimensions assessed (two-column list)
         if (metadata.dimension_order && metadata.dimension_order.length > 0) {
-            y = checkPageBreak(y, 60)
-            y = addSectionTitle('Dimensions Assessed in This Session', y)
-            const dims = metadata.dimension_order
-            const midpoint = Math.ceil(dims.length / 2)
-            const leftCol = dims.slice(0, midpoint)
-            const rightCol = dims.slice(midpoint)
-            const colWidth = (width - (2 * SPACING.pageMargin)) / 2
-            const startY = y
+            y = checkPageBreak(y, 60);
+            y = addEyebrow('Scope', y);
+            y = addSectionTitle('Dimensions Assessed', y);
 
-            // Left column
-            leftCol.forEach((dim: string) => {
-                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(`- ${dim}`, SPACING.pageMargin, y, { width: colWidth })
-                y += 18
-            })
+            const dims   = metadata.dimension_order;
+            const mid    = Math.ceil(dims.length / 2);
+            const left   = dims.slice(0, mid);
+            const right  = dims.slice(mid);
+            const colW   = CONTENT_W / 2;
+            const startY = y;
 
-            // Right column — reset y to startY, offset x by colWidth
-            y = startY
-            rightCol.forEach((dim: string) => {
-                doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(`- ${dim}`, SPACING.pageMargin + colWidth, y, { width: colWidth })
-                y += 18
-            })
-
-            // Advance y past whichever column was longer
-            y = startY + (Math.max(leftCol.length, rightCol.length) * 18) + 20
-        }
-
-        // 3. STRENGTHS
-        if (evaluation.strengths && Array.isArray(evaluation.strengths)) {
-            y = addSectionTitle('Core Strengths', y);
-
-            evaluation.strengths.forEach((s: any) => {
-                y = checkPageBreak(y, 60);
-
-                const skillText: string = s.skill ?? '';
-                if (!skillText) { y += 20; return; }
-
-                doc.fontSize(12).font(FONTS.bold).fillColor(COLORS.success)
-                    .text(`PASS  ${skillText}`, SPACING.pageMargin, y);
-                y += 24;
+            left.forEach((dim: string) => {
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(`- ${dim}`, SPACING.pageMargin, y, { width: colW });
+                y += 16;
             });
-            y += 10;
+            y = startY;
+            right.forEach((dim: string) => {
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(`- ${dim}`, SPACING.pageMargin + colW, y, { width: colW });
+                y += 16;
+            });
+            y = startY + Math.max(left.length, right.length) * 16 + SPACING.sectionGap;
         }
 
-        // 4. AREAS FOR IMPROVEMENT
-        if (evaluation.areas_for_improvement && Array.isArray(evaluation.areas_for_improvement)) {
-            y = checkPageBreak(y, 200);
-            y = addSectionTitle('Areas for Improvement', y);
+        drawFooter(pageNum++);
 
-            // ── Level-unlock reframe (Change 4) ──────────────────────────────────
-            // Derive nextLevelLabel from hireable_level so improvements read as
-            // forward-looking (what gets you promoted) rather than deficit-focused.
-            const levelProgression: Record<string, string> = {
-                'Junior': 'Mid-level',
-                'Mid-level': 'Senior',
-                'Senior': 'Principal',
-                'Principal': 'Staff',
-                'Staff': 'Director',
+        // ── STRENGTHS & AREAS FOR IMPROVEMENT ────────────────────────────────────
+        {
+            let onNewPage = false;
+
+            const ensurePage = (): void => {
+                if (!onNewPage) {
+                    doc.addPage();
+                    currentSection = 'Strengths & Areas for Improvement';
+                    drawHeader(currentSection);
+                    y = 56;
+                    onNewPage = true;
+                }
             };
-            let nextLevelLabel = 'To strengthen your bar:';
-            try {
-                const hireableLevel: string = evaluation.hireable_level || '';
-                const tokens = hireableLevel.split(' ');
-                const matchedToken = tokens.find(
-                    (t: string) => Object.prototype.hasOwnProperty.call(levelProgression, t)
-                );
-                if (matchedToken) {
-                    const nextLevel = levelProgression[matchedToken];
-                    nextLevelLabel = `To perform at ${nextLevel} ${metadata.role} bar:`;
-                }
-            } catch (levelErr) {
-                console.warn('[PDF] Level progression parse failed, using fallback:', levelErr);
-                nextLevelLabel = 'To strengthen your bar:';
+
+            // STRENGTHS
+            const hasStrengths = evaluation.strengths && Array.isArray(evaluation.strengths) && evaluation.strengths.length > 0;
+            if (hasStrengths) {
+                ensurePage();
+                y = addEyebrow('Positive Signals', y);
+                y = addSectionTitle('Core Strengths', y);
+
+                evaluation.strengths.forEach((s: any) => {
+                    const skillText: string = s.skill ?? '';
+                    if (!skillText) return;
+
+                    y = checkPageBreak(y, 32);
+
+                    // Pill badge
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold);
+                    const pillText = `+ ${skillText}`;
+                    const pillW    = doc.widthOfString(pillText) + 24;
+                    doc.rect(SPACING.pageMargin, y, pillW, 22).fill(COLORS.successLight);
+                    doc.rect(SPACING.pageMargin, y, 3, 22).fill(COLORS.success);
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.success)
+                        .text(pillText, SPACING.pageMargin + SPACING.cardPadding, y + 5);
+                    y += 30;
+                });
+                y += SPACING.sectionGap;
             }
-            // ─────────────────────────────────────────────────────────────────────
 
-            evaluation.areas_for_improvement.forEach((imp: any, impIndex: number) => {
-                y = checkPageBreak(y, 100);
+            // AREAS FOR IMPROVEMENT
+            const hasImprovements = evaluation.areas_for_improvement && Array.isArray(evaluation.areas_for_improvement) && evaluation.areas_for_improvement.length > 0;
+            if (hasImprovements) {
+                ensurePage();
+                if (hasStrengths) y = checkPageBreak(y, 140);
 
-                // Render nextLevelLabel once, in gray italic, above the first item only
-                if (impIndex === 0) {
-                    y = checkPageBreak(y, 20);
-                    doc.fontSize(9).font(FONTS.italic).fillColor(COLORS.textMuted)
-                        .text(nextLevelLabel, SPACING.pageMargin, y);
-                    y += 18;
+                y = addEyebrow('Development Areas', y);
+                y = addSectionTitle('Areas for Improvement', y);
+
+                // Level-progression framing
+                const levelProgression: Record<string, string> = {
+                    'Junior':    'Mid-level',
+                    'Mid-level': 'Senior',
+                    'Senior':    'Principal',
+                    'Principal': 'Staff',
+                    'Staff':     'Director',
+                };
+                let nextLevelLabel = 'To strengthen your bar:';
+                try {
+                    const hireableLevel: string = evaluation.hireable_level || '';
+                    const tokens  = hireableLevel.split(' ');
+                    const matched = tokens.find((t: string) => Object.prototype.hasOwnProperty.call(levelProgression, t));
+                    if (matched) nextLevelLabel = `To perform at ${levelProgression[matched]} ${metadata.role} bar:`;
+                } catch {
+                    nextLevelLabel = 'To strengthen your bar:';
                 }
 
-                // Support both new pipeline (string) and old pipeline (object) formats
-                const isString = typeof imp === 'string';
-                const headingText: string = isString ? imp : (imp.limit ?? '');
-                if (!headingText) { y += 10; return; }
+                doc.fontSize(FONT_SIZES.small).font(FONTS.italic).fillColor(COLORS.textMuted)
+                    .text(nextLevelLabel, SPACING.pageMargin, y);
+                y += 18;
 
-                // Gap Type Badge (object format only)
-                let gapBadge = '';
-                let gapColor = COLORS.warning;
-                if (!isString && imp.gap_type) {
-                    if (imp.gap_type === 'fundamental') {
-                        gapBadge = '[FUNDAMENTAL] ';
-                        gapColor = '#d32f2f';
-                    } else if (imp.gap_type === 'role_level') {
-                        gapBadge = '[ROLE-LEVEL] ';
-                        gapColor = '#d32f2f';
-                    } else if (imp.gap_type === 'polish') {
-                        gapBadge = '[POLISH] ';
-                        gapColor = COLORS.accent;
+                evaluation.areas_for_improvement.forEach((imp: any) => {
+                    const isString    = typeof imp === 'string';
+                    const headingText: string = isString ? imp : (imp.limit ?? '');
+                    if (!headingText) { y += 8; return; }
+
+                    // Card colour based on gap_type
+                    let cardBg = COLORS.warningLight;
+                    let barCol = COLORS.warning;
+                    if (!isString && imp.gap_type) {
+                        if (imp.gap_type === 'fundamental' || imp.gap_type === 'role_level') {
+                            cardBg = COLORS.dangerLight;
+                            barCol = COLORS.danger;
+                        } else if (imp.gap_type === 'polish') {
+                            cardBg = COLORS.backgroundCard;
+                            barCol = COLORS.amber;
+                        }
                     }
-                }
 
-                doc.fontSize(12).font(FONTS.bold).fillColor(gapColor)
-                    .text(`${gapBadge}${headingText}`, SPACING.pageMargin, y);
-                y += 20;
+                    const whyText: string = isString ? '' : (imp.why_it_matters ?? '');
+                    const headH = doc.heightOfString(headingText, { width: INNER_W, lineGap: 3 });
+                    const whyH  = whyText
+                        ? doc.heightOfString(`To reach the next level: ${whyText}`, { width: INNER_W, lineGap: 3 }) + 10
+                        : 0;
+                    const cardH = SPACING.cardPadding + headH + whyH + SPACING.cardPadding;
 
-                // Impact Scope (object format only)
-                if (!isString && imp.impact_scope) {
-                    let impactText = '';
-                    if (imp.impact_scope === 'blocks_hire') {
-                        impactText = 'Impact: Blocks hiring at this level';
-                    } else if (imp.impact_scope === 'blocks_next_level') {
-                        impactText = 'Impact: Required to reach next level';
-                    } else if (imp.impact_scope === 'polish_only') {
-                        impactText = 'Impact: Polish-level improvement (not a hiring risk)';
+                    y = checkPageBreak(y, cardH + 10);
+                    drawCard(y, cardH, cardBg, barCol);
+
+                    const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
+                    let cy = y + SPACING.cardPadding;
+
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                        .text(headingText, innerX, cy, { width: INNER_W, lineGap: 3 });
+                    cy += headH;
+
+                    if (whyText) {
+                        cy += 8;
+                        doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                            .text(`To reach the next level: ${whyText}`, innerX, cy, { width: INNER_W, lineGap: 3 });
                     }
-                    if (impactText) {
-                        doc.fontSize(9).font(FONTS.italic).fillColor(COLORS.textMuted)
-                            .text(impactText, SPACING.pageMargin, y);
-                        y += 15;
-                    }
-                }
 
-                // why_it_matters (object format only — string items carry no subtext)
-                // Data object is NOT mutated.
-                const whyText: string = isString ? '' : (imp.why_it_matters ?? '');
-                if (whyText) {
-                    const whyItMattersText = `To reach the next level: ${whyText}`;
-                    doc.fontSize(11).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                        .text(whyItMattersText, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-                    y += doc.heightOfString(whyItMattersText, { width: width - (2 * SPACING.pageMargin) }) + 20;
-                } else {
-                    y += 10;
-                }
-            });
+                    y += cardH + 10;
+                });
+            }
+
+            if (onNewPage) drawFooter(pageNum++);
         }
 
-        drawFooter();
-
-        // --- PAGE 4+: ANSWER UPGRADES ---
-        if (evaluation.answer_upgrades && Array.isArray(evaluation.answer_upgrades)) {
+        // ── ANSWER UPGRADES ──────────────────────────────────────────────────────
+        if (evaluation.answer_upgrades && Array.isArray(evaluation.answer_upgrades) && evaluation.answer_upgrades.length > 0) {
             doc.addPage();
-            drawHeader();
-            y = 80;
+            currentSection = 'Answer Upgrades';
+            drawHeader(currentSection);
+            y = 56;
 
+            y = addEyebrow('AI Coaching', y);
             y = addSectionTitle('Answer Upgrades', y);
-            y = addBodyText('Below are the most critical answers to reconstruct. These rewrites demonstrate the difference between a "pass" and a "hire".', y);
-            y += 20;
+
+            const introStr = 'The most critical answers to reconstruct, shown alongside your original response.';
+            doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                .text(introStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+            y += doc.heightOfString(introStr, { width: CONTENT_W, lineGap: 3 }) + SPACING.sectionGap;
 
             evaluation.answer_upgrades.forEach((upgrade: any, index: number) => {
-                y = checkPageBreak(y, 250); // Need substantial space for an upgrade
+                y = checkPageBreak(y, 160);
 
-                // Title
-                doc.fontSize(14).font(FONTS.bold).fillColor(COLORS.brandDark2)
-                    .text(`${index + 1}. ${upgrade.question_context}`, SPACING.pageMargin, y);
-                y += 25;
+                // Question heading
+                const qStr = `${index + 1}.  ${upgrade.question_context || ''}`;
+                doc.fontSize(FONT_SIZES.body).font(FONTS.bold).fillColor(COLORS.textPrimary)
+                    .text(qStr, SPACING.pageMargin, y, { width: CONTENT_W });
+                y += doc.heightOfString(qStr, { width: CONTENT_W }) + 10;
 
-                // Weakness
-                doc.fontSize(10).font(FONTS.bold).fillColor(COLORS.warning).text('WEAKNESS:', SPACING.pageMargin, y);
-                doc.fontSize(10).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(upgrade.weakness, SPACING.pageMargin + 70, y, { width: width - SPACING.pageMargin - 100 });
-                y += doc.heightOfString(upgrade.weakness, { width: width - SPACING.pageMargin - 100 }) + 15;
+                // Weakness card
+                const weakText: string = upgrade.weakness || '';
+                if (weakText) {
+                    y = checkPageBreak(y, 50);
+                    const labelH = FONT_SIZES.small + 8;
+                    const bodyH  = doc.heightOfString(weakText, { width: INNER_W, lineGap: 3 });
+                    const cardH  = labelH + bodyH + 2 * SPACING.cardPadding;
+                    drawCard(y, cardH, COLORS.dangerLight, COLORS.danger);
+                    const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
+                    doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.danger)
+                        .text('WEAKNESS', innerX, y + SPACING.cardPadding);
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                        .text(weakText, innerX, y + SPACING.cardPadding + labelH, { width: INNER_W, lineGap: 3 });
+                    y += cardH + 8;
+                }
 
-                // Upgraded Answer Box
-                doc.fontSize(10).font(FONTS.bold).fillColor(COLORS.success).text('UPGRADE:', SPACING.pageMargin, y);
-                y += 15;
-
-                // Content
-                doc.rect(SPACING.pageMargin, y, width - (2 * SPACING.pageMargin), 2).fill(COLORS.success); // Top line
-                y += 10;
-
-                doc.fontSize(11).font(FONTS.italic).fillColor(COLORS.textPrimary);
-                const upgradeText = `"${upgrade.upgraded_answer}"`;
-                doc.text(upgradeText, SPACING.pageMargin, y, { width: width - (2 * SPACING.pageMargin) });
-
-                y += doc.heightOfString(upgradeText, { width: width - (2 * SPACING.pageMargin) }) + 30;
+                // Upgraded answer card
+                const upgradeText: string = upgrade.upgraded_answer || '';
+                if (upgradeText) {
+                    y = checkPageBreak(y, 60);
+                    const labelH  = FONT_SIZES.small + 8;
+                    const bodyH   = doc.heightOfString(`"${upgradeText}"`, { width: INNER_W, lineGap: 3 });
+                    const cardH   = labelH + bodyH + 2 * SPACING.cardPadding;
+                    drawCard(y, cardH, COLORS.successLight, COLORS.success);
+                    const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
+                    doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.success)
+                        .text('UPGRADED ANSWER', innerX, y + SPACING.cardPadding);
+                    doc.fontSize(FONT_SIZES.body).font(FONTS.italic).fillColor(COLORS.textPrimary)
+                        .text(`"${upgradeText}"`, innerX, y + SPACING.cardPadding + labelH, { width: INNER_W, lineGap: 3 });
+                    y += cardH + SPACING.sectionGap;
+                }
             });
-            drawFooter();
+
+            drawFooter(pageNum++);
         }
 
-        // --- ANNOTATED TRANSCRIPT SECTION ---
-        // Only renders for new sessions (Stage 1 populates transcript_extracts)
+        // ── ANNOTATED TRANSCRIPT ─────────────────────────────────────────────────
         const transcriptExtracts = (evaluation as any).transcript_extracts;
         const turnDiagnostics: any[] = (evaluation as any).answer_level_diagnostics || [];
 
         if (transcriptExtracts && Array.isArray(transcriptExtracts) && transcriptExtracts.length > 0) {
             doc.addPage();
-            drawHeader();
-            y = 80;
+            currentSection = 'Your Interview';
+            drawHeader(currentSection);
+            y = 56;
 
-            doc.fontSize(FONT_SIZES.sectionTitle).font(FONTS.bold).fillColor(COLORS.textPrimary)
-                .text('Your Interview — Turn by Turn', SPACING.pageMargin, y);
-            y += 30;
+            y = addEyebrow('Annotated Transcript', y);
+            y = addSectionTitle('Your Interview', y);
 
-            doc.fontSize(9).font(FONTS.regular).fillColor(COLORS.textSecondary)
-                .text(
-                    'Your exact answers are shown below alongside what the interviewer observed. This is the section to return to.',
-                    SPACING.pageMargin, y, { width: width - 2 * SPACING.pageMargin }
-                );
-            y += 28;
+            const subStr = 'Your answers alongside what the interviewer observed.';
+            doc.fontSize(FONT_SIZES.small).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                .text(subStr, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+            y += doc.heightOfString(subStr, { width: CONTENT_W, lineGap: 3 }) + SPACING.sectionGap;
 
             for (const extract of transcriptExtracts) {
                 const diagnostic = turnDiagnostics.find((d: any) => d.turn_index === extract.turn_index);
-                const isTMAY = extract.question_type === 'tmay' || extract.turn_index === 0;
+                const isTMAY     = extract.question_type === 'tmay' || extract.turn_index === 0;
 
-                if (y + 120 > doc.page.height - 60) {
-                    doc.addPage();
-                    drawHeader();
-                    y = 80;
-                }
+                y = checkPageBreak(y, 120);
 
-                // Question label
-                const qLabel = isTMAY ? 'Tell me about yourself' : `Question ${extract.turn_index}`;
-                doc.fontSize(8).font(FONTS.bold).fillColor(COLORS.textMuted)
+                // Turn label
+                const qLabel = isTMAY ? 'Tell Me About Yourself' : `Question ${extract.turn_index}`;
+                doc.fontSize(FONT_SIZES.sectionEyebrow).font(FONTS.bold).fillColor(COLORS.textMuted)
                     .text(qLabel.toUpperCase(), SPACING.pageMargin, y);
                 y += 14;
 
                 // Question text
-                const qText = extract.question || '';
-                doc.fontSize(10).font(FONTS.italic).fillColor(COLORS.textSecondary)
-                    .text(qText, SPACING.pageMargin + 12, y, { width: width - 2 * SPACING.pageMargin - 12 });
-                y += doc.heightOfString(qText, { width: width - 2 * SPACING.pageMargin - 12 }) + 8;
+                const qText: string = extract.question || '';
+                doc.fontSize(FONT_SIZES.body).font(FONTS.italic).fillColor(COLORS.textSecondary)
+                    .text(qText, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                y += doc.heightOfString(qText, { width: CONTENT_W, lineGap: 3 }) + 8;
 
-                // Candidate answer in a shaded box
-                const answerText = extract.candidate_answer_verbatim || '(no answer captured)';
-                const answerBoxWidth = width - 2 * SPACING.pageMargin;
-                const answerInnerWidth = answerBoxWidth - 28;
-                const answerHeight = doc.heightOfString(answerText, { width: answerInnerWidth }) + 20;
+                // Candidate answer card
+                const answerText: string = extract.candidate_answer_verbatim || '(no answer captured)';
+                const answerInnerW = CONTENT_W - 2 * SPACING.cardPadding;
+                const answerBodyH  = doc.heightOfString(answerText, { width: answerInnerW, lineGap: 4 });
+                const answerCardH  = answerBodyH + 2 * SPACING.cardPadding;
 
-                if (y + answerHeight > doc.page.height - 60) {
-                    doc.addPage();
-                    drawHeader();
-                    y = 80;
-                }
-
-                doc.rect(SPACING.pageMargin, y, answerBoxWidth, answerHeight).fill('#F8F7F4');
-                doc.fontSize(9.5).font(FONTS.regular).fillColor(COLORS.textPrimary)
-                    .text(answerText, SPACING.pageMargin + 14, y + 10, { width: answerInnerWidth });
-                y += answerHeight + 6;
+                y = checkPageBreak(y, answerCardH + 30);
+                drawCard(y, answerCardH, COLORS.backgroundCard);
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(answerText, SPACING.pageMargin + SPACING.cardPadding, y + SPACING.cardPadding,
+                        { width: answerInnerW, lineGap: 4 });
+                y += answerCardH + 6;
 
                 // Signal annotation
                 if (diagnostic) {
-                    const signalColor = diagnostic.signal_strength === 'strong' ? '#0A7C42'
-                        : diagnostic.signal_strength === 'mixed' ? '#8B5E00' : '#9B1C1C';
-                    const signalLabel = diagnostic.signal_strength === 'strong' ? 'Strong signal'
-                        : diagnostic.signal_strength === 'mixed' ? 'Mixed signal' : 'Weak signal';
-                    const annotationText = `${signalLabel.toUpperCase()}  —  ${diagnostic.interviewer_consequence || diagnostic.impact_on_interviewer || ''}`;
-                    doc.fontSize(8).font(FONTS.bold).fillColor(signalColor)
-                        .text(annotationText, SPACING.pageMargin + 12, y,
-                            { width: width - 2 * SPACING.pageMargin - 24 });
-                    y += doc.heightOfString(annotationText, { width: width - 2 * SPACING.pageMargin - 24 }) + 14;
+                    const sigStrength: string = diagnostic.signal_strength || '';
+                    const sigColor = sigStrength === 'strong' ? COLORS.success
+                        : sigStrength === 'mixed' ? COLORS.amber : COLORS.danger;
+                    const sigLabel = sigStrength === 'strong' ? 'Strong Signal'
+                        : sigStrength === 'mixed' ? 'Mixed Signal' : 'Weak Signal';
+                    const consequence: string = diagnostic.interviewer_consequence || diagnostic.impact_on_interviewer || '';
+                    const annotText = consequence ? `${sigLabel}  -  ${consequence}` : sigLabel;
+                    doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(sigColor)
+                        .text(annotText, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+                    y += doc.heightOfString(annotText, { width: CONTENT_W, lineGap: 3 }) + 14;
                 } else {
                     y += 12;
                 }
 
-                // Separator line
+                // Separator
                 doc.moveTo(SPACING.pageMargin, y)
-                    .lineTo(width - SPACING.pageMargin, y)
-                    .strokeColor('#E0DFDC').lineWidth(0.5).stroke();
-                y += 12;
+                    .lineTo(PAGE_W - SPACING.pageMargin, y)
+                    .strokeColor(COLORS.borderSubtle).lineWidth(0.5).stroke();
+                y += 14;
             }
 
-            drawFooter();
+            drawFooter(pageNum++);
         }
 
-        // --- PRO/PRO+ : PERSONAL ANSWER RULES ---
-        // isExtendedEval matches the same pattern used in eval-logic.ts (Pro+ merged into Pro, Feb 2026)
+        // ── PERSONAL ANSWER RULES ────────────────────────────────────────────────
+        // isExtendedEval matches the same gate used in eval-logic.ts (Pro+ merged into Pro, Feb 2026)
         const isExtendedEval = tier === 'Pro' || tier === 'Pro+';
-        if (isExtendedEval && evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules)) {
+        if (isExtendedEval && evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules) && evaluation.personal_answer_rules.length > 0) {
             doc.addPage();
-            drawHeader();
-            y = 80;
+            currentSection = 'Personal Answer Rules';
+            drawHeader(currentSection);
+            y = 56;
 
+            y = addEyebrow('Personalized Coaching', y);
             y = addSectionTitle('Your Personal Answer Rules', y);
-            y = addBodyText('These are custom rules calibrated to your specific interview patterns. Apply these every time you answer:', y);
-            y += 20;
+
+            const rulesIntro = 'Rules calibrated to your specific interview patterns. Apply these every time you answer.';
+            doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textSecondary)
+                .text(rulesIntro, SPACING.pageMargin, y, { width: CONTENT_W, lineGap: 3 });
+            y += doc.heightOfString(rulesIntro, { width: CONTENT_W, lineGap: 3 }) + SPACING.sectionGap;
 
             evaluation.personal_answer_rules.forEach((rule: string, index: number) => {
-                y = checkPageBreak(y, 50);
+                const ruleStr = rule || '';
+                const labelH  = FONT_SIZES.small + 8;
+                const bodyH   = doc.heightOfString(ruleStr, { width: INNER_W, lineGap: 3 });
+                const cardH   = labelH + bodyH + 2 * SPACING.cardPadding;
 
-                doc.fontSize(12).font(FONTS.bold).fillColor(COLORS.brandDark2)
-                    .text(`${index + 1}. ${rule}`, SPACING.pageMargin, y);
-                y += 25;
+                y = checkPageBreak(y, cardH + 12);
+                drawCard(y, cardH, COLORS.backgroundCard, COLORS.brandDark2);
+
+                const innerX = SPACING.pageMargin + SPACING.cardPadding + 3;
+                doc.fontSize(FONT_SIZES.small).font(FONTS.bold).fillColor(COLORS.textMuted)
+                    .text(`RULE ${index + 1}`, innerX, y + SPACING.cardPadding);
+                doc.fontSize(FONT_SIZES.body).font(FONTS.regular).fillColor(COLORS.textPrimary)
+                    .text(ruleStr, innerX, y + SPACING.cardPadding + labelH, { width: INNER_W, lineGap: 3 });
+
+                y += cardH + 12;
             });
 
-            drawFooter();
+            drawFooter(pageNum++);
         }
 
-        // --- END DOCUMENT ---
+        // ── END ──────────────────────────────────────────────────────────────────
         doc.end();
     });
 }
