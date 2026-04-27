@@ -48,13 +48,6 @@ export async function POST(request: NextRequest) {
         const audioBlob = formData.get('audio') as File | null
         const sessionId  = formData.get('session_id') as string | null
 
-        if (audioBlob && audioBlob.size > 24 * 1024 * 1024) {
-            return NextResponse.json(
-                { error: 'Audio file too large. Please keep answers under 3 minutes.' },
-                { status: 413 }
-            )
-        }
-
         if (!audioBlob) {
             return NextResponse.json(
                 { success: false, error: 'audio field required' },
@@ -62,10 +55,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Whisper requires a File with a name that has a recognisable extension.
-        // MediaRecorder may produce 'audio/webm;codecs=opus' which Whisper rejects —
-        // always pin to plain 'audio/webm'.
-        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' })
+        // Whisper requires a File with a recognisable extension.
+        // The client sends either audio/wav (compressed) or audio/webm (raw).
+        // Normalise audio/webm;codecs=opus → audio/webm so Whisper accepts it.
+        const mimeType  = audioBlob.type?.includes('wav') ? 'audio/wav' : 'audio/webm'
+        const extension = mimeType === 'audio/wav' ? 'wav' : 'webm'
+        const audioFile = new File([audioBlob], `audio.${extension}`, { type: mimeType })
 
         console.log('[stt] file name:', audioFile.name, 'type:', audioFile.type, 'size:', audioFile.size)
 

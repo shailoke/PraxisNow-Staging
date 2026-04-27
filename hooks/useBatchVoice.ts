@@ -388,6 +388,8 @@ export function useBatchVoice(
 
     // ── askNextQuestion ────────────────────────────────────────────────────
     const askNextQuestion = useCallback(async () => {
+        setError(null)
+
         // Guard: paused
         if (isPausedRef.current) {
             console.warn('[useBatchVoice] askNextQuestion blocked — session is paused')
@@ -415,20 +417,40 @@ export function useBatchVoice(
                 return
             }
 
-            // Guard: reject blobs too large to process (>20MB indicates recording far exceeded 3 minutes)
-            if (audioBlob.size > 20 * 1024 * 1024) {
-                console.warn('[useBatchVoice] Audio blob too large:', audioBlob.size, 'bytes')
-                setError('Your answer was too long to process. Please keep answers under 3 minutes.')
-                audioChunksRef.current = []
-                startRecording()
-                return
+            // Re-encode at lower bitrate if blob is large to avoid hitting Vercel body limits
+            let blobToSend: Blob = audioBlob
+            if (audioBlob.size > 4 * 1024 * 1024) {
+                try {
+                    // Convert to lower quality by re-encoding via AudioContext
+                    const arrayBuffer = await audioBlob.arrayBuffer()
+                    const audioContext = new AudioContext({ sampleRate: 16000 })
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+                    const offlineContext = new OfflineAudioContext(
+                        1, // mono
+                        audioBuffer.duration * 16000,
+                        16000
+                    )
+                    const source = offlineContext.createBufferSource()
+                    source.buffer = audioBuffer
+                    source.connect(offlineContext.destination)
+                    source.start()
+                    const renderedBuffer = await offlineContext.startRendering()
+                    // Convert to WAV for Whisper compatibility
+                    const wavBlob = audioBufferToWav(renderedBuffer)
+                    blobToSend = wavBlob
+                    console.log(`[useBatchVoice] Compressed audio: ${audioBlob.size} → ${wavBlob.size} bytes`)
+                } catch (compressionError) {
+                    console.warn('[useBatchVoice] Compression failed, sending original:', compressionError)
+                    blobToSend = audioBlob
+                }
             }
 
             // 2. STT
             setInterviewState('TRANSCRIBING')
 
             const sttFormData = new FormData()
-            sttFormData.append('audio', audioBlob, 'audio.webm')
+            const audioFileName = blobToSend.type === 'audio/wav' ? 'audio.wav' : 'audio.webm'
+            sttFormData.append('audio', blobToSend, audioFileName)
             sttFormData.append('session_id', sessionId ?? '')
 
             const sttRes = await fetch('/api/voice/stt', {
@@ -528,7 +550,13 @@ export function useBatchVoice(
 
         } catch (err: any) {
             console.error('[useBatchVoice] askNextQuestion error:', err)
-            setError(err.message || 'Turn failed')
+            const rawMessage: string = err.message || ''
+            const userMessage =
+                rawMessage.includes('413') ? 'Your answer was too long to process. Please try a shorter response.' :
+                rawMessage.includes('401') ? 'Session expired. Please refresh the page.' :
+                rawMessage.includes('500') ? 'Something went wrong on our end. Please try again.' :
+                'Could not process your answer. Please try again.'
+            setError(userMessage)
             setIsInterviewerSpeaking(false)
             setIsSpeaking(false)
             setInterviewState('WAITING_FOR_USER')
@@ -691,6 +719,58 @@ export function useBatchVoice(
         interruptedTextRef,
         replayInterruptedText,
     }
+}
+
+// ─── audioBufferToWav ─────────────────────────────────────────────────────────
+/**
+ * Convert an AudioBuffer to a WAV Blob (16-bit PCM, mono, 16 kHz).
+ * Used to compress large WebM blobs before sending to the STT API so they
+ * stay within Vercel's request body limit.
+ */
+function audioBufferToWav(buffer: AudioBuffer): Blob {
+    const numChannels = 1      // always downmix to mono
+    const sampleRate  = buffer.sampleRate
+    const bitsPerSample = 16
+    const samples     = buffer.getChannelData(0)  // channel 0 only — mono
+    const dataLength  = samples.length * 2         // 16-bit = 2 bytes per sample
+    const totalLength = 44 + dataLength            // 44-byte WAV header
+
+    const ab   = new ArrayBuffer(totalLength)
+    const view = new DataView(ab)
+
+    const writeStr = (offset: number, str: string) => {
+        for (let i = 0; i < str.length; i++) {
+            view.setUint8(offset + i, str.charCodeAt(i))
+        }
+    }
+
+    // RIFF chunk descriptor
+    writeStr(0, 'RIFF')
+    view.setUint32(4,  totalLength - 8,                              true)
+    writeStr(8, 'WAVE')
+
+    // fmt sub-chunk
+    writeStr(12, 'fmt ')
+    view.setUint32(16, 16,                                           true) // sub-chunk size (PCM)
+    view.setUint16(20, 1,                                            true) // audio format = PCM
+    view.setUint16(22, numChannels,                                  true)
+    view.setUint32(24, sampleRate,                                   true)
+    view.setUint32(28, sampleRate * numChannels * bitsPerSample / 8, true) // byte rate
+    view.setUint16(32, numChannels * bitsPerSample / 8,              true) // block align
+    view.setUint16(34, bitsPerSample,                                true)
+
+    // data sub-chunk
+    writeStr(36, 'data')
+    view.setUint32(40, dataLength, true)
+
+    // Write 16-bit PCM samples (clamp float32 to [-1, 1] → int16)
+    let offset = 44
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]))
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+    }
+
+    return new Blob([ab], { type: 'audio/wav' })
 }
 
 // ─── Named alias so pages can import { useRealtimeVoice } from '@/hooks/useBatchVoice'
