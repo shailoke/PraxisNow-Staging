@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase'
+import LegalFooter from '@/components/LegalFooter'
 
 export default function PricingPage() {
     const router = useRouter()
@@ -194,8 +195,15 @@ export default function PricingPage() {
                 </div>
 
                 {/* Footer note */}
-                <p className="text-center text-xs text-gray-600 mb-14">
+                <p className="text-center text-xs text-gray-600 mb-3">
                     All sessions are 30 minutes · Any role · Any round · Sessions never expire
+                </p>
+                <p className="text-center text-xs text-gray-600 mb-14">
+                    Session packs are non-refundable once purchased. If a session fails due to a verified technical error on our part, we will credit one replacement session. Contact{' '}
+                    <a href="mailto:support@praxisnow.ai" className="text-gray-500 hover:text-gray-400 transition-colors underline underline-offset-2">
+                        support@praxisnow.ai
+                    </a>
+                    {' '}within 7 days.
                 </p>
 
                 <div className="text-center">
@@ -204,6 +212,8 @@ export default function PricingPage() {
                     </Link>
                 </div>
             </div>
+
+            <LegalFooter />
 
             <Script
                 src="https://checkout.razorpay.com/v1/checkout.js"

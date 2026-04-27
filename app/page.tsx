@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Zap, BarChart, CheckCircle2, Bot } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
+import LegalFooter from '@/components/LegalFooter'
 
 export default function LandingPage() {
   const router = useRouter()
@@ -395,6 +396,8 @@ export default function LandingPage() {
           </Button>
         </div>
       </section>
+
+      <LegalFooter />
 
       {/* Razorpay checkout script — preserved */}
       <Script

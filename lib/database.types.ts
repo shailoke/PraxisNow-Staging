@@ -569,6 +569,8 @@ export type Database = {
           phone: string | null
           primary_role: string | null
           star_interviewer: boolean
+          terms_accepted: boolean
+          terms_accepted_at: string | null
           total_sessions_used: number | null
         }
         Insert: {
@@ -589,6 +591,8 @@ export type Database = {
           phone?: string | null
           primary_role?: string | null
           star_interviewer?: boolean
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
           total_sessions_used?: number | null
         }
         Update: {
@@ -609,6 +613,8 @@ export type Database = {
           phone?: string | null
           primary_role?: string | null
           star_interviewer?: boolean
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
           total_sessions_used?: number | null
         }
         Relationships: []

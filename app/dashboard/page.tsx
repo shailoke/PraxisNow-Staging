@@ -13,6 +13,7 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import Script from 'next/script'
+import LegalFooter from '@/components/LegalFooter'
 import CurrentBarCard, { type CurrentBarCardProps } from '@/components/CurrentBarCard'
 import DashboardFilters, { FilterState } from '@/components/DashboardFilters'
 import type { Database } from '@/lib/database.types'
@@ -997,6 +998,8 @@ export default function DashboardPage() {
                     </div>
                 </footer>
             </main>
+
+            <LegalFooter />
 
             <SupportModal
                 isOpen={isSupportOpen}
