@@ -28,7 +28,7 @@ Two active tiers (Pro+ is legacy):
 
 | Tier | Price | Sessions | Notes |
 |---|---|---|---|
-| **Free** | — | 0 | Must purchase a plan |
+| **Free** | — | 0 | Must purchase a pack |
 | **Starter** | ₹599 / pack | 3 | Awareness-focused evaluation |
 | **Pro** | ₹899 / pack | 5 | Full evaluation, answer upgrades, salary negotiation, AI Fluency round (R4) |
 | **Pro+** | Legacy SKU | 7 | Maps to Pro tier for backward compat; `pro_plus` enum still in TypeScript types |
@@ -37,6 +37,10 @@ Payment SKUs in `app/api/razorpay/verify/route.ts`:
 - `starter` → Starter tier, 3 sessions
 - `pro` → Pro tier, 5 sessions
 - `pro_plus` → Legacy SKU → Pro tier, 7 sessions
+
+### User-facing language
+
+All user-facing UI uses session-pack language ("purchase a session pack", "included with every paid session"). Plan/tier names ("Pro plan", "Starter plan") do not appear in rendered UI. The underlying DB column `package_tier` and Razorpay `descriptionMap` strings are internal and unchanged.
 
 ---
 
@@ -111,6 +115,18 @@ audioEl.play()
 
 `audioContextRef` and `audioSourceRef` remain declared as no-op refs for abort compatibility but are never set during playback. `readerRef` holds the active `ReadableStreamDefaultReader` so `abortInterviewerAudio()` can cancel it mid-stream.
 
+### Pause / Resume mechanism
+
+Pause/resume mid-speech is handled by three refs in `useBatchVoice.ts`:
+
+- **`interruptedTextRef`** — Set to `llmText` immediately before `await speakText(llmText)` in `askNextQuestion()`. Cleared to `null` after `speakText` resolves cleanly. If the speak is aborted mid-playback, the ref retains the text so resume can replay it.
+- **`speakRejectRef`** — Stores the `reject` function of the `speakText` Promise at the moment it is created (both MediaSource and blob URL paths). `abortInterviewerAudio()` calls `speakRejectRef.current?.(new Error('AbortError'))` to unblock a hanging `await speakText(...)` call.
+- **`replayInterruptedText`** — Callback exported by the hook. Called by `handleResume()` in the simulator page (after a 500ms delay). Re-runs `speakText(interruptedTextRef.current)`, then appends the message to `messagesRef` and clears `interruptedTextRef`.
+
+`abortInterviewerAudio()` additionally calls `setInterviewState('WAITING_FOR_USER')` after aborting, so the UI does not remain stuck in `ASSISTANT_SPEAKING`.
+
+`askNextQuestion()` wraps `speakText` in a try/catch — if aborted, it returns early without clearing `interruptedTextRef`, leaving the text available for `replayInterruptedText`.
+
 ### DB write pattern (interview route)
 
 After GPT responds and the message is validated, STEP 12 (mark turn answered + insert new turn) fires as a background IIFE — the response is returned to the client immediately. STEP 13 (`user_question_history`) was already fire-and-forget.
@@ -147,7 +163,9 @@ This saves ~1,200–1,400ms per turn.
 - **`ASSISTANT_SPEAKING` state is set inside `audioEl.oncanplay`** — never at the call site. The state stays as `THINKING` until the browser signals it has enough data to play.
 - **`audioEl.play()` is called inside `appendNext()` after the first `appendBuffer`** (primary MediaSource path) — calling it before any data is buffered will throw `NotAllowedError` or stall silently.
 - **`readerRef` holds the active `ReadableStreamDefaultReader`** — `abortInterviewerAudio()` calls `readerRef.current?.cancel()` to terminate the stream mid-flight.
-- **Do NOT call `setEvalResult` before `router.push`** in `handleEnd()` for standard interviews
+- **`interruptedTextRef` must be set before `speakText()`** — never after. It is the only mechanism for `replayInterruptedText` to know what to replay after a pause.
+- **`speakRejectRef.current` is always nulled after use** — both in `onended`/`onerror` (after normal completion) and in `abortInterviewerAudio()` (after abort). Never call it twice.
+- **Do NOT call `setEvalResult` before `router.push`** in `handleEnd()` for standard interviews — it causes a `.map()` crash on undefined fields in the simulator results view.
 
 ---
 
@@ -212,6 +230,7 @@ Fetched from `user_question_history` table. Scoped by `user_id` + `role` + `roun
 - **Score scale:** 1–5 (not 1–4)
 - **Gap field:** Required for scores 1–4. Null only at score 5 (exceptional, no gaps). Score 4 = strong with minor gaps — the gap must name the specific minor gap.
 - **`runStage2` signature:** `(stage1Output, role, round, roundTitle, evaluationGuidance)` — 5 args. `evaluationGuidance` comes from `scenarios.evaluation_guidance`.
+- **Verification checklist:** The stage 2 prompt includes a mandatory pre-scoring verification block (inserted before the JSON schema). It enforces score discipline for 4.0+, correct hypothetical-round framing (described intent is not problem framing), behavioral specificity rules, and metrics/guardrail rules. GPT must answer these checks internally before writing any score.
 
 ### Post-stage derived fields (no new AI calls)
 
@@ -310,6 +329,10 @@ npx supabase gen types typescript --project-id [project-id] --schema public > li
 
 Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Never hardcode any duration value in the simulator.
 
+### 13. Simulator Eval Error Screen Is Guarded by `isNavigatingToResults`
+
+In `app/simulator/[scenarioId]/page.tsx`, `setShowResults(true)` is called in Phase 2 of `handleEnd()` — before the evaluate API call. When the evaluate API succeeds, `router.push()` fires, then the `finally` block sets `isEvaluating(false)`. Without a guard this renders the error screen briefly before navigation completes. The `isNavigatingToResults` state is set to `true` immediately before `router.push()` and gates the error screen branch (`!isNavigatingToResults`). Never remove this guard.
+
 ---
 
 ## Known Issues / Technical Debt
@@ -320,7 +343,7 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 
 3. **`Pro+` enum still present** — TypeScript types still reference `Pro+` in several places. Cleanup pending. The `session/start` negotiation tier check still reads `profile.package_tier !== 'Pro' && profile.package_tier !== 'Pro+'`.
 
-4. **`lib/eval-logic.ts` is dead code** — File exists but is not imported anywhere in the evaluation pipeline. Stage 2 was fully rewritten. Safe to delete after confirming no other callers.
+4. **`lib/eval-logic.ts` is mostly dead code** — The evaluation pipeline no longer uses this file's logic. However, the `EvalResult` type it exports is still imported in `app/simulator/[scenarioId]/page.tsx` for the negotiation results branch. Safe to migrate that type inline and delete the file, but not done yet.
 
 5. **Star Interviewer not read from DB** — The dashboard computes the Star Interviewer callout as a frontend-only calculation. The `star_interviewer` column on `users` is written by the evaluate route but the dashboard does not read it — it recomputes from session history.
 
@@ -343,14 +366,15 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 | `app/api/voice/opening/route.ts` | Fetches Turn 0 content for TMAY playback |
 | `app/api/razorpay/route.ts` | Razorpay order creation |
 | `app/api/razorpay/verify/route.ts` | Payment verification + tier upgrade logic |
-| `app/results/[session_id]/page.tsx` | Results screen — Verdict, Performance Scorecard, Strongest Moment, The One Thing, What's Next |
-| `app/dashboard/page.tsx` | Dashboard — Practice tab (role selector, scenario grid, score history), History tab. Amber recovery banner appears when sessions are stuck in `evaluating` status (10–90 min old). |
-| `app/simulator/[scenarioId]/page.tsx` | Interview simulator — evaluation progress UI, redirects on eval complete. `beforeunload` guard fires `navigator.sendBeacon('/api/session/abandon', ...)` when tab is closed mid-session. |
-| `hooks/useBatchVoice.ts` | **Primary voice hook** — STT→LLM→TTS batch pipeline. MediaSource stream pump (primary) + blob URL fallback (iOS Safari). State transitions via `oncanplay`. |
+| `app/results/[session_id]/page.tsx` | Results screen — Verdict, Performance Scorecard, Strongest Moment, The One Thing, What's Next. Answer upgrades upsell links to `/pricing`. |
+| `app/dashboard/page.tsx` | Dashboard — Practice tab (role selector, scenario grid, score history), History tab. Sessions badge shows `available_sessions + (free_session_used ? 0 : 1)`. Amber recovery banner appears when sessions are stuck in `evaluating` status (10–90 min old). |
+| `app/simulator/[scenarioId]/page.tsx` | Interview simulator — evaluation progress UI, redirects on eval complete. `isNavigatingToResults` guards the error screen during route transition. `beforeunload` guard fires `navigator.sendBeacon('/api/session/abandon', ...)` when tab is closed mid-session. |
+| `app/negotiator/page.tsx` | Salary Negotiation Coach — 30-min role-play simulation. Access gated on `package_tier === 'Pro'`. Paywall upsell links to `/pricing`. |
+| `hooks/useBatchVoice.ts` | **Primary voice hook** — STT→LLM→TTS batch pipeline. MediaSource stream pump (primary) + blob URL fallback (iOS Safari). Pause/resume via `interruptedTextRef`, `speakRejectRef`, `replayInterruptedText`. State transitions via `oncanplay`. |
 | `hooks/useRealtimeVoice.ts` | Legacy voice hook — WebRTC/Realtime API. Not used in production. |
 | `supabase/migrations/20250418_stale_session_cleanup.sql` | pg_cron job (runs hourly) — marks sessions stuck in `created/active/evaluating` for >90 min as `abandoned`. **Must be run via Supabase SQL Editor**, not `db push` (requires superuser for pg_cron). |
 | `lib/evaluation/stage1-extract.ts` | Stage 1 — parses `interview_turns` into `Stage1Output` |
-| `lib/evaluation/stage2-evaluate.ts` | Stage 2 — o4-mini competency scoring (1–5), 5-arg `runStage2` |
+| `lib/evaluation/stage2-evaluate.ts` | Stage 2 — o4-mini competency scoring (1–5), 5-arg `runStage2`, verification checklist pre-scoring |
 | `lib/evaluation/stage3-rewrite.ts` | Stage 3 — grounded answer rewrites; behavioral vs hypothetical rules |
 | `lib/evaluation/stage4-rules.ts` | Stage 4 — session-specific personal answer rules with verbatim quote grounding |
 | `lib/evaluation-progress.ts` | `getEvaluationSteps(role, round)` — step labels for simulator progress UI |
@@ -361,6 +385,10 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 | `lib/runtime-scenario.ts` | `normalizeRole`, `derivePersona`. `normalizeRole` imported by session/start. |
 | `lib/replay-comparison.ts` | `compareReplayAttempts` — used by the replay block in the evaluate route |
 | `lib/database.types.ts` | Supabase-generated TypeScript types — **do not edit manually** |
+| `public/praxisnow-logo-dark.svg` | Primary logo (dark backgrounds) — used on landing, auth, dashboard |
+| `public/praxisnow-logo.svg` | Logo variant (light backgrounds) |
+| `public/favicon.svg` | SVG favicon — primary; `favicon.ico` is fallback for older browsers |
+| `public/praxisnow-icon-512.svg` | Apple touch icon |
 
 ---
 
@@ -370,7 +398,8 @@ Always read from `scenario.session_duration_minutes` with `?? 30` fallback. Neve
 | Column | Notes |
 |---|---|
 | `package_tier` | `'Free' \| 'Starter' \| 'Pro' \| 'Pro+'` (Pro+ legacy) |
-| `available_sessions` | Credits remaining |
+| `available_sessions` | Paid credits remaining |
+| `free_session_used` | `BOOLEAN`. `true` once the free session has been consumed. `NULL` treated as `false` (available) in middleware and client. |
 | `total_sessions_used` | Lifetime count |
 | `star_interviewer` | Written by evaluate route when all 4 rounds ≥ 4.0 |
 
