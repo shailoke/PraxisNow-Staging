@@ -245,6 +245,15 @@ export async function POST(req: NextRequest) {
                 .from('users')
                 .update({ free_session_used: true })
                 .eq('id', user.id)
+
+            // Grant Pro tier so free-session users receive full evaluation
+            // (answer upgrades + personal rules). Only elevates — never downgrades.
+            if (userRecord?.package_tier === 'Free' || userRecord?.package_tier === 'Starter') {
+                await adminClient
+                    .from('users')
+                    .update({ package_tier: 'Pro' })
+                    .eq('id', user.id)
+            }
         }
 
         // Fire-and-forget analytics
