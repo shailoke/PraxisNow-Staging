@@ -625,7 +625,7 @@ export async function POST(req: NextRequest) {
                 {
                     role,
                     level,
-                    scenario: scenario_title,
+                    scenario: roundTitle || role,
                     date: new Date().toLocaleDateString(),
                     duration: session.duration_seconds ? `${Math.floor(session.duration_seconds / 60)}m` : 'N/A',
                     session_id: session_id,

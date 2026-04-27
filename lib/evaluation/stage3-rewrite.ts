@@ -67,6 +67,12 @@ vague description like "lacked depth" but the precise missing element:
 "No named product or team context", "No quantified outcome",
 "No alternative solution considered", "No tradeoff reasoning shown".
 
+CRITICAL: The upgraded_answer field must NEVER reproduce the candidate's original answer verbatim.
+It must be a substantively rewritten version that demonstrates the missing element identified
+in the weakness field. If the original answer is strong in structure, the rewrite must add
+the specific missing signal (e.g. statistical validity, explicit tradeoff comparison, guardrail
+metrics) — not repeat what was already said. The rewrite should be 150-250 words maximum.
+
 Return valid JSON only.
 Format: { "upgrades": [ { turn_index, question_context, weakness, original_verbatim, upgraded_answer, pattern_name } ] }
 upgraded_answer must be written in first person, spoken register — not essay style.`;
@@ -106,7 +112,7 @@ export async function runStage3(
 
     const response = await openai.chat.completions.create({
         model: 'gpt-4o',
-        temperature: 0.3,
+        temperature: 0.4,
         messages: [
             { role: 'system', content: STAGE3_PROMPT },
             {
@@ -115,7 +121,7 @@ export async function runStage3(
             }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 3000,
+        max_tokens: 4000,
     });
 
     const rawContent = response.choices[0].message.content || ''
