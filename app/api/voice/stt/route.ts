@@ -6,10 +6,6 @@ import OpenAI from 'openai'
 // Standard Node runtime — Whisper returns JSON (no streaming), no timeout concern
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-export const config = {
-    api: { bodyParser: { sizeLimit: '10mb' } }
-}
-
 export const maxDuration = 30
 
 /**
@@ -51,6 +47,13 @@ export async function POST(request: NextRequest) {
         const formData = await request.formData()
         const audioBlob = formData.get('audio') as File | null
         const sessionId  = formData.get('session_id') as string | null
+
+        if (audioBlob && audioBlob.size > 24 * 1024 * 1024) {
+            return NextResponse.json(
+                { error: 'Audio file too large. Please keep answers under 3 minutes.' },
+                { status: 413 }
+            )
+        }
 
         if (!audioBlob) {
             return NextResponse.json(

@@ -69,6 +69,8 @@ export function useBatchVoice(
     const turnAuthorityTokens       = useRef(0)
     const assistantTurnCount        = useRef(0)
     const userTurnCount             = useRef(0)
+    const recordingSafetyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const askNextQuestionRef        = useRef<() => void>(() => {})
 
     // Keep pause ref in sync with external prop
     isPausedRef.current = isPausedExternal
@@ -97,10 +99,23 @@ export function useBatchVoice(
         }
         recorder.start(250) // collect chunks every 250 ms
         mediaRecorderRef.current = recorder
+
+        // Safety: auto-submit after 3 minutes to prevent oversized blobs
+        const MAX_RECORDING_MS = 180_000
+        if (recordingSafetyTimerRef.current) clearTimeout(recordingSafetyTimerRef.current)
+        recordingSafetyTimerRef.current = setTimeout(() => {
+            console.warn('[useBatchVoice] Max recording duration reached — auto-stopping')
+            askNextQuestionRef.current()
+        }, MAX_RECORDING_MS)
     }, [])
 
     /** Stop the active MediaRecorder and return the collected Blob. */
     const stopRecording = useCallback((): Promise<Blob> => {
+        // Clear safety timer whenever recording stops normally
+        if (recordingSafetyTimerRef.current) {
+            clearTimeout(recordingSafetyTimerRef.current)
+            recordingSafetyTimerRef.current = null
+        }
         return new Promise((resolve) => {
             const recorder = mediaRecorderRef.current
             if (!recorder || recorder.state === 'inactive') {
@@ -400,9 +415,10 @@ export function useBatchVoice(
                 return
             }
 
-            // Guard: reject blobs too large to send to STT (>8MB causes 413)
-            if (audioBlob.size > 8 * 1024 * 1024) {
-                console.warn('[useBatchVoice] Audio blob too large, skipping STT', audioBlob.size, 'bytes')
+            // Guard: reject blobs too large to process (>20MB indicates recording far exceeded 3 minutes)
+            if (audioBlob.size > 20 * 1024 * 1024) {
+                console.warn('[useBatchVoice] Audio blob too large:', audioBlob.size, 'bytes')
+                setError('Your answer was too long to process. Please keep answers under 3 minutes.')
                 audioChunksRef.current = []
                 startRecording()
                 return
@@ -521,6 +537,9 @@ export function useBatchVoice(
         }
     }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText, targetDuration])
 
+    // Keep ref in sync so the safety timer can call the latest version without a dependency cycle
+    askNextQuestionRef.current = askNextQuestion
+
     // ── replayInterruptedText ──────────────────────────────────────────────
     /**
      * Re-speak the question that was interrupted mid-playback by a pause.
@@ -627,6 +646,12 @@ export function useBatchVoice(
         audioSourceRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
+
+        // Clear recording safety timer
+        if (recordingSafetyTimerRef.current) {
+            clearTimeout(recordingSafetyTimerRef.current)
+            recordingSafetyTimerRef.current = null
+        }
 
         // Clear buffers
         audioChunksRef.current = []
