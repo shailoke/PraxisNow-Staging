@@ -6,10 +6,6 @@ import OpenAI from 'openai'
 // Standard Node runtime — Whisper returns JSON (no streaming), no timeout concern
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-export const config = {
-    api: { bodyParser: { sizeLimit: '10mb' } }
-}
-
 export const maxDuration = 30
 
 /**
@@ -59,10 +55,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Whisper requires a File with a name that has a recognisable extension.
-        // MediaRecorder may produce 'audio/webm;codecs=opus' which Whisper rejects —
-        // always pin to plain 'audio/webm'.
-        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' })
+        // Whisper requires a File with a recognisable extension.
+        // The client sends either audio/wav (compressed) or audio/webm (raw).
+        // Normalise audio/webm;codecs=opus → audio/webm so Whisper accepts it.
+        const mimeType  = audioBlob.type?.includes('wav') ? 'audio/wav' : 'audio/webm'
+        const extension = mimeType === 'audio/wav' ? 'wav' : 'webm'
+        const audioFile = new File([audioBlob], `audio.${extension}`, { type: mimeType })
 
         console.log('[stt] file name:', audioFile.name, 'type:', audioFile.type, 'size:', audioFile.size)
 
