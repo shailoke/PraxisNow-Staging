@@ -200,13 +200,14 @@ export default function ResultsPage() {
   const router    = useRouter()
   const sessionId = params.session_id as string
 
-  const [session,      setSession]      = useState<Record<string, unknown> | null>(null)
-  const [evaluation,   setEvaluation]   = useState<EvaluationData | null>(null)
-  const [momentumCard, setMomentumCard] = useState<MomentumCard | null>(null)
-  const [turns,        setTurns]        = useState<InterviewTurn[]>([])
-  const [loading,      setLoading]      = useState(true)
-  const [notFound,     setNotFound]     = useState(false)
-  const [pdfLoading,   setPdfLoading]   = useState(false)
+  const [session,          setSession]          = useState<Record<string, unknown> | null>(null)
+  const [evaluation,       setEvaluation]       = useState<EvaluationData | null>(null)
+  const [momentumCard,     setMomentumCard]     = useState<MomentumCard | null>(null)
+  const [turns,            setTurns]            = useState<InterviewTurn[]>([])
+  const [loading,          setLoading]          = useState(true)
+  const [notFound,         setNotFound]         = useState(false)
+  const [pdfLoading,       setPdfLoading]       = useState(false)
+  const [evaluationFailed, setEvaluationFailed] = useState(false)
 
   // Memoised session fetcher — called on mount and by the polling interval.
   const fetchSessionRow = useCallback(
@@ -253,7 +254,9 @@ export default function ResultsPage() {
       setLoading(false)
 
       // ── Poll until evaluation completes ────────────────────────────────
-      if (sessionRow.status !== 'completed') {
+      if (sessionRow.status === 'failed' || sessionRow.status === 'abandoned') {
+        setEvaluationFailed(true)
+      } else if (sessionRow.status !== 'completed') {
         intervalId = setInterval(async () => {
           const updated = await fetchSessionRow(supabase, userId)
           if (updated) {
@@ -263,6 +266,10 @@ export default function ResultsPage() {
             if (updated.status === 'completed') {
               clearInterval(intervalId!)
               intervalId = null
+            } else if (updated.status === 'failed' || updated.status === 'abandoned') {
+              clearInterval(intervalId!)
+              intervalId = null
+              setEvaluationFailed(true)
             }
           }
         }, 3000)
@@ -381,6 +388,25 @@ export default function ResultsPage() {
           <Link href="/dashboard" className="text-purple-400 hover:text-purple-300 text-sm">
             ← Back to Dashboard
           </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (evaluationFailed) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] text-white flex items-center justify-center p-6">
+        <div className="text-center space-y-6 max-w-md">
+          <h1 className="text-2xl font-bold">We weren&apos;t able to complete your evaluation</h1>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            This can happen if your answers couldn&apos;t be captured correctly. Your session credit has been returned — you&apos;ll see it on your dashboard.
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold text-white transition-colors"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     )

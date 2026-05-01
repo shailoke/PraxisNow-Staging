@@ -476,14 +476,17 @@ export function useBatchVoice(
             //    user_answer MUST be written first so it is never null on answered=true.
             setInterviewState('THINKING')
 
-            await fetch('/api/turns/answer', {
+            const answerRes = await fetch('/api/turns/answer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     session_id: sessionId,
                     answer_text: sttTranscript.trim(),
                 }),
-            }).catch((err) => console.error('[useBatchVoice] answer persist failed:', err))
+            })
+            if (!answerRes.ok) {
+                throw new Error(`Answer persist failed: ${answerRes.status}`)
+            }
 
             // 4. Build context for interview call
             const systemMsgsToSend = [...pendingSystemMessagesRef.current]

@@ -56,9 +56,13 @@ async function getPriorSessionForRoleLevel(
 
 export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    // Hoisted so the finally block can access them regardless of where try throws
+    let session_id = ''
+    const adminServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, adminServiceKey)
 
     try {
-        const { session_id } = await req.json();
+        session_id = (await req.json()).session_id
         console.log('[evaluate] session_id:', session_id)
 
         const cookieStore = await cookies()
@@ -91,9 +95,7 @@ export async function POST(req: NextRequest) {
 
         const session = sessionData as any;
 
-        // Hoist service-role client — reused throughout this entire request
-        const adminServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-        const adminClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, adminServiceKey);
+        // adminClient and adminServiceKey are hoisted above the try block for finally-block access
 
         // 🛑 IDEMPOTENCY CHECK
         // If session is already completed, do NOT re-run AI.
@@ -244,6 +246,10 @@ export async function POST(req: NextRequest) {
                 `[EVAL_ABORT] Only ${answersWithContent}/${answeredTurns} answered turns have user_answer content.`,
                 `Fewer than 50% — aborting to prevent fabricated output.`
             );
+            await adminClient
+                .from('sessions')
+                .update({ status: 'failed' })
+                .eq('id', session_id)
             return NextResponse.json({
                 evaluation_depth: 'insufficient',
                 pdf_url: null,
@@ -748,6 +754,23 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
         console.error('Error in evaluate endpoint:', error);
         return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
+    } finally {
+        try {
+            const { data: currentSession } = await adminClient
+                .from('sessions')
+                .select('status')
+                .eq('id', session_id)
+                .single()
+            if (currentSession?.status === 'evaluating') {
+                await adminClient
+                    .from('sessions')
+                    .update({ status: 'failed' })
+                    .eq('id', session_id)
+                console.error('[evaluate] finally: session left in evaluating — set to failed. session_id:', session_id)
+            }
+        } catch (cleanupError) {
+            console.error('[evaluate] finally cleanup error:', cleanupError)
+        }
     }
 }
 
