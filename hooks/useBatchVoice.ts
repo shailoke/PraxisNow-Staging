@@ -15,6 +15,7 @@ export type InterviewState =
     | 'SESSION_ENDING'
     | 'TRANSCRIBING'
     | 'THINKING'
+    | 'AUDIO_SILENT'
 
 // ─── useBatchVoice ────────────────────────────────────────────────────────────
 /**
@@ -48,6 +49,7 @@ export function useBatchVoice(
     const [messages,              setMessages]              = useState<Message[]>([])
     const [interviewState,        setInterviewState]        = useState<InterviewState>('ASSISTANT_SPEAKING')
     const [error,                 setError]                 = useState<string | null>(null)
+    const [audioSilent,           setAudioSilent]           = useState(false)
 
     // ── Refs ───────────────────────────────────────────────────────────────
     const isStartingRef             = useRef(false)
@@ -71,6 +73,7 @@ export function useBatchVoice(
     const userTurnCount             = useRef(0)
     const recordingSafetyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
     const askNextQuestionRef        = useRef<() => void>(() => {})
+    const audioSilentRef            = useRef(false)
 
     // Keep pause ref in sync with external prop
     isPausedRef.current = isPausedExternal
@@ -269,8 +272,15 @@ export function useBatchVoice(
                                 }
                                 appendNext()
                             }, { once: true })
-                        } catch (err) {
+                        } catch (err: any) {
+                            if (err?.name === 'AbortError') return
                             console.error('[AUDIO_STREAM_ERROR]', err)
+                            audioSilentRef.current = true
+                            setAudioSilent(true)
+                            // Stop the orb animation and status text
+                            setIsInterviewerSpeaking(false)
+                            setIsSpeaking(false)
+                            setInterviewState('AUDIO_SILENT')
                         }
                     }
 
@@ -389,6 +399,8 @@ export function useBatchVoice(
     // ── askNextQuestion ────────────────────────────────────────────────────
     const askNextQuestion = useCallback(async () => {
         setError(null)
+        setAudioSilent(false)
+        audioSilentRef.current = false
 
         // Guard: paused
         if (isPausedRef.current) {
@@ -594,6 +606,26 @@ export function useBatchVoice(
         interruptedTextRef.current = null
     }, [speakText])
 
+    // ── replayCurrentQuestion ──────────────────────────────────────────────
+    /**
+     * Re-speak the current question after audio dropped mid-playback (AUDIO_SILENT).
+     * Distinct from replayInterruptedText (pause/resume): this handles stream errors,
+     * not deliberate pauses.
+     */
+    const replayCurrentQuestion = useCallback(async () => {
+        const text = interruptedTextRef.current
+        if (!text) return
+        setAudioSilent(false)
+        audioSilentRef.current = false
+        setInterviewState('THINKING')
+        try {
+            await speakText(text)
+        } catch (e) {
+            return
+        }
+        interruptedTextRef.current = null
+    }, [speakText])
+
     // ── injectSystemMessage ────────────────────────────────────────────────
     /**
      * Buffer a system message to be flushed with the next /api/interview call.
@@ -721,6 +753,8 @@ export function useBatchVoice(
         error,
         interruptedTextRef,
         replayInterruptedText,
+        audioSilent,
+        replayCurrentQuestion,
     }
 }
 
