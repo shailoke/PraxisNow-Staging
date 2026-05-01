@@ -277,12 +277,6 @@ export default function DashboardPage() {
 
             if (profile) {
                 setUserProfile(profile as any)
-                const hasActivePack = !!(profile.package_tier && profile.package_tier !== 'Free')
-                if (!hasActivePack && profile.onboarding_complete === false) {
-                    await supabase.from('users').update({ onboarding_complete: true } as any).eq('id', user.id)
-                    router.replace('/pricing')
-                    return
-                }
             } else {
                 setUserProfile(null)
             }
