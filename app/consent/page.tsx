@@ -10,7 +10,6 @@ export default function ConsentPage() {
     const router = useRouter()
     const supabase = createClient()
     const [checked1, setChecked1] = useState(false)
-    const [checked2, setChecked2] = useState(false)
     const [loading, setLoading] = useState(false)
     const [initialising, setInitialising] = useState(true)
 
@@ -37,7 +36,7 @@ export default function ConsentPage() {
     }, [])
 
     const handleSubmit = async () => {
-        if (!checked1 || !checked2) return
+        if (!checked1) return
         setLoading(true)
         try {
             const res = await fetch('/api/consent', { method: 'POST' })
@@ -110,23 +109,12 @@ export default function ConsentPage() {
                         </span>
                     </label>
 
-                    <label className="flex items-start gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={checked2}
-                            onChange={e => setChecked2(e.target.checked)}
-                            className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 accent-purple-500 cursor-pointer shrink-0"
-                        />
-                        <span className="text-sm text-gray-300 leading-relaxed">
-                            I am 18 years of age or older
-                        </span>
-                    </label>
                 </div>
 
                 {/* Submit */}
                 <button
                     onClick={handleSubmit}
-                    disabled={!checked1 || !checked2 || loading}
+                    disabled={!checked1 || loading}
                     className="w-full py-3 rounded-xl font-semibold text-sm bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Saving...' : 'Continue to PraxisNow'}
