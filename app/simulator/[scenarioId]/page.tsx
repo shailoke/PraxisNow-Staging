@@ -193,7 +193,7 @@ export default function SimulatorPage() {
     // PAUSE STATE (must be before hook initialization)
     const [isPaused, setIsPaused] = useState(false)
 
-    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError, interruptedTextRef, replayInterruptedText } = useRealtimeVoice(sessionId, initialInstruction, isPaused, targetDuration)
+    const { isConnected, isSpeaking, isInterviewerSpeaking, startSession, endSession, abortInterviewerAudio, messages, messagesRef, waitForSafeExit, injectSystemMessage, askNextQuestion, getTurnStats, interviewState, error: voiceError, interruptedTextRef, replayInterruptedText, audioSilent, replayCurrentQuestion } = useRealtimeVoice(sessionId, initialInstruction, isPaused, targetDuration)
     const { requestWakeLock, releaseWakeLock } = useWakeLock()
     const [timeLeft, setTimeLeft] = useState(duration)
     const [sessionStarted, setSessionStarted] = useState(false)
@@ -845,6 +845,7 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                                     interviewState === 'TRANSCRIBING' ? 'Processing your answer...'
                                     : interviewState === 'THINKING' ? 'Interviewer is thinking...'
                                     : interviewState === 'ASSISTANT_SPEAKING' ? (scenarioIdStr === 'negotiation' ? 'Simulation in progress...' : 'Interviewer is speaking...')
+                                    : interviewState === 'AUDIO_SILENT' ? 'Audio stopped mid-question'
                                     : 'Listening...'
                                 ) : (
                                     <span className="animate-pulse">Connecting...</span>
@@ -966,6 +967,17 @@ You will receive time updates every 3 minutes. Follow them strictly.`
                                 className="rounded-full border-green-500/30 text-green-300 hover:bg-green-500/10 hover:border-green-500/50 px-4 transition-all text-sm"
                             >
                                 ▶️ Resume
+                            </Button>
+                        )}
+
+                        {/* Replay button — visible only when audio dropped mid-playback */}
+                        {audioSilent && (
+                            <Button
+                                variant="outline"
+                                onClick={replayCurrentQuestion}
+                                className="rounded-full border-yellow-500/50 bg-yellow-500/10 text-yellow-200 hover:bg-yellow-500/20 hover:border-yellow-500/70 px-6 transition-all text-sm font-semibold"
+                            >
+                                🔁 Replay question
                             </Button>
                         )}
 
