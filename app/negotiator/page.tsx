@@ -11,6 +11,13 @@ import { cn } from '@/lib/utils'
 export default function NegotiatorPage() {
     const router = useRouter()
 
+    // Negotiation simulation is hidden from the product — redirect any direct
+    // navigation to this route. Backend (this page, /api/negotiation/**,
+    // lib/negotiation-coach.ts) is intentionally left intact, not deleted.
+    useEffect(() => {
+        router.replace('/dashboard')
+    }, [router])
+
     // Auth & Tier Check
     const [hasAccess, setHasAccess] = useState(false)
     const [checkingAccess, setCheckingAccess] = useState(true)
