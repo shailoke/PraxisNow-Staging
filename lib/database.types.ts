@@ -52,6 +52,38 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event_name: string
+          id: string
+          properties: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_name: string
+          id?: string
+          properties?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_name?: string
+          id?: string
+          properties?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_turns: {
         Row: {
           answered: boolean
@@ -181,6 +213,44 @@ export type Database = {
           },
         ]
       }
+      razorpay_orders: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          order_id: string
+          sku: string
+          user_id: string | null
+          verified: boolean
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          order_id: string
+          sku: string
+          user_id?: string | null
+          verified?: boolean
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          sku?: string
+          user_id?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "razorpay_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scenarios: {
         Row: {
           applicant_context: string | null
@@ -270,6 +340,7 @@ export type Database = {
           evaluation_data: Json | null
           evaluation_depth: string | null
           id: string
+          is_free_session: boolean
           momentum_card: Json | null
           overall_score: number | null
           pdf_url: string | null
@@ -289,6 +360,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -308,6 +380,7 @@ export type Database = {
           evaluation_data?: Json | null
           evaluation_depth?: string | null
           id?: string
+          is_free_session?: boolean
           momentum_card?: Json | null
           overall_score?: number | null
           pdf_url?: string | null
@@ -486,6 +559,7 @@ export type Database = {
           designation: string | null
           email: string | null
           first_name: string | null
+          free_session_used: boolean
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -495,6 +569,8 @@ export type Database = {
           phone: string | null
           primary_role: string | null
           star_interviewer: boolean
+          terms_accepted: boolean
+          terms_accepted_at: string | null
           total_sessions_used: number | null
         }
         Insert: {
@@ -505,6 +581,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -514,6 +591,8 @@ export type Database = {
           phone?: string | null
           primary_role?: string | null
           star_interviewer?: boolean
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
           total_sessions_used?: number | null
         }
         Update: {
@@ -524,6 +603,7 @@ export type Database = {
           designation?: string | null
           email?: string | null
           first_name?: string | null
+          free_session_used?: boolean
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
@@ -533,6 +613,8 @@ export type Database = {
           phone?: string | null
           primary_role?: string | null
           star_interviewer?: boolean
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
           total_sessions_used?: number | null
         }
         Relationships: []

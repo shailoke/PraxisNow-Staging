@@ -671,10 +671,8 @@ export async function generateSessionPDF(
             drawFooter();
         }
 
-        // --- PRO/PRO+ : PERSONAL ANSWER RULES ---
-        // isExtendedEval matches the same pattern used in eval-logic.ts (Pro+ merged into Pro, Feb 2026)
-        const isExtendedEval = tier === 'Pro' || tier === 'Pro+';
-        if (isExtendedEval && evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules)) {
+        // --- PERSONAL ANSWER RULES (all paid sessions — no tiers) ---
+        if (evaluation.personal_answer_rules && Array.isArray(evaluation.personal_answer_rules)) {
             doc.addPage();
             drawHeader();
             y = 80;

@@ -116,20 +116,27 @@ export async function POST(req: NextRequest) {
         // STEP 5 — CREDIT CHECK
         const { data: profile } = await adminClient
             .from('users')
-            .select('available_sessions, total_sessions_used, package_tier')
+            .select('available_sessions, total_sessions_used, package_tier, free_session_used')
             .eq('id', user.id)
             .single()
 
         if (!profile) return NextResponse.json({ error: 'User profile not found.' }, { status: 404 })
 
-        if (!profile.package_tier || profile.package_tier === 'Free') {
+        const hasActivePack = !!(profile.package_tier && profile.package_tier !== 'Free')
+        // Free-tier users get exactly one free session, gated by free_session_used.
+        // AI round (4) is still blocked for them — enforced separately in STEP 7.
+        const canUseFreeSession = profile.package_tier === 'Free' && profile.free_session_used === false
+
+        if (!hasActivePack && !canUseFreeSession) {
             return NextResponse.json(
                 { error: 'No active plan. Please purchase a plan to start an interview.' },
                 { status: 403 }
             )
         }
 
-        if ((profile.available_sessions ?? 0) < 1) {
+        // Free sessions don't draw on available_sessions (new users start at 0) —
+        // only paid sessions need a credit check here.
+        if (!canUseFreeSession && (profile.available_sessions ?? 0) < 1) {
             return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
         }
 
@@ -148,16 +155,40 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'AI Round requires Pro tier.' }, { status: 403 })
         }
 
-        // STEP 8 — DEDUCT CREDIT ATOMICALLY
-        const { data: deducted, error: deductError } = await adminClient
-            .from('users')
-            .update({
-                available_sessions: (profile.available_sessions ?? 1) - 1,
-                total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
-            })
-            .eq('id', user.id)
-            .gt('available_sessions', 0)
-            .select('id')
+        // STEP 8 — DEDUCT CREDIT
+        // Free session: new users start at available_sessions = 0, so decrementing
+        // it would take it to -1. The only deduction for a free session is flipping
+        // free_session_used so it can't be reused.
+        // Paid session: decrement available_sessions as before — total_sessions_used
+        // is incremented for both paths.
+        let deducted: { id: string }[] | null
+        let deductError: any
+
+        if (canUseFreeSession) {
+            const { data, error } = await adminClient
+                .from('users')
+                .update({
+                    free_session_used: true,
+                    total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
+                })
+                .eq('id', user.id)
+                .eq('free_session_used', false)
+                .select('id')
+            deducted = data
+            deductError = error
+        } else {
+            const { data, error } = await adminClient
+                .from('users')
+                .update({
+                    available_sessions: (profile.available_sessions ?? 1) - 1,
+                    total_sessions_used: (profile.total_sessions_used ?? 0) + 1,
+                })
+                .eq('id', user.id)
+                .gt('available_sessions', 0)
+                .select('id')
+            deducted = data
+            deductError = error
+        }
 
         if (deductError || !deducted || deducted.length === 0) {
             return NextResponse.json({ error: 'Insufficient session credits.' }, { status: 403 })
@@ -181,9 +212,15 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (insertError || !session) {
+            // Mirror STEP 8's branch: free sessions only flipped free_session_used
+            // (never touched available_sessions), so the rollback must match.
+            const rollbackPayload: Record<string, any> = canUseFreeSession
+                ? { free_session_used: false }
+                : { available_sessions: (profile.available_sessions ?? 1) }
+
             await adminClient
                 .from('users')
-                .update({ available_sessions: (profile.available_sessions ?? 1) })
+                .update(rollbackPayload)
                 .eq('id', user.id)
 
             if (insertError) {

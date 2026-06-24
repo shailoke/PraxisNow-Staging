@@ -337,11 +337,11 @@ export async function POST(req: NextRequest) {
         );
         console.log(`[EVAL_STAGE2] Signal: ${stage2.hiring_signal}, Confidence: ${stage2.hiring_confidence}`);
 
-        // ── Stage 3: Rewrite (Pro/Pro+ only, full depth only) ────────────────────────
+        // ── Stage 3: Rewrite (all paid sessions, full depth only — no tiers) ─────────
         let answerUpgrades: any[] = [];
         if (evaluationDepth === 'full') {
             console.log('[EVAL_STAGE3] Generating grounded rewrites...');
-            const rawUpgrades = await runStage3(stage1, stage2, user.package_tier);
+            const rawUpgrades = await runStage3(stage1, stage2);
 
             const turnsWithAnswers = turns.filter((t: any) => (t as any).user_answer?.trim());
             const { valid, flagged } = validateAnswerUpgrades(rawUpgrades, turnsWithAnswers);
@@ -352,10 +352,9 @@ export async function POST(req: NextRequest) {
             console.log(`[EVAL_STAGE3] ${answerUpgrades.length} grounded upgrades produced.`);
         }
 
-        // ── Stage 4: Personal Rules (Pro/Pro+, full depth only) ───────────────────────
+        // ── Stage 4: Personal Rules (all paid sessions, full depth only — no tiers) ──
         let personalRules: any[] = [];
-        const isExtendedEval = user.package_tier === 'Pro' || user.package_tier === 'Pro+';
-        if (isExtendedEval && evaluationDepth === 'full') {
+        if (evaluationDepth === 'full') {
             console.log('[EVAL_STAGE4] Generating session-specific rules...');
             personalRules = await runStage4(stage1, stage2);
             console.log(`[EVAL_STAGE4] ${personalRules.length} validated rules produced.`);

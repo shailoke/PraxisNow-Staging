@@ -10,12 +10,14 @@ export async function POST(req: Request) {
     try {
         const { packId } = await req.json()
 
-        let amount = 0
-        if (packId === 'starter') amount = 599 * 100
-        if (packId === 'pro') amount = 899 * 100
-        if (packId === 'pro_plus') amount = 1199 * 100 // Legacy SKU - still accepted
+        const amountMap: Record<string, number> = {
+            single: 49900,         // ₹499 in paise
+            practice_pack: 139900, // ₹1,399 in paise
+            full_prep: 219900,     // ₹2,199 in paise
+        }
 
-        if (amount === 0) return NextResponse.json({ error: 'Invalid pack' }, { status: 400 })
+        const amount = amountMap[packId]
+        if (!amount) return NextResponse.json({ error: 'Invalid pack' }, { status: 400 })
 
         const order = await razorpay.orders.create({
             amount,

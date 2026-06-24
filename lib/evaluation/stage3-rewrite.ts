@@ -73,12 +73,8 @@ upgraded_answer must be written in first person, spoken register — not essay s
 
 export async function runStage3(
     stage1: Stage1Output,
-    stage2: Stage2Output,
-    tier: string
+    stage2: Stage2Output
 ): Promise<AnswerUpgrade[]> {
-    const isExtended = tier === 'Pro' || tier === 'Pro+';
-    if (!isExtended) return [];
-
     // Select the 3 turns with weakest signal for rewriting
     const weakestTurns = stage2.turn_diagnostics
         .filter(d => d.signal_strength !== 'strong' && stage1.turns.find(t => t.turn_index === d.turn_index)?.candidate_answer_verbatim)

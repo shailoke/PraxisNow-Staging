@@ -59,6 +59,7 @@ export function useBatchVoice(
     const audioSourceRef            = useRef<AudioBufferSourceNode | null>(null)
     const audioElRef                = useRef<HTMLAudioElement | null>(null)
     const blobUrlRef                = useRef<string | null>(null)
+    const readerRef                 = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
     const ttsAbortControllerRef     = useRef<AbortController | null>(null)
     const pendingSystemMessagesRef  = useRef<string[]>([])
     const isPausedRef               = useRef(isPausedExternal)
@@ -142,16 +143,64 @@ export function useBatchVoice(
                 throw new Error(`TTS error: ${ttsRes.status}`)
             }
 
-            const blob = await ttsRes.blob()
-            const blobUrl = URL.createObjectURL(blob)
+            return new Promise<void>((resolve) => {
+                const audioEl = new Audio()
+                const mediaSource = new MediaSource()
+                const msUrl = URL.createObjectURL(mediaSource)
+                audioEl.src = msUrl
 
-            await new Promise<void>((resolve) => {
-                const audioEl = new Audio(blobUrl)
+                mediaSource.addEventListener('sourceopen', async () => {
+                    let sourceBuffer: SourceBuffer
+                    try {
+                        sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg')
+                    } catch (e) {
+                        console.error('[AUDIO_MEDIASOURCE_ERROR] addSourceBuffer failed:', e)
+                        URL.revokeObjectURL(msUrl)
+                        // fallback: resolve to avoid stuck state
+                        setIsInterviewerSpeaking(false)
+                        setIsSpeaking(false)
+                        setInterviewState('WAITING_FOR_USER')
+                        assistantTurnCount.current += 1
+                        audioChunksRef.current = []
+                        startRecording()
+                        resolve()
+                        return
+                    }
+
+                    const reader = ttsRes.body!.getReader()
+                    readerRef.current = reader
+
+                    const appendNext = async () => {
+                        try {
+                            const { done, value } = await reader.read()
+                            if (done) {
+                                // All chunks appended — signal end of stream
+                                if (!sourceBuffer.updating) {
+                                    mediaSource.endOfStream()
+                                } else {
+                                    sourceBuffer.addEventListener('updateend', () => {
+                                        mediaSource.endOfStream()
+                                    }, { once: true })
+                                }
+                                return
+                            }
+                            if (sourceBuffer.updating) {
+                                await new Promise<void>(r => sourceBuffer.addEventListener('updateend', () => r(), { once: true }))
+                            }
+                            sourceBuffer.appendBuffer(value)
+                            sourceBuffer.addEventListener('updateend', appendNext, { once: true })
+                        } catch (err) {
+                            console.error('[AUDIO_STREAM_ERROR]', err)
+                        }
+                    }
+
+                    appendNext()
+                })
 
                 audioEl.onended = () => {
-                    URL.revokeObjectURL(blobUrl)
-                    audioContextRef.current = null   // no-op, kept for abort compat
-                    audioSourceRef.current = null    // no-op, kept for abort compat
+                    URL.revokeObjectURL(msUrl)
+                    audioContextRef.current = null
+                    audioSourceRef.current = null
                     setIsInterviewerSpeaking(false)
                     setIsSpeaking(false)
                     setInterviewState('WAITING_FOR_USER')
@@ -163,7 +212,7 @@ export function useBatchVoice(
 
                 audioEl.onerror = (err) => {
                     console.error('[AUDIO_PLAYBACK_ERROR]', err)
-                    URL.revokeObjectURL(blobUrl)
+                    URL.revokeObjectURL(msUrl)
                     audioContextRef.current = null
                     audioSourceRef.current = null
                     setIsInterviewerSpeaking(false)
@@ -176,8 +225,8 @@ export function useBatchVoice(
                 }
 
                 audioElRef.current = audioEl
-                blobUrlRef.current = blobUrl
-                audioEl.play()
+                blobUrlRef.current = msUrl
+                audioEl.play().catch(err => console.error('[AUDIO_PLAY_ERROR]', err))
             })
 
         } catch (err: any) {
@@ -431,6 +480,8 @@ export function useBatchVoice(
         // These are now no-ops but kept for safety
         audioContextRef.current = null
         audioSourceRef.current = null
+        readerRef.current?.cancel()
+        readerRef.current = null
         ttsAbortControllerRef.current?.abort()
         ttsAbortControllerRef.current = null
         setIsInterviewerSpeaking(false)

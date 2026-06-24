@@ -479,28 +479,6 @@ export default function DashboardPage() {
                                 {/* Current Bar — shown after first evaluated session */}
                                 {currentBar && <CurrentBarCard {...currentBar} />}
 
-                                {/* BONUS NEGOTIATION CARD (Pro+ Exclusive OR Credit Holders) */}
-                                {((userProfile as any)?.package_tier === 'Pro+' && !sessions.find(s => s.session_type === 'negotiation_simulation')) && (
-                                    <div
-                                        onClick={() => router.push('/simulator/negotiation')}
-                                        className="mb-8 h-full p-6 rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-transparent hover:border-yellow-500/50 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 group relative overflow-hidden"
-                                    >
-                                        <div className="absolute top-0 right-0 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-bl-lg uppercase tracking-wider">
-                                            Bonus
-                                        </div>
-                                        <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
-                                            <Trophy className="w-8 h-8" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-lg font-bold text-yellow-200">Salary Negotiation Simulation</h4>
-                                            <p className="text-sm text-yellow-200/60 mt-1">Practice negotiating your offer with realistic pushback</p>
-                                        </div>
-                                        <div className="mt-2 px-4 py-1.5 rounded-full bg-yellow-500/10 text-xs font-semibold text-yellow-400 border border-yellow-500/20 group-hover:bg-yellow-500 group-hover:text-black transition-colors">
-                                            Start Simulation (30 min)
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Role Selector */}
                                 <div className="flex items-center gap-2 mb-8">
                                     {(['Product Manager', 'Software Development Engineer', 'Data Scientist'] as const).map(role => (

@@ -5,20 +5,22 @@ import crypto from 'crypto'
 import { Database } from '@/lib/database.types'
 
 // Package Configuration to ensure consistency
-// PHASE 2: Pro+ merged into Pro - pro_plus SKU maps to Pro tier for backward compatibility
+// PRICING REDESIGN: tiers removed — every paid pack grants the full experience.
+// Packs differ only in how many sessions they include. All paid purchases set
+// package_tier = 'Pro' for backward compat with the negotiation gate (see
+// session/start's negotiation check, which is left untouched and still reads
+// package_tier === 'Pro' || 'Pro+'). package_tier is no longer used to gate
+// evaluation features — see app/api/evaluate/route.ts.
 const PACKAGES = {
-    'starter': { amount: 59900, sessions: 3, tier: 'Starter' },
-    'pro': { amount: 89900, sessions: 5, tier: 'Pro' },
-    'pro_plus': { amount: 119900, sessions: 7, tier: 'Pro' } // Legacy SKU → Pro tier
+    'single': { amount: 49900, sessions: 1, tier: 'Pro' },
+    'practice_pack': { amount: 139900, sessions: 3, tier: 'Pro' },
+    'full_prep': { amount: 219900, sessions: 5, tier: 'Pro' },
+    // Legacy SKU — kept for backward compatibility with old purchase records.
+    // Not surfaced anywhere in the UI.
+    'pro_plus': { amount: 119900, sessions: 7, tier: 'Pro' },
 } as const
 
 type Tier = 'Starter' | 'Pro' | 'Pro+' // Pro+ kept for type safety during migration
-
-const TIER_WEIGHT = {
-    'Starter': 1,
-    'Pro': 2,
-    'Pro+': 2 // Pro+ = Pro (same weight, no upgrade/downgrade)
-}
 
 export async function POST(req: NextRequest) {
     try {
@@ -95,30 +97,23 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Payment verified but session update failed' }, { status: 500 })
         }
 
-        // 6. Handle Logic for Tier Upgrade
-        // We fetch current tier to ensure we don't downgrade a user (e.g. Pro+ buys Starter pack for sessions)
-        const { data: userProfile } = await supabase
-            .from('users')
-            .select('package_tier')
-            .eq('id', user.id)
-            .single()
-
-        const currentTier = ((userProfile as any)?.package_tier || 'Starter') as Tier
+        // 6. Tier assignment — no tiers in the new pricing model.
+        // Every paid purchase sets package_tier = 'Pro' unconditionally. This is
+        // purely for backward compat with the negotiation gate in session/start
+        // (untouched, still checks package_tier === 'Pro' || 'Pro+') — it no
+        // longer has any effect on evaluation feature gating.
         const newTier = pack.tier as Tier
 
-        // Only upgrade if new tier is higher weight
-        if (TIER_WEIGHT[newTier] > TIER_WEIGHT[currentTier]) {
-            const { error: updateError } = await (supabase
-                .from('users') as any)
-                .update({ package_tier: newTier })
-                .eq('id', user.id)
+        const { error: updateError } = await (supabase
+            .from('users') as any)
+            .update({ package_tier: newTier })
+            .eq('id', user.id)
 
-            if (updateError) {
-                console.error('Tier Update Error:', updateError)
-            }
+        if (updateError) {
+            console.error('Tier Update Error:', updateError)
         }
 
-        return NextResponse.json({ success: true, upgraded: TIER_WEIGHT[newTier] > TIER_WEIGHT[currentTier] })
+        return NextResponse.json({ success: true })
 
     } catch (error) {
         console.error('Verification Error:', error)
