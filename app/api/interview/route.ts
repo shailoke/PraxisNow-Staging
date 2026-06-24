@@ -123,8 +123,40 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        // T2: no interview_turns read on this path before GPT — delta will be ~0ms
-        const t2 = t1
+        // STEP 5B — Verify user_answer exists server-side (don't trust client).
+        // turn_authority is a client-asserted boolean; this closes the gap where
+        // a race (e.g. AUDIO_SILENT recovery, or a double-fired "ask next
+        // question") lets turn_authority arrive true with no real answer ever
+        // written to the open turn.
+        if (!is_first_question) {
+            const { data: currentTurn } = await supabase
+                .from('interview_turns')
+                .select('id, user_answer, answered')
+                .eq('session_id', session_id)
+                .eq('answered', false)
+                .order('turn_index', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            if (!currentTurn) {
+                console.warn('[INTERVIEW] No open turn found — possible race condition')
+                return NextResponse.json(
+                    { message: null, suppressed: true, reason: 'no_open_turn' },
+                    { status: 200 }
+                )
+            }
+
+            if (!currentTurn.user_answer || currentTurn.user_answer.trim().length < 3) {
+                console.warn('[INTERVIEW] Turn has no real user_answer — suppressing GPT call')
+                return NextResponse.json(
+                    { message: null, suppressed: true, reason: 'no_user_answer' },
+                    { status: 200 }
+                )
+            }
+        }
+
+        // T2: interview_turns read once for STEP 5B before GPT
+        const t2 = Date.now()
 
         // STEP 6 — FETCH ANTI-CONVERGENCE BLOCKLIST
         let recentQuestions: string[] = []

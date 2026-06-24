@@ -74,6 +74,7 @@ export function useBatchVoice(
     const recordingSafetyTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
     const askNextQuestionRef        = useRef<() => void>(() => {})
     const audioSilentRef            = useRef(false)
+    const isProcessingTurnRef       = useRef(false)
 
     // Keep pause ref in sync with external prop
     isPausedRef.current = isPausedExternal
@@ -281,6 +282,11 @@ export function useBatchVoice(
                             setIsInterviewerSpeaking(false)
                             setIsSpeaking(false)
                             setInterviewState('AUDIO_SILENT')
+                            // Settle the enclosing Promise — without this, the
+                            // await speakText(...) call site (askNextQuestion,
+                            // STEP 6) hangs forever instead of falling into its
+                            // catch block.
+                            reject(new Error('AudioSilent'))
                         }
                     }
 
@@ -412,6 +418,14 @@ export function useBatchVoice(
             console.warn('[useBatchVoice] askNextQuestion blocked — interviewer already speaking')
             return
         }
+        // Guard: already processing a turn (defense in depth against concurrent
+        // invocations — e.g. a fast double-click, or a fresh call landing while
+        // a prior one is still mid-STT/answer-write/interview-call)
+        if (isProcessingTurnRef.current) {
+            console.warn('[VOICE] askNextQuestion called while already processing — ignoring')
+            return
+        }
+        isProcessingTurnRef.current = true
 
         try {
             // 1. Stop MediaRecorder and assemble blob FIRST, then clear the chunk buffer.
@@ -496,8 +510,15 @@ export function useBatchVoice(
                     answer_text: sttTranscript.trim(),
                 }),
             })
-            if (!answerRes.ok) {
-                throw new Error(`Answer persist failed: ${answerRes.status}`)
+            const answerData = await answerRes.json().catch(() => ({}))
+
+            if (!answerRes.ok || answerData.success === false) {
+                console.warn('[VOICE] Answer write failed or returned success:false:', answerData.reason)
+                // Do NOT proceed to /api/interview — a 200 with success:false
+                // (e.g. no_open_turn) is a failure, not a success.
+                audioChunksRef.current = []
+                startRecording()
+                return
             }
 
             // 4. Build context for interview call
@@ -577,6 +598,8 @@ export function useBatchVoice(
             setInterviewState('WAITING_FOR_USER')
             audioChunksRef.current = []
             startRecording()
+        } finally {
+            isProcessingTurnRef.current = false
         }
     }, [sessionId, isInterviewerSpeaking, stopRecording, startRecording, speakText, targetDuration])
 
